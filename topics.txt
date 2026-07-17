@@ -1,0 +1,22 @@
+# Lista semilla de temas — un tema con angulo especifico por linea.
+# Uso: py pipeline.py "<linea>"
+why the 50/30/20 rule fails at low income
+the real reason your emergency fund should NOT be in your checking account
+compound interest explained with one cup of coffee
+3 money mistakes people make in their first job
+why paying only the minimum on your credit card doubles the price of everything
+the 1% rule before buying anything over $100
+lifestyle creep: the raise that made you poorer
+sinking funds: the budgeting trick banks don't advertise
+why a 6-month emergency fund beats a 3-month one
+the 24-hour rule that kills impulse purchases
+how much car you can actually afford (the 20/4/10 rule)
+why "no spend months" backfire and what to do instead
+the debt snowball vs avalanche: which one actually works
+your first $1,000 saved matters more than your next $10,000
+why budgeting apps fail and the 2-account system that doesn't
+the hidden cost of buy now pay later
+rent vs buy: the 5% rule nobody runs the numbers on
+why your savings account is losing money right now
+the paycheck routine that builds wealth on autopilot
+what a 750 credit score actually gets you
