@@ -35,6 +35,14 @@ from pathlib import Path
 
 import requests
 
+# Windows con tarea programada suele heredar stdout en cp1252; un titulo con
+# emoji o caracter fuera de ese charset lanza UnicodeEncodeError y tumba la
+# corrida DESPUES de haber gastado creditos de TTS/imagenes/musica (visto
+# repetidas veces esta sesion). Forzar UTF-8 lo elimina de raiz.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 try:
     from dotenv import load_dotenv
 
@@ -175,19 +183,62 @@ def log(stage: str, msg: str) -> None:
     print(f"[{stage}] {msg}", flush=True)
 
 
-def run(cmd: list[str], cwd: Path | None = None) -> None:
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+def run(cmd: list[str], cwd: Path | None = None, timeout: float = 600.0) -> None:
+    """timeout=600s por defecto: un ffmpeg colgado (input corrupto, stream_loop
+    infinito) no debe bloquear una corrida desatendida (tarea programada) para
+    siempre -- antes no habia limite y el proceso podia quedar colgado indefinidamente."""
+    try:
+        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"Comando colgado >{timeout:.0f}s ({cmd[0]}), abortado: {' '.join(cmd[:4])}...") from e
     if result.returncode != 0:
         raise RuntimeError(f"Comando fallo ({cmd[0]}):\n{result.stderr[-2000:]}")
 
 
-def ffprobe_duration(path: Path) -> float:
+def ffprobe_duration(path: Path, timeout: float = 30.0) -> float:
     out = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration",
          "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
-        capture_output=True, text=True, check=True,
+        capture_output=True, text=True, check=True, timeout=timeout,
     )
     return float(out.stdout.strip())
+
+
+def _atomic_write_json(path: Path, data) -> None:
+    """Escribe a un .tmp y luego renombra (os.replace es atomico en el mismo
+    filesystem) -- evita que dos procesos escribiendo el mismo manifest.json
+    (ej. tarea programada solapada con una corrida manual) se pisen a mitad
+    de escritura y corrompan used_topics.json / manifest de personajes /
+    gemini_usage.json."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def _load_json(path: Path, default):
+    """Carga JSON con guarda contra archivo corrupto/inexistente -- unifica
+    las ~4 variantes de 'leer dict o default' que habia sueltas por el archivo."""
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return default
+
+
+_DRAWTEXT_SPECIAL = str.maketrans({
+    "\\": "\\\\", "'": "’", ":": "\\:", ",": "\\,", "%": "\\%",
+})
+
+
+def _drawtext_escape(text: str) -> str:
+    """Escapa texto para usarlo dentro de un filtro drawtext de ffmpeg.
+    Sin esto, una coma parte el filtergraph completo (cada ',' separa
+    filtros en -filter_complex) y '%{...}' dispara expansion de expresiones
+    de drawtext (vector de inyeccion real) -- visto al agregar el CTA de
+    texto en pantalla, que puede traer titulos/frases con puntuacion normal."""
+    return text.translate(_DRAWTEXT_SPECIAL)
 
 
 def with_retries(fn, *args, attempts: int = 3, delay: float = 10.0, **kwargs):
@@ -208,15 +259,13 @@ def with_retries(fn, *args, attempts: int = 3, delay: float = 10.0, **kwargs):
 # ------------------------------------------------------------- AUTO TOPICS
 
 def _load_used_topics() -> set[str]:
-    if USED_TOPICS_FILE.exists():
-        return set(json.loads(USED_TOPICS_FILE.read_text(encoding="utf-8")))
-    return set()
+    return set(_load_json(USED_TOPICS_FILE, []))
 
 
 def _mark_topic_used(topic: str) -> None:
     used = _load_used_topics()
     used.add(topic)
-    USED_TOPICS_FILE.write_text(json.dumps(sorted(used), indent=2, ensure_ascii=False), encoding="utf-8")
+    _atomic_write_json(USED_TOPICS_FILE, sorted(used))
 
 
 def pick_next_topic() -> str:
@@ -243,41 +292,41 @@ def pick_next_topic() -> str:
 
 # ---------------------------------------------------------------- 1. SCRIPT
 
-def generate_script(topic: str) -> dict:
+def _claude_json_call(max_tokens: int, schema: dict, prompt: str) -> dict:
+    """Helper compartido para llamadas a Claude con salida json_schema --
+    unifica el patron repetido 3 veces (generate_script, generate_ideas,
+    pick_sfx_cues) y corrige un bug real: si la respuesta solo trae un bloque
+    'thinking' (presupuesto de pensamiento agotado), next(...) sin default
+    lanza StopIteration cruda en vez de un error legible."""
     import anthropic
 
     client = anthropic.Anthropic()
-    log("script", f"Generando guion con {MODEL}...")
     response = client.messages.create(
         model=MODEL,
-        max_tokens=2000,
+        max_tokens=max_tokens,
         thinking={"type": "adaptive"},
-        output_config={"format": {"type": "json_schema", "schema": SCRIPT_SCHEMA}},
-        messages=[{"role": "user", "content": SCRIPT_PROMPT.format(topic=topic)}],
+        output_config={"format": {"type": "json_schema", "schema": schema}},
+        messages=[{"role": "user", "content": prompt}],
     )
-    text = next(b.text for b in response.content if b.type == "text")
-    data = json.loads(text)
+    text = next((b.text for b in response.content if b.type == "text"), None)
+    if text is None:
+        raise RuntimeError("Claude no devolvio bloque de texto (solo thinking?) -- "
+                            "revisar max_tokens/presupuesto de pensamiento")
+    return json.loads(text)
+
+
+def generate_script(topic: str) -> dict:
+    log("script", f"Generando guion con {MODEL}...")
+    data = with_retries(_claude_json_call, 2000, SCRIPT_SCHEMA, SCRIPT_PROMPT.format(topic=topic))
     log("script", f"{len(data['script'].split())} palabras, {len(data['search_terms'])} search terms")
     return data
 
 
 def generate_ideas(existing_topics: list[str]) -> list[str]:
-    import anthropic
-
-    client = anthropic.Anthropic()
     log("ideas", f"Generando 5 ideas con {MODEL}...")
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=1000,
-        thinking={"type": "adaptive"},
-        output_config={"format": {"type": "json_schema", "schema": IDEAS_SCHEMA}},
-        messages=[{
-            "role": "user",
-            "content": IDEAS_PROMPT.format(existing_topics=", ".join(existing_topics) or "none"),
-        }],
-    )
-    text = next(b.text for b in response.content if b.type == "text")
-    return json.loads(text)["ideas"]
+    prompt = IDEAS_PROMPT.format(existing_topics=", ".join(existing_topics) or "none")
+    data = with_retries(_claude_json_call, 1000, IDEAS_SCHEMA, prompt)
+    return data["ideas"]
 
 
 # ----------------------------------------------------------------- 2. AUDIO
@@ -343,6 +392,32 @@ def _check_pacing(script: str, target_seconds: float = 45.0) -> None:
                        f"Considera bajar a ~{target_words} palabras.")
     else:
         log("pacing", f"{word_count} palabras / {target_seconds:.0f}s = {wps:.2f} wps (OK)")
+
+
+def _check_script_lint(script: str, title: str, voice: str) -> None:
+    """Avisos rapidos y baratos (nunca bloquean) sobre dos reglas ya validadas
+    con datos reales esta temporada, para no depender de acordarse a mano:
+    (1) palabras con ñ en guiones de voz en espanol -- el TTS las pronuncia
+    mal (ver memoria voz-espanol-impixxel); (2) titulo sin nombre propio
+    reconocible -- proxy barato de la regla 'antagonista/institucion famosa
+    en el titulo' (ver memoria titulo-antagonista-famoso), que correlaciono
+    con 1000+ vistas en HiddenFacts."""
+    if voice.startswith("es-") and "ñ" in script.lower():
+        log("lint", "AVISO: el guion tiene 'ñ' con voz en espanol -- el TTS suele "
+                     "pronunciarla mal, considera un sinonimo (ver memoria "
+                     "voz-espanol-impixxel).")
+    # heuristica barata: alguna palabra que empiece en mayuscula despues de la
+    # primera palabra del titulo (nombre propio/institucion), sin serlo TODAS
+    # las palabras (titulo en Title Case no cuenta como señal)
+    words = title.split()
+    if len(words) > 1:
+        capitalized = sum(1 for w in words[1:] if w[:1].isupper())
+        if capitalized == 0:
+            log("lint", "AVISO: el titulo no parece nombrar a nadie/nada propio "
+                        "(antagonista, institucion, figura famosa) -- esa señal "
+                        "correlaciono con 1000+ vistas en HiddenFacts, considera "
+                        "agregarla si el hecho real lo permite (ver memoria "
+                        "titulo-antagonista-famoso).")
 
 
 def _rate_to_kokoro_speed(rate: str) -> float:
@@ -626,17 +701,11 @@ def _character_slug(name: str) -> str:
 
 
 def _load_characters_manifest() -> dict:
-    if CHARACTERS_MANIFEST.exists():
-        try:
-            return json.loads(CHARACTERS_MANIFEST.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
-    return {}
+    return _load_json(CHARACTERS_MANIFEST, {})
 
 
 def _save_characters_manifest(data: dict) -> None:
-    CHARACTERS_DIR.mkdir(parents=True, exist_ok=True)
-    CHARACTERS_MANIFEST.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    _atomic_write_json(CHARACTERS_MANIFEST, data)
 
 
 def _get_named_character_sheet(name: str, phase: str, style_directive: str,
@@ -734,24 +803,17 @@ def _track_gemini_usage(kind: str, success: bool) -> None:
     para poder avisar gasto estimado y fallos por cuota sin depender de una API
     de balance que Gemini no expone al key de consumidor."""
     today = datetime.now().strftime("%Y-%m-%d")
-    data = {}
-    if USAGE_LOG_PATH.exists():
-        try:
-            data = json.loads(USAGE_LOG_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            data = {}
+    data = _load_json(USAGE_LOG_PATH, {})
     day = data.setdefault(today, {"images_ok": 0, "images_failed": 0,
                                    "songs_ok": 0, "songs_failed": 0})
     key = f"{'images' if kind == 'image' else 'songs'}_{'ok' if success else 'failed'}"
     day[key] += 1
-    USAGE_LOG_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    _atomic_write_json(USAGE_LOG_PATH, data)
 
 
 def _usage_summary_today() -> str:
     today = datetime.now().strftime("%Y-%m-%d")
-    if not USAGE_LOG_PATH.exists():
-        return ""
-    data = json.loads(USAGE_LOG_PATH.read_text(encoding="utf-8")).get(today)
+    data = _load_json(USAGE_LOG_PATH, {}).get(today)
     if not data:
         return ""
     cost = data["images_ok"] * COST_PER_IMAGE + data["songs_ok"] * COST_PER_SONG
@@ -1134,8 +1196,6 @@ def pick_sfx_cues(words: list[tuple[float, float, str]],
     if not sfx_files or not os.getenv("ANTHROPIC_API_KEY"):
         return []
 
-    import anthropic
-
     schema = {
         "type": "object",
         "properties": {
@@ -1189,23 +1249,13 @@ def pick_sfx_cues(words: list[tuple[float, float, str]],
         f"{json.dumps(catalog, ensure_ascii=False)}"
     )
     # max_tokens generoso: con thinking adaptive a veces el presupuesto se
-    # consume pensando y no deja espacio para el bloque de texto final
-    # (StopIteration silenciosa al buscarlo) -- visto en produccion.
-    client = anthropic.Anthropic()
-    data = None
-    for attempt in range(2):
-        try:
-            response = client.messages.create(
-                model=MODEL, max_tokens=4000, thinking={"type": "adaptive"},
-                output_config={"format": {"type": "json_schema", "schema": schema}},
-                messages=[{"role": "user", "content": prompt}],
-            )
-            text = next(b.text for b in response.content if b.type == "text")
-            data = json.loads(text)
-            break
-        except Exception as e:
-            log("sfx", f"Seleccion de SFX fallo intento {attempt + 1} ({type(e).__name__}): {e}")
-    if data is None:
+    # consume pensando y no deja espacio para el bloque de texto final --
+    # _claude_json_call ya convierte eso en un RuntimeError legible en vez
+    # de la StopIteration silenciosa que habia antes.
+    try:
+        data = with_retries(_claude_json_call, 4000, schema, prompt, attempts=2, delay=3.0)
+    except Exception as e:
+        log("sfx", f"Seleccion de SFX fallo: {type(e).__name__}: {e}")
         return []
 
     def _norm(w: str) -> str:
@@ -1289,7 +1339,7 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         music = _pick_music()
 
     watermark_filter = (
-        f"drawtext=fontfile='C\\:/Windows/Fonts/arialbd.ttf':text='{watermark}'"
+        f"drawtext=fontfile='C\\:/Windows/Fonts/arialbd.ttf':text='{_drawtext_escape(watermark)}'"
         ":fontcolor=white@0.55:fontsize=34:borderw=2:bordercolor=black@0.4"
         ":x=w-text_w-28:y=110,"
     ) if watermark else ""
@@ -1307,7 +1357,7 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         else:  # "middle"
             cta_start = max(audio_dur / 2 - cta_dur / 2, 0)
         cta_end = cta_start + cta_dur
-        safe_text = cta_text.replace("'", "’").replace(":", "\\:")
+        safe_text = _drawtext_escape(cta_text)
         cta_filter = (
             f"drawtext=fontfile='C\\:/Windows/Fonts/arialbd.ttf':text='{safe_text}'"
             ":fontcolor=white:fontsize=44:borderw=3:bordercolor=black@0.6"
@@ -1478,14 +1528,25 @@ def main() -> int:
         print("ERROR: falta GEMINI_API_KEY. Consiguela gratis en https://aistudio.google.com/apikey")
         return 1
 
-    out_dir = OUTPUT_ROOT / f"{date.today().isoformat()}-{slugify(topic)}"
+    base_slug = f"{date.today().isoformat()}-{slugify(topic)}"
+    out_dir = OUTPUT_ROOT / base_slug
+    # si la carpeta ya existe y tiene un video renderizado, es una corrida
+    # DISTINTA con el mismo titulo el mismo dia (ej. mismo guion re-generado
+    # con --cta-position distinto) -- usar un sufijo incremental en vez de
+    # pisar voice.mp3/clips/video.mp4 de la corrida anterior (bug real: las
+    # 3 variantes de CTA de Coca-Cola se pisaban entre si sin esto)
+    suffix = 2
+    while (out_dir / "video.mp4").exists():
+        out_dir = OUTPUT_ROOT / f"{base_slug}-{suffix}"
+        suffix += 1
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "script.json").write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    _atomic_write_json(out_dir / "script.json", data)
 
     media_source = "nanobanana" if args.nanobanana else ("gradient" if args.no_pexels else "pexels")
 
     try:
         _check_pacing(data["script"])
+        _check_script_lint(data["script"], data.get("title", ""), args.voice)
         audio_path, words = with_retries(generate_audio, data["script"], args.voice, args.rate, out_dir)
         ass_path = generate_subtitles(words, out_dir)
 

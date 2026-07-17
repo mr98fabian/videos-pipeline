@@ -12,8 +12,13 @@ import argparse
 import csv
 import json
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parent
 LOG_PATH = ROOT / "video_log.csv"
@@ -35,7 +40,7 @@ def _video_duration(video_path: Path) -> str:
         out = subprocess.run(
             ["ffprobe", "-v", "error", "-show_entries", "format=duration",
              "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)],
-            capture_output=True, text=True, check=True,
+            capture_output=True, text=True, check=True, timeout=30,
         ).stdout.strip()
         return f"{float(out):.1f}"
     except Exception:
@@ -94,7 +99,9 @@ def log_video(output_dir: str | Path, video_id: str, privacy: str = "unlisted",
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        epilog="Si video_id empieza con '-' (ej. -abc123), antepone '--' para que "
+               "argparse no lo interprete como flag: py track_video.py <dir> -- -abc123")
     parser.add_argument("output_dir")
     parser.add_argument("video_id")
     parser.add_argument("--privacy", default="unlisted")

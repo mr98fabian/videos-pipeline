@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -16,10 +18,44 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
+
+# Windows con tarea programada suele heredar stdout en cp1252; un titulo/comentario
+# con emoji o caracter fuera de ese charset lanza UnicodeEncodeError al imprimir.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parent
 CLIENT_SECRET_PATH = ROOT / "client_secret.json"
+
+
+def _parse_yt_time(s: str) -> datetime:
+    """Parsea un timestamp de la API de YouTube ('...Z') a datetime aware UTC.
+    Unifica las 3 copias sueltas de '.replace(\"Z\",\"+00:00\")'."""
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+def _yt_execute(request, tries: int = 3, delay: float = 5.0):
+    """Ejecuta un request de googleapiclient con reintento/backoff ante errores
+    transitorios (429 cuota, 500/503 del lado de Google) -- antes cualquier
+    .execute() propagaba el HttpError crudo en el primer fallo, incluso cuando
+    reintentar unos segundos despues suele resolverlo solo."""
+    last_exc: Exception | None = None
+    for attempt in range(1, tries + 1):
+        try:
+            return request.execute()
+        except HttpError as e:
+            status = getattr(e, "status_code", None) or getattr(e.resp, "status", None)
+            transient = status in (403, 429, 500, 503)
+            last_exc = e
+            if not transient or attempt == tries:
+                raise
+            print(f"[retry] YouTube API {status} (intento {attempt}/{tries}), "
+                  f"reintento en {delay:.0f}s...")
+            time.sleep(delay)
+    raise last_exc
 
 SCOPES = [
     "https://www.googleapis.com/auth/youtube",
@@ -87,19 +123,20 @@ def _effective_publish_times(youtube) -> list[datetime]:
     en un canal con >50 videos historicos puede devolver los mas VIEJOS y
     omitir los ultimos subidos -- justo los que este chequeo necesita ver
     (bug real detectado: Yasuo/Darius/Ping9 no aparecian en la lista)."""
-    resp = youtube.search().list(part="id", forMine=True, type="video",
-                                  order="date", maxResults=50).execute()
-    ids = [it["id"]["videoId"] for it in resp.get("items", [])]
+    resp = _yt_execute(youtube.search().list(part="id", forMine=True, type="video",
+                                              order="date", maxResults=50))
+    ids = [it["id"]["videoId"] for it in resp.get("items", []) if "videoId" in it.get("id", {})]
     if not ids:
         return []
-    resp = youtube.videos().list(part="snippet,status", id=",".join(ids)).execute()
+    resp = _yt_execute(youtube.videos().list(part="snippet,status", id=",".join(ids)))
     times = []
-    for it in resp["items"]:
-        status = it["status"]
-        if status["privacyStatus"] == "public":
-            times.append(datetime.fromisoformat(it["snippet"]["publishedAt"].replace("Z", "+00:00")))
+    for it in resp.get("items", []):
+        status = it.get("status", {})
+        snippet = it.get("snippet", {})
+        if status.get("privacyStatus") == "public" and snippet.get("publishedAt"):
+            times.append(_parse_yt_time(snippet["publishedAt"]))
         elif status.get("publishAt"):
-            times.append(datetime.fromisoformat(status["publishAt"].replace("Z", "+00:00")))
+            times.append(_parse_yt_time(status["publishAt"]))
     return times
 
 
@@ -186,8 +223,18 @@ def upload_video(video_path: str | Path, title: str, description: str,
     media = MediaFileUpload(str(video_path), chunksize=-1, resumable=True, mimetype="video/mp4")
     request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
     response = None
+    upload_retries = 0
     while response is None:
-        progress, response = request.next_chunk()
+        try:
+            progress, response = request.next_chunk()
+        except HttpError as e:
+            status = getattr(e, "status_code", None) or getattr(e.resp, "status", None)
+            upload_retries += 1
+            if status not in (403, 429, 500, 503) or upload_retries > 3:
+                raise
+            print(f"[retry] upload chunk fallo ({status}), reintento {upload_retries}/3...")
+            time.sleep(5)
+            continue
         if progress:
             print(f"[upload] {int(progress.progress() * 100)}%")
     video_id = response["id"]
@@ -204,14 +251,18 @@ def update_video(video_id: str, title: str | None = None, description: str | Non
     """Actualiza titulo/descripcion/tags de un video ya subido (ej. tras afinar
     con vidIQ despues de la subida)."""
     youtube = get_youtube_client(account)
-    current = youtube.videos().list(part="snippet", id=video_id).execute()["items"][0]["snippet"]
+    resp = _yt_execute(youtube.videos().list(part="snippet", id=video_id))
+    items = resp.get("items", [])
+    if not items:
+        raise SystemExit(f"No se encontro el video {video_id} (id invalido o sin permisos)")
+    current = items[0]["snippet"]
     if title is not None:
         current["title"] = title[:100]
     if description is not None:
         current["description"] = description
     if tags is not None:
         current["tags"] = tags
-    youtube.videos().update(part="snippet", body={"id": video_id, "snippet": current}).execute()
+    _yt_execute(youtube.videos().update(part="snippet", body={"id": video_id, "snippet": current}))
     print(f"[update] listo: https://youtube.com/watch?v={video_id}")
 
 
@@ -223,7 +274,7 @@ def create_playlist(title: str, description: str = "", privacy_status: str = "pu
         "snippet": {"title": title[:150], "description": description},
         "status": {"privacyStatus": privacy_status},
     }
-    resp = youtube.playlists().insert(part="snippet,status", body=body).execute()
+    resp = _yt_execute(youtube.playlists().insert(part="snippet,status", body=body))
     print(f"[playlist] creada: {title} ({resp['id']})")
     return resp["id"]
 
@@ -236,13 +287,16 @@ def add_video_to_playlist(playlist_id: str, video_id: str, account: str = "defau
             "resourceId": {"kind": "youtube#video", "videoId": video_id},
         }
     }
-    youtube.playlistItems().insert(part="snippet", body=body).execute()
+    _yt_execute(youtube.playlistItems().insert(part="snippet", body=body))
 
 
 def get_channel_id(account: str = "default") -> str:
     youtube = get_youtube_client(account)
-    resp = youtube.channels().list(part="id", mine=True).execute()
-    return resp["items"][0]["id"]
+    resp = _yt_execute(youtube.channels().list(part="id", mine=True))
+    items = resp.get("items", [])
+    if not items:
+        raise SystemExit(f"Cuenta '{account}' sin canal asociado (revisar autorizacion)")
+    return items[0]["id"]
 
 
 def channel_report(start_date: str, end_date: str, channel_id: str | None = None,
@@ -252,13 +306,13 @@ def channel_report(start_date: str, end_date: str, channel_id: str | None = None
     likes, comments, shares."""
     analytics = get_analytics_client(account)
     cid = channel_id or get_channel_id(account)
-    resp = analytics.reports().query(
+    resp = _yt_execute(analytics.reports().query(
         ids=f"channel=={cid}",
         startDate=start_date,
         endDate=end_date,
         metrics="views,estimatedMinutesWatched,averageViewDuration,"
                 "subscribersGained,likes,comments,shares",
-    ).execute()
+    ))
     headers = [h["name"] for h in resp.get("columnHeaders", [])]
     row = resp.get("rows", [[0] * len(headers)])[0]
     return dict(zip(headers, row))
@@ -269,7 +323,7 @@ def top_videos(start_date: str, end_date: str, max_results: int = 10,
     """Videos ordenados por views en el rango de fechas, con retencion promedio."""
     analytics = get_analytics_client(account)
     cid = channel_id or get_channel_id(account)
-    resp = analytics.reports().query(
+    resp = _yt_execute(analytics.reports().query(
         ids=f"channel=={cid}",
         startDate=start_date,
         endDate=end_date,
@@ -277,7 +331,7 @@ def top_videos(start_date: str, end_date: str, max_results: int = 10,
         dimensions="video",
         sort="-views",
         maxResults=max_results,
-    ).execute()
+    ))
     headers = [h["name"] for h in resp.get("columnHeaders", [])]
     return [dict(zip(headers, row)) for row in resp.get("rows", [])]
 
@@ -293,14 +347,14 @@ def retention_curve(video_id: str, start_date: str = "2020-01-01",
     from datetime import date
     analytics = get_analytics_client(account)
     cid = get_channel_id(account)
-    resp = analytics.reports().query(
+    resp = _yt_execute(analytics.reports().query(
         ids=f"channel=={cid}",
         startDate=start_date,
         endDate=end_date or date.today().isoformat(),
         metrics="audienceWatchRatio,relativeRetentionPerformance",
         dimensions="elapsedVideoTimeRatio",
         filters=f"video=={video_id}",
-    ).execute()
+    ))
     headers = [h["name"] for h in resp.get("columnHeaders", [])]
     rows = [dict(zip(headers, r)) for r in resp.get("rows", [])]
     if not rows:
@@ -337,14 +391,17 @@ def add_comment(video_id: str, text: str, account: str = "default") -> str:
             "topLevelComment": {"snippet": {"textOriginal": text}},
         }
     }
-    resp = youtube.commentThreads().insert(part="snippet", body=body).execute()
+    resp = _yt_execute(youtube.commentThreads().insert(part="snippet", body=body))
     cid = resp["id"]
     print(f"[comment] publicado en {video_id} ({cid}) -- fijalo manual en Studio")
     return cid
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="YouTube upload / analytics")
+    parser = argparse.ArgumentParser(
+        description="YouTube upload / analytics",
+        epilog="Si un video_id empieza con '-', antepone '--' antes: "
+               "py youtube_api.py update -- -abc123 --title '...'")
     parser.add_argument("--account", default="default",
                          help="'default' = HiddenFacts, 'impixxel' = canal ImPixxel "
                               "(usa su propio token_<account>.json)")
