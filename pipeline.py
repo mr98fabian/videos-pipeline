@@ -499,12 +499,19 @@ _CAP_ACTIVE = r"{\c&H00FFFF&}"
 _CAP_WHITE = r"{\c&HFFFFFF&}"
 
 
-def generate_subtitles(words: list[tuple[float, float, str]], out_dir: Path) -> Path:
+def generate_subtitles(words: list[tuple[float, float, str]], out_dir: Path,
+                       lead_ms: int = 0) -> Path:
     # Karaoke palabra-por-palabra: agrupa en bloques cortos (max 3 palabras / 18
     # chars, texto-como-imagen: lectura instantanea sin "leer" gramaticalmente)
     # para conservar contexto de 2 lineas, pero emite UN evento por palabra con
     # la activa resaltada en amarillo -- fija la mirada (clave con ~50% viendo
     # en mute) y sube la retencion en Shorts.
+    if lead_ms:
+        # adelanta el texto respecto al audio (test: el ojo "lee" el gancho antes
+        # de que se oiga, aunque la mayoria vea en mute) -- no afecta el audio.
+        lead = lead_ms / 1000
+        words = [(max(ws - lead, 0.0), max(we - lead, 0.0), w) for ws, we, w in words]
+
     chunks: list[list[tuple[float, float, str]]] = []
     buf: list[tuple[float, float, str]] = []
     for w in words:
@@ -1292,12 +1299,23 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
              durations: list[float] | None = None,
              watermark: str | None = "ImPixxel",
              cta_text: str | None = None,
-             cta_position: str | None = None) -> Path:
+             cta_position: str | None = None,
+             intro_stinger: bool = False,
+             split_first_clip: bool = False) -> Path:
     """durations: duracion por escena (de _scene_boundaries, cortes en fin de
     frase). Sin ella, reparto uniforme (comportamiento anterior)."""
     audio_dur = ffprobe_duration(audio)
     if durations is None:
         durations = [audio_dur / len(clips)] * len(clips)
+
+    if split_first_clip and durations[0] > 1.0:
+        # parte la escena 1 en dos mitades del mismo clip -- un corte extra en
+        # el primer segundo simula "mas camaras"/ritmo, sin generar media nueva
+        # (test: el corte en si es una senal de "esto se mueve rapido").
+        half = durations[0] / 2
+        clips = [clips[0], clips[0], *clips[1:]]
+        durations = [half, half, *durations[1:]]
+
     norm_paths = []
 
     for i, clip in enumerate(clips):
@@ -1325,6 +1343,18 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
     # cwd = out_dir con rutas relativas: evita escapar rutas de Windows en el filtro ass
     final = out_dir / "video.mp4"
     sfx_cues = sfx_cues or []
+
+    stinger_path = None
+    if intro_stinger:
+        # gancho auditivo en el frame 0, independiente de trigger_word (que
+        # nunca dispara nada antes de que se diga la primera palabra) -- test
+        # de si un whoosh/riser generico al inicio baja el swipe inmediato.
+        candidates = [p for p in SFX_DIR.iterdir()
+                      if p.suffix.lower() in (".mp3", ".wav")
+                      and re.search(r"whoosh|riser|swoosh", p.name, re.I)] if SFX_DIR.exists() else []
+        if candidates:
+            import random
+            stinger_path = random.choice(candidates)
 
     music = None
     gemini_key = os.getenv("GEMINI_API_KEY", "")
@@ -1383,6 +1413,12 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         sfx_idxs.append(next_idx)
         next_idx += 1
 
+    stinger_idx = None
+    if stinger_path:
+        inputs += ["-i", str(stinger_path)]
+        stinger_idx = next_idx
+        next_idx += 1
+
     audio_labels = []
     audio_filters = ""
     if music:
@@ -1405,6 +1441,10 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         ms = int(ts * 1000)
         audio_filters += f"[{idx}:a]adelay={ms}|{ms},volume=0.2[sfx{k}];"
         audio_labels.append(f"[sfx{k}]")
+
+    if stinger_idx is not None:
+        audio_filters += f"[{stinger_idx}:a]atrim=0:0.6,volume=0.25[stinger];"
+        audio_labels.append("[stinger]")
 
     audio_filters += (
         f"{''.join(audio_labels)}amix=inputs={len(audio_labels)}:"
@@ -1476,6 +1516,15 @@ def main() -> int:
     parser.add_argument("--punch-index", type=int, default=None, metavar="N",
                         help="Escena (0-indexed) que recibe el zoom 'golpe' para acentuar el "
                              "remate/giro comico. Por defecto la penultima escena.")
+    parser.add_argument("--intro-stinger", action="store_true",
+                        help="Agrega un whoosh/riser generico en el frame 0 (gancho auditivo "
+                             "independiente de la narracion). Test de primeros 2 segundos.")
+    parser.add_argument("--subs-lead-ms", type=int, default=0, metavar="MS",
+                        help="Adelanta el texto de los subtitulos MS milisegundos respecto al "
+                             "audio (no afecta el audio). Test de primeros 2 segundos.")
+    parser.add_argument("--split-first-clip", action="store_true",
+                        help="Corta la escena 1 en dos mitades (mismo clip) para agregar un "
+                             "corte extra de ritmo en el primer segundo. Test de primeros 2 segundos.")
     parser.add_argument("--ideas", action="store_true",
                         help="Genera 5 ideas de tema nuevas (usando topics.txt como referencia) y termina")
     parser.add_argument("--auto", action="store_true",
@@ -1530,16 +1579,24 @@ def main() -> int:
 
     base_slug = f"{date.today().isoformat()}-{slugify(topic)}"
     out_dir = OUTPUT_ROOT / base_slug
-    # si la carpeta ya existe y tiene un video renderizado, es una corrida
-    # DISTINTA con el mismo titulo el mismo dia (ej. mismo guion re-generado
-    # con --cta-position distinto) -- usar un sufijo incremental en vez de
-    # pisar voice.mp3/clips/video.mp4 de la corrida anterior (bug real: las
-    # 3 variantes de CTA de Coca-Cola se pisaban entre si sin esto)
+    # si la carpeta ya existe (o se crea al mismo tiempo por otra corrida en
+    # paralelo), es una corrida DISTINTA con el mismo titulo el mismo dia (ej.
+    # mismo guion re-generado con --cta-position distinto) -- usar un sufijo
+    # incremental en vez de pisar voice.mp3/clips/video.mp4 de la otra corrida.
+    # mkdir(exist_ok=False) es atomico a nivel de SO: si dos procesos compiten
+    # por el mismo out_dir, solo uno gana la carpeta base y el otro reintenta
+    # con el siguiente sufijo (bug real: dos corridas lanzadas en paralelo
+    # esta sesion pasaron el chequeo "existe video.mp4" ANTES de que ninguna
+    # hubiera escrito el archivo, y terminaron pisandose los inputs a mitad
+    # de render).
     suffix = 2
-    while (out_dir / "video.mp4").exists():
-        out_dir = OUTPUT_ROOT / f"{base_slug}-{suffix}"
-        suffix += 1
-    out_dir.mkdir(parents=True, exist_ok=True)
+    while True:
+        try:
+            out_dir.mkdir(parents=True, exist_ok=False)
+            break
+        except FileExistsError:
+            out_dir = OUTPUT_ROOT / f"{base_slug}-{suffix}"
+            suffix += 1
     _atomic_write_json(out_dir / "script.json", data)
 
     media_source = "nanobanana" if args.nanobanana else ("gradient" if args.no_pexels else "pexels")
@@ -1548,7 +1605,7 @@ def main() -> int:
         _check_pacing(data["script"])
         _check_script_lint(data["script"], data.get("title", ""), args.voice)
         audio_path, words = with_retries(generate_audio, data["script"], args.voice, args.rate, out_dir)
-        ass_path = generate_subtitles(words, out_dir)
+        ass_path = generate_subtitles(words, out_dir, lead_ms=args.subs_lead_ms)
 
         audio_dur = ffprobe_duration(audio_path)
         durations = _scene_boundaries(words, args.clips, audio_dur)
@@ -1562,7 +1619,9 @@ def main() -> int:
         final = assemble(clips, audio_path, ass_path, out_dir,
                           music_mood=data.get("music_mood"), sfx_cues=sfx_cues,
                           durations=durations, watermark=args.watermark or None,
-                          cta_text=args.cta_text, cta_position=args.cta_position)
+                          cta_text=args.cta_text, cta_position=args.cta_position,
+                          intro_stinger=args.intro_stinger,
+                          split_first_clip=args.split_first_clip)
     except Exception:
         if args.auto:
             _log_auto_failure(topic)
