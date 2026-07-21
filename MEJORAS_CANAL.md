@@ -2,6 +2,10 @@
 
 Basado en: datos reales de tu YouTube Studio (10 jul 2026), análisis en vivo del canal Kerios (643K subs, tu benchmark ES de LoL), los canales que ve tu público (BekindXP, MisrraVB 267K, itero.gg 40K, Th3Antonio 178K) y benchmarks 2026 de Shorts.
 
+## ACCIÓN URGENTE (20 jul 2026)
+
+**Cortar el gasto en ads ya mismo.** El usuario fijó la regla el 16 jul de parar promociones al llegar a 1,000 subs; el canal está en 1,080 y el % de tráfico pagado subió (22%→36.8%) en vez de bajar. Ver `PROGRESO_CANAL.md` fila 20 jul para el detalle completo (incluye un salto anómalo de suscriptores 11-17 jul sin causa confirmada, no extrapolable).
+
 ## Diagnóstico en una línea
 
 **El algoritmo ya te encontró (31.3K vistas, 10.6K únicos/mes); nadie sabe quién eres cuando el video termina.** 99.6% público nuevo, 97.1% del watch time de no-suscritos, retorno "Bajo" en TODOS tus videos.

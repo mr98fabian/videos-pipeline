@@ -103,7 +103,21 @@ def get_analytics_client(account: str = "default"):
     return build("youtubeAnalytics", "v2", credentials=_get_credentials(account))
 
 
-MIN_PUBLISH_GAP_MINUTES = 30  # ver memoria espaciado-publicacion-shorts: <20min aplasta vistas
+MIN_PUBLISH_GAP_MINUTES = 3 * 60  # 3h. Historial de cambios (19 jul 2026):
+# 1) El 18 jul se subieron 12 videos en un dia (35min de separacion) y 5 de esos 12
+#    cayeron en 0-view jail real (2-5 vistas) -- se leyo como "la rafaga mata las vistas"
+#    y el gap subio a 20h.
+# 2) Pero revisando el MISMO lote con mas cuidado: los otros 2 videos de esa tanda
+#    (_2b0cUyn4OY y xz362sxj_sA), tambien 35min entre si, MISMO dia, rompieron 1K
+#    (1495 y 1226 vistas) -- contradice que la rafaga por si sola sea la causa
+#    determinista. Con n=12 es mas probable que sea varianza normal de muestra chica
+#    (formato ultra-corto de 6-8s, primeras pruebas de ese formato) que un efecto de
+#    espaciado. 20h era mas conservador de lo que los datos sostienen.
+# 3) Bajado a 3h: suficiente para no repetir el patron extremo de "12 en 35min" (que
+#    de todas formas fallo en su mayoria), pero permite probar varios formatos nuevos
+#    por dia (ver FORMATOS_A_PROBAR.md) en vez de 1 solo -- prioridad actual. Sirve
+#    ademas para mapear el gap exacto real entre publicaciones con datos limpios en
+#    vez de asumirlo.
 # MAX_PUBLIC_PER_DAY (cap fijo de 3/dia) RETIRADO el 17 jul 2026: probamos deliberadamente
 # un 4to video de HiddenFacts (09:30 UTC, dentro de la franja buena) y funciono normal
 # (574 vistas) -- el cap nunca fue real, estaba confundido con la franja horaria (ver
@@ -194,13 +208,21 @@ def next_available_slot(youtube, after: datetime | None = None) -> datetime:
 def upload_video(video_path: str | Path, title: str, description: str,
                   tags: list[str] | None = None, category_id: str = "27",
                   privacy_status: str = "unlisted", account: str = "default",
-                  publish_at: str | None = None) -> str:
+                  publish_at: str | None = None, default_language: str | None = None) -> str:
     """Sube un video. privacy_status: 'private' | 'unlisted' | 'public'.
     publish_at: timestamp ISO 8601 UTC (ej. '2026-07-16T23:00:00Z') para publicacion
     programada -- YouTube exige privacyStatus='private' cuando se usa publishAt;
     el video se hace publico solo el mismo automaticamente a esa hora.
     account: 'default' (HiddenFacts) o 'impixxel' (u otro canal ya autorizado
-    con --account, ver _token_path). Devuelve el video_id."""
+    con --account, ver _token_path). Devuelve el video_id.
+    default_language: idioma del video/audio (ej. 'en', 'es-US'). Si se omite,
+    se infiere del account ('default'->'en', 'impixxel'->'es') -- bug real (20
+    jul 2026): el default de idioma del CANAL HiddenFacts en Studio estaba en
+    'es-US' pese a ser 100% ingles, y como el video nunca mandaba defaultLanguage
+    explicito, cada subida heredaba ese default incorrecto silenciosamente.
+    Fijarlo aca por video evita depender de la configuracion del canal en Studio."""
+    if default_language is None:
+        default_language = "es" if account == "impixxel" else "en"
     youtube = get_youtube_client(account)
     if publish_at or privacy_status == "public":
         target = (datetime.fromisoformat(publish_at.replace("Z", "+00:00"))
@@ -211,12 +233,19 @@ def upload_video(video_path: str | Path, title: str, description: str,
                      "selfDeclaredMadeForKids": False}
     if publish_at:
         video_status["publishAt"] = publish_at
+    # si se olvida --tags, no dejar el video sin NINGUNA tag (bug real: 8 videos
+    # de esta sesion se subieron con tags=[] al llamar upload sin --tags -- sin
+    # tags YouTube tiene menos senal textual para clasificarlo). Fallback base
+    # minimo, no sustituye tags especificas del tema pero evita el peor caso.
+    effective_tags = tags if tags else ["hiddenfacts", "history", "shorts", "truestory"]
     body = {
         "snippet": {
             "title": title[:100],
             "description": description,
-            "tags": tags or [],
+            "tags": effective_tags,
             "categoryId": category_id,  # 27 = Education
+            "defaultLanguage": default_language,
+            "defaultAudioLanguage": default_language,
         },
         "status": video_status,
     }
@@ -336,6 +365,82 @@ def top_videos(start_date: str, end_date: str, max_results: int = 10,
     return [dict(zip(headers, row)) for row in resp.get("rows", [])]
 
 
+# Orden importa: primer match gana. Palabras en minuscula, buscadas como
+# substring del titulo+descripcion en minuscula -- clasificacion best-effort,
+# no perfecta (ver track_video.py log_video para el fallback si no matchea
+# ninguna).
+PLAYLIST_KEYWORDS: dict[str, list[str]] = {
+    "PLRizVB4PvxnQ": [  # Space Race Secrets
+        "space", "nasa", "soviet space", "laika", "moon landing", "apollo", "cosmonaut",
+    ],
+    "PLTV_oX18Ko_k": [  # WWII Secrets & Spies
+        "nazi", "hitler", "wwii", "world war ii", "d-day", "codebreak", "bletchley",
+        "rommel", "commando", "turing", "ghost army", "gestapo",
+    ],
+    "PLT5eTA5TAYM0": [  # Cold War Secrets
+        "cold war", "soviet", "cia", "kgb", "stalin", "mkultra", "manhattan project",
+        "mafia", "northwoods", "cuba", "atomic", "nuclear",
+    ],
+    "PLeyjdSceljwo": [  # Silenced Truths & Hidden Heroes
+        "rejected", "sexis", "radium", "poisoning its workers", "just an actress",
+        "freed", "her own freedom",
+    ],
+    "PLWJd-A6OnC_A": [  # American Heroes & Hidden Genius
+        "american soldier", "medal of honor", "american inventor", "american teenager",
+        "a company tried to steal", "farm boy",
+    ],
+    "PLKfjliWPUzKI": [  # Legendary Cons & Unsolved Mysteries
+        "con man", "hoax", "scam", "scandal", "mystery", "secret recipe",
+        "vikings", "myth", "fraud", "sold an entire country", "didn't exist",
+        "invented a scandal", "exposed him",
+    ],
+}
+
+
+def classify_playlist(title: str, description: str = "") -> str | None:
+    """Devuelve el playlist_id que matchea (primer hit por orden de
+    PLAYLIST_KEYWORDS), o None si ninguna palabra clave aparece."""
+    text = f"{title} {description}".lower()
+    for playlist_id, keywords in PLAYLIST_KEYWORDS.items():
+        if any(kw in text for kw in keywords):
+            return playlist_id
+    return None
+
+
+def auto_add_to_playlist(video_id: str, title: str, description: str = "",
+                          account: str = "default") -> str | None:
+    """Clasifica por keywords y agrega el video a la playlist que matchea.
+    Devuelve el playlist_id usado, o None si no matcheo ninguna (queda para
+    asignacion manual)."""
+    playlist_id = classify_playlist(title, description)
+    if playlist_id is None:
+        print(f"[playlist] AVISO: '{title[:50]}...' no matcheo ninguna playlist -- asignar manual")
+        return None
+    add_video_to_playlist(playlist_id, video_id, account=account)
+    print(f"[playlist] agregado a {playlist_id}")
+    return playlist_id
+
+
+def search_terms(start_date: str, end_date: str, video_id: str | None = None,
+                  max_results: int = 15, account: str = "default") -> list[list]:
+    """Terminos de busqueda de YouTube que generaron vistas (canal completo, o
+    de UN video si se pasa video_id). No existe metrica de impresiones/CTR en
+    la Analytics API publica (confirmado con error 400 'Unknown identifier'),
+    pero insightTrafficSourceDetail filtrado a YT_SEARCH si funciona -- es la
+    misma tabla que Studio muestra en Alcance > Terminos de busqueda."""
+    analytics = get_analytics_client(account)
+    cid = get_channel_id(account)
+    filters = "insightTrafficSourceType==YT_SEARCH"
+    if video_id:
+        filters += f";video=={video_id}"
+    resp = _yt_execute(analytics.reports().query(
+        ids=f"channel=={cid}", startDate=start_date, endDate=end_date,
+        metrics="views", dimensions="insightTrafficSourceDetail",
+        filters=filters, sort="-views", maxResults=max_results,
+    ))
+    return resp.get("rows", [])
+
+
 def retention_curve(video_id: str, start_date: str = "2020-01-01",
                      end_date: str | None = None, account: str = "default") -> dict:
     """Curva de retencion de audiencia de UN video: para cada punto del video
@@ -436,6 +541,13 @@ if __name__ == "__main__":
     p_ret = sub.add_parser("retention")
     p_ret.add_argument("video_id")
 
+    p_st = sub.add_parser("search-terms")
+    p_st.add_argument("--start", required=True, help="YYYY-MM-DD")
+    p_st.add_argument("--end", required=True, help="YYYY-MM-DD")
+    p_st.add_argument("--video-id", default=None,
+                       help="Limita a un video; sin esto es el canal completo")
+    p_st.add_argument("--n", type=int, default=15)
+
     p_com = sub.add_parser("comment")
     p_com.add_argument("video_id")
     p_com.add_argument("--text", required=True)
@@ -458,6 +570,10 @@ if __name__ == "__main__":
                           indent=2, ensure_ascii=False))
     elif args.cmd == "retention":
         print(json.dumps(retention_curve(args.video_id, account=args.account),
+                          indent=2, ensure_ascii=False))
+    elif args.cmd == "search-terms":
+        print(json.dumps(search_terms(args.start, args.end, video_id=args.video_id,
+                                       max_results=args.n, account=args.account),
                           indent=2, ensure_ascii=False))
     elif args.cmd == "comment":
         add_comment(args.video_id, args.text, account=args.account)

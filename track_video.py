@@ -66,10 +66,19 @@ def _migrate_if_needed() -> None:
 
 def log_video(output_dir: str | Path, video_id: str, privacy: str = "unlisted",
               keyword_score: float | None = None, title_score: float | None = None,
-              outlier_reference: str | None = None) -> None:
+              outlier_reference: str | None = None, account: str = "default") -> None:
     out_dir = Path(output_dir)
     script_data = json.loads((out_dir / "script.json").read_text(encoding="utf-8"))
     title = (out_dir / "title.txt").read_text(encoding="utf-8").strip()
+
+    if account == "default":
+        # solo HiddenFacts tiene playlists tematicas hoy; ImPixxel no las usa
+        try:
+            import youtube_api as y
+            desc = script_data.get("description", "")
+            y.auto_add_to_playlist(video_id, title, desc, account=account)
+        except Exception as e:
+            print(f"[playlist] fallo la asignacion automatica: {e}")
 
     _migrate_if_needed()
 
@@ -108,7 +117,9 @@ if __name__ == "__main__":
     parser.add_argument("--keyword-score", type=float, default=None)
     parser.add_argument("--title-score", type=float, default=None)
     parser.add_argument("--outlier-ref", default=None)
+    parser.add_argument("--account", default="default",
+                         help="'default' = HiddenFacts (con playlists), 'impixxel' = sin playlists")
     args = parser.parse_args()
     log_video(args.output_dir, args.video_id, args.privacy,
               keyword_score=args.keyword_score, title_score=args.title_score,
-              outlier_reference=args.outlier_ref)
+              outlier_reference=args.outlier_ref, account=args.account)

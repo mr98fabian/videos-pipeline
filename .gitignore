@@ -32,3 +32,8 @@ venv/
 
 # Herramienta embebida con su propio repo git anidado (Kokoro TTS) — no la trackeamos
 tools/kokoro_tts/
+
+# Remotion (motion_graphics/): node_modules se regenera con npm install, no se trackea
+motion_graphics/node_modules/
+motion_graphics/public/collage_photo.png
+motion_graphics/public/scene_sticker_*.png
