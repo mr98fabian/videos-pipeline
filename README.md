@@ -72,7 +72,7 @@ una tarea programada de Windows (ejemplo: todos los días a las 7:00 AM):
 
 ```powershell
 $action = New-ScheduledTaskAction -Execute "powershell.exe" `
-  -Argument '-ExecutionPolicy Bypass -File "C:\Users\Khine\Desktop\Workspace\Proyectos_Software\Videos\scripts\run_auto.ps1"'
+  -Argument '-ExecutionPolicy Bypass -File "<ruta-local-del-proyecto>\scripts\run_auto.ps1"'
 $trigger = New-ScheduledTaskTrigger -Daily -At 7:00AM
 Register-ScheduledTask -TaskName "FacelessShorts-Daily" -Action $action -Trigger $trigger `
   -Description "Genera 1 YouTube Short automatico por dia"
@@ -85,4 +85,4 @@ Para quitarla: `Unregister-ScheduledTask -TaskName "FacelessShorts-Daily" -Confi
 - Voces alternativas: `py -m edge_tts --list-voices | findstr en-US`
 - La subida automática vía YouTube Data API deja los videos en privado hasta pasar
   la auditoría de Google; por eso el MVP termina en carpeta local (publicación manual ~30s).
-- Blueprint y decisiones del proyecto: `C:\Users\Khine\.claude\plans\quiero-crear-un-canal-fluttering-wadler.md`
+- Blueprint y decisiones del proyecto: `<ruta local a tus notas de planificacion>`

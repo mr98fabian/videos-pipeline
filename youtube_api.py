@@ -68,7 +68,7 @@ SCOPES = [
 
 def _token_path(account: str = "default") -> Path:
     """Cada canal (HiddenFacts, ImPixxel, ...) tiene su propio token, porque la
-    cuenta de Google mr98fabian@gmail.com administra varios canales/marca y
+    cuenta de Google [cuenta de Google del proyecto, ver .env local] administra varios canales/marca y
     cada autorizacion de YouTube API queda atada al canal elegido durante el
     consentimiento de Google, no a la cuenta en si."""
     name = "token.json" if account == "default" else f"token_{account}.json"

@@ -2134,7 +2134,7 @@ def _photo_sticker(query: str, clips_dir: Path, tag: str) -> str | None:
     out_path = MOTION_DIR / "public" / fname
     for i, cand in enumerate(candidates[:6]):
         raw_path = clips_dir / f"scene_raw_{tag}_{i}.jpg"
-        req = urllib.request.Request(cand["url"], headers={"User-Agent": "HiddenFactsBot/1.0 (mr98fabian@gmail.com)"})
+        req = urllib.request.Request(cand["url"], headers={"User-Agent": "HiddenFactsBot/1.0 (contact@example.com)"})
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 raw_path.write_bytes(resp.read())
@@ -2249,7 +2249,7 @@ def _wikimedia_commons_search(term: str, bias_portrait: bool = True) -> list[dic
     url = (f"https://commons.wikimedia.org/w/api.php?action=query&generator=search"
            f"&gsrsearch={q}&gsrnamespace=6&gsrlimit=12&prop=imageinfo"
            f"&iiprop=url|extmetadata|mime|size&format=json")
-    req = urllib.request.Request(url, headers={"User-Agent": "HiddenFactsBot/1.0 (mr98fabian@gmail.com)"})
+    req = urllib.request.Request(url, headers={"User-Agent": "HiddenFactsBot/1.0 (contact@example.com)"})
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.load(resp)
@@ -2360,7 +2360,7 @@ def add_real_photo_collage(video_path: Path, collage_subject: str, out_dir: Path
     # usuario pidio automatizacion 100%, ver HISTORIAL_MEJORAS.md 21 jul 2026).
     for i, cand in enumerate(candidates):
         raw_path = clips_dir / f"collage_raw_{i}.jpg"
-        req = urllib.request.Request(cand["url"], headers={"User-Agent": "HiddenFactsBot/1.0 (mr98fabian@gmail.com)"})
+        req = urllib.request.Request(cand["url"], headers={"User-Agent": "HiddenFactsBot/1.0 (contact@example.com)"})
         try:
             with urllib.request.urlopen(req, timeout=20) as resp:
                 raw_path.write_bytes(resp.read())
