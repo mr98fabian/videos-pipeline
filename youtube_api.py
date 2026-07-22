@@ -441,7 +441,8 @@ def video_metrics_batch(video_ids: list[str], start_date: str = "2015-01-01",
     analytics = get_analytics_client(account)
     cid = get_channel_id(account)
     end = end_date or date.today().isoformat()
-    base_metrics = "views,averageViewDuration,averageViewPercentage,likes,comments,subscribersGained,shares"
+    base_metrics = ("views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,"
+                     "likes,comments,subscribersGained,shares")
 
     out: dict[str, dict] = {}
     batch_size = 200  # limite prudente para el valor de filters=video==... (no documentado con precision)

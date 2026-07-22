@@ -32,8 +32,8 @@ OUT_PATH = Path(__file__).resolve().parent / "performance_report.csv"
 # columnas que vienen de la Analytics API (video_metrics_batch) -- se suman a
 # las de video_log.csv en el CSV final. impressions/impressionsClickThroughRate
 # pueden faltar si la cuenta/rango no las tiene disponibles.
-METRIC_FIELDS = ["views", "averageViewDuration", "averageViewPercentage", "likes",
-                  "comments", "subscribersGained", "shares",
+METRIC_FIELDS = ["views", "estimatedMinutesWatched", "averageViewDuration", "averageViewPercentage",
+                  "likes", "comments", "subscribersGained", "shares",
                   "impressions", "impressionsClickThroughRate"]
 
 
@@ -88,6 +88,15 @@ def print_insights(rows: list[dict]) -> None:
         return
 
     print(f"\n[insights] {len(scored)} videos con metricas de {len(rows)} en el log\n")
+
+    # 0. el video que mas minutos de visualizacion acumulo (metrica clave para
+    #    watch time / requisitos de monetizacion, distinta de "mas vistas")
+    with_minutes = [r for r in scored if _num(r, "estimatedMinutesWatched") is not None]
+    if with_minutes:
+        best = max(with_minutes, key=lambda r: _num(r, "estimatedMinutesWatched"))
+        print(f"  Mas minutos de visualizacion: '{best.get('title','')[:60]}' "
+              f"({best.get('video_id')}) -> {_num(best,'estimatedMinutesWatched'):,.0f} min, "
+              f"{_num(best,'views'):,.0f} vistas, {best.get('youtube_url','')}")
 
     # 1. retencion (averageViewPercentage) alta vs baja -- misma comparacion
     #    que el video de referencia (top 26 vs bottom 26 por avg view duration)
