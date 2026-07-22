@@ -30,6 +30,18 @@ from pathlib import Path
 
 import requests
 
+# bug real (22 jul 2026): esta faltando cargar el .env -- os.getenv leia solo
+# variables de entorno del proceso, nunca las del archivo .env (a diferencia
+# de pipeline.py, que si llama a load_dotenv()). Con GEMINI_API_KEY solo en
+# .env, --generate fallaba de entrada con "falta GEMINI_API_KEY" aunque
+# estuviera bien configurada.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 ROOT = Path(__file__).parent
 STICKERS_DIR = ROOT / "assets" / "stickers"
 MANIFEST_PATH = STICKERS_DIR / "manifest.json"
@@ -778,7 +790,7 @@ def prepare_render_cues(words: list[tuple[float, float, str]], public_dir: Path,
 
 # --------------------------------------------------------------- generacion
 
-def _generate_icon_image(prompt: str, api_key: str, attempts: int = 3) -> bytes | None:
+def _generate_icon_image_gemini(prompt: str, api_key: str, attempts: int = 3) -> bytes | None:
     full_prompt = prompt + STICKER_STYLE_SUFFIX
     for attempt in range(attempts):
         try:
@@ -806,6 +818,65 @@ def _generate_icon_image(prompt: str, api_key: str, attempts: int = 3) -> bytes 
     return None
 
 
+def _generate_icon_image_seedream(prompt: str, api_key: str, attempts: int = 3) -> bytes | None:
+    """Alternativa via Seedream (ByteDance) por PiAPI -- mismo patron que
+    _seedream_generate_image() en pipeline.py. Bug real (22 jul 2026): la
+    cuota gratuita de GEMINI_API_KEY para imagenes se agoto (0/200 stickers
+    generados, todo 429) mientras PIAPI_API_KEY seguia con cupo -- esta
+    funcion es el fallback que usa esa cuota en vez de quedar bloqueado."""
+    full_prompt = prompt + STICKER_STYLE_SUFFIX
+    for attempt in range(attempts):
+        try:
+            r = requests.post(
+                "https://api.piapi.ai/api/v1/task",
+                headers={"X-API-Key": api_key, "Content-Type": "application/json"},
+                json={
+                    "model": "seedream",
+                    "task_type": "seedream-5-lite",
+                    "input": {"prompt": full_prompt, "aspect_ratio": "1:1", "output_format": "png"},
+                },
+                timeout=60,
+            )
+            r.raise_for_status()
+            task_id = r.json()["data"]["task_id"]
+            for _ in range(60):
+                time.sleep(2)
+                poll = requests.get(f"https://api.piapi.ai/api/v1/task/{task_id}",
+                                     headers={"X-API-Key": api_key}, timeout=30)
+                poll.raise_for_status()
+                task = poll.json()["data"]
+                status = task.get("status", "").lower()
+                if status in ("completed", "success"):
+                    output = task.get("output", {})
+                    img_url = (output.get("image_urls") or output.get("images") or [None])[0]
+                    if not img_url:
+                        raise RuntimeError("tarea completa sin imagen de salida")
+                    img_resp = requests.get(img_url, timeout=60)
+                    img_resp.raise_for_status()
+                    return img_resp.content
+                if status in ("failed", "error"):
+                    raise RuntimeError(task.get("error", "tarea fallo sin detalle"))
+            raise RuntimeError("timeout esperando la tarea de Seedream")
+        except Exception as e:
+            if attempt < attempts - 1:
+                print(f"  intento {attempt + 1} fallo, reintento en 5s: {e}")
+                time.sleep(5)
+            else:
+                print(f"  FALLO definitivo: {e}")
+    return None
+
+
+def _generate_icon_image(prompt: str, gemini_key: str, piapi_key: str = "", attempts: int = 3) -> bytes | None:
+    """Prueba Seedream/PiAPI primero si hay key (cupo disponible el 22 jul
+    2026 mientras Gemini estaba agotado), cae a Gemini/Nano Banana si no."""
+    if piapi_key:
+        result = _generate_icon_image_seedream(prompt, piapi_key, attempts=attempts)
+        if result is not None:
+            return result
+        print("  Seedream sin resultado, probando Gemini/Nano Banana...")
+    return _generate_icon_image_gemini(prompt, gemini_key, attempts=attempts)
+
+
 def _remove_background(raw_bytes: bytes) -> bytes:
     from rembg import remove
     return remove(raw_bytes)
@@ -817,9 +888,13 @@ def generate_library(force: bool = False, only: list[str] | None = None,
     manifest = load_manifest()
 
     api_key = os.getenv("GEMINI_API_KEY", "")
-    if not api_key:
-        print("ERROR: falta GEMINI_API_KEY en .env (gratis en https://aistudio.google.com/apikey)")
+    piapi_key = os.getenv("PIAPI_API_KEY", "")
+    if not api_key and not piapi_key:
+        print("ERROR: falta GEMINI_API_KEY o PIAPI_API_KEY en .env "
+              "(Gemini gratis en https://aistudio.google.com/apikey)")
         return
+    if piapi_key:
+        print("Usando Seedream/PiAPI primero (cupo disponible), Gemini como respaldo.")
 
     try:
         import rembg  # noqa: F401
@@ -837,7 +912,7 @@ def generate_library(force: bool = False, only: list[str] | None = None,
 
     for i, concept in enumerate(pending, 1):
         print(f"[{i}/{len(pending)}] {concept['id']} ...")
-        raw = _generate_icon_image(concept["prompt"], api_key)
+        raw = _generate_icon_image(concept["prompt"], api_key, piapi_key)
         if raw is None:
             continue
         data = _remove_background(raw) if has_rembg else raw
