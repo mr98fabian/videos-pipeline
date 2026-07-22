@@ -205,10 +205,27 @@ def next_available_slot(youtube, after: datetime | None = None) -> datetime:
     raise RuntimeError("no se encontro horario disponible")
 
 
+def _video_duration_seconds(video_path: str | Path) -> float | None:
+    """Duracion real del archivo via ffprobe, o None si ffprobe no esta
+    disponible/falla (nunca bloquea la subida por un problema de tooling,
+    solo por una duracion realmente corta)."""
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)],
+            capture_output=True, text=True, check=True, timeout=30,
+        ).stdout.strip()
+        return float(out)
+    except Exception:
+        return None
+
+
 def upload_video(video_path: str | Path, title: str, description: str,
                   tags: list[str] | None = None, category_id: str = "27",
                   privacy_status: str = "unlisted", account: str = "default",
-                  publish_at: str | None = None, default_language: str | None = None) -> str:
+                  publish_at: str | None = None, default_language: str | None = None,
+                  min_duration: float | None = 58.0) -> str:
     """Sube un video. privacy_status: 'private' | 'unlisted' | 'public'.
     publish_at: timestamp ISO 8601 UTC (ej. '2026-07-16T23:00:00Z') para publicacion
     programada -- YouTube exige privacyStatus='private' cuando se usa publishAt;
@@ -220,7 +237,24 @@ def upload_video(video_path: str | Path, title: str, description: str,
     jul 2026): el default de idioma del CANAL HiddenFacts en Studio estaba en
     'es-US' pese a ser 100% ingles, y como el video nunca mandaba defaultLanguage
     explicito, cada subida heredaba ese default incorrecto silenciosamente.
-    Fijarlo aca por video evita depender de la configuracion del canal en Studio."""
+    Fijarlo aca por video evita depender de la configuracion del canal en Studio.
+    min_duration: bloquea la subida si el video final mide MENOS que esto en
+    segundos (default 58s, la regla dura del canal). Bug real (22 jul 2026):
+    12 videos con guiones de ~15 palabras (en vez de ~150) se generaron y
+    publicaron con 5-7s de duracion real -- nada verificaba el VIDEO FINAL
+    antes de subir, solo `_check_pacing()` avisaba sobre el guion antes de
+    generar el TTS. Pasar min_duration=None o 0 para formatos cortos
+    legitimos (ultrashort/silent_card_mode/readcard), nunca por default."""
+    if min_duration:
+        dur = _video_duration_seconds(video_path)
+        if dur is not None and dur < min_duration:
+            raise ValueError(
+                f"Video de {dur:.1f}s, por debajo del minimo de {min_duration:.0f}s -- "
+                f"subida BLOQUEADA (bug real 22 jul 2026: guiones truncados generaron "
+                f"12 videos de 5-7s que se publicaron sin que nada los detectara). "
+                f"Si este video es un formato corto INTENCIONAL (ultrashort/silent_card/"
+                f"readcard), volve a llamar con min_duration=None."
+            )
     if default_language is None:
         default_language = "es" if account == "impixxel" else "en"
     youtube = get_youtube_client(account)
@@ -569,6 +603,10 @@ if __name__ == "__main__":
     p_upload.add_argument("--publish-at", default=None,
                            help="ISO 8601 UTC ej. 2026-07-16T23:00:00Z -- programa la "
                                 "publicacion; el video queda privado hasta esa hora")
+    p_upload.add_argument("--allow-short", action="store_true",
+                           help="Desactiva el bloqueo de duracion minima (58s) -- usar SOLO "
+                                "para formatos cortos intencionales (ultrashort/silent_card/"
+                                "readcard), nunca por defecto.")
 
     p_update = sub.add_parser("update")
     p_update.add_argument("video_id")
@@ -610,7 +648,8 @@ if __name__ == "__main__":
         tags = [t.strip() for t in args.tags.split(",") if t.strip()]
         upload_video(args.video_path, args.title, args.description, tags,
                       privacy_status=args.privacy, account=args.account,
-                      publish_at=args.publish_at)
+                      publish_at=args.publish_at,
+                      min_duration=None if args.allow_short else 58.0)
     elif args.cmd == "update":
         tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags is not None else None
         update_video(args.video_id, args.title, args.description, tags, account=args.account)

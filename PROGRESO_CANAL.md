@@ -16,3 +16,36 @@ Registro de cada corrida de `/canal audit`. Comparar siempre contra la fila ante
 - **Duplicados limpiados (16 jul):** borrados `BF_iqiwIwx8` (1408v, "de la historia") y `OdwF60y4mr0` (1158v) del grupo "El peor camuflaje" — quedó solo `H7I43mX-_7s` (1709v). Borrado `OkdRdNYliUk` (1361v) del grupo "El momento más épico de la partida" — quedó solo `tlBOlFzphkQ` (1450v). Revisar en la próxima auditoría si las vistas del sobreviviente subieron al dejar de competir consigo mismo.
 - Dejar que Garen/Shaco/Sylas (serie Roblox, vivos) acumulen 4-5 días antes de comparar contra los clips crudos — a 1-2 días de vida no es lectura justa.
 - Si se vuelve a generar contenido de prueba (ej. el experimento de polarización), evitar borrarlo antes de al menos 48h — si se borra antes de acumular vistas, no deja señal utilizable para la próxima auditoría.
+
+## Auditoría HiddenFacts (GetHiddenFacts) — 22 jul 2026
+
+Primera auditoría formal de este canal (nació 14 jul, 8 días de vida real).
+
+| Métrica | Valor |
+|---|---|
+| Suscriptores | 37 |
+| Vistas totales | 32,426 |
+| Videos publicados | 70 (58 tras limpieza) |
+| Vistas/día (Analytics oficial, única semana completa disponible) | 637 / 6,095 / 4,688 / **6,529 (pico, 18 jul)** / 4,756 |
+| % tráfico Shorts feed | 97%+ |
+
+**Hallazgo crítico y causa raíz identificada:** 12 videos con duración real de 5.4-7.2s
+(deberían durar ~50-60s) se generaron y publicaron TODOS en el mismo segundo
+(2026-07-18T18:01) — guiones de guion de **solo 15 palabras** (una oración) en vez
+de las ~150 normales. 10 de los 12 flopearon (2-14 vistas); 2 tuvieron
+`breakoutScore` inflado (274, 428) por el artefacto de "loop instantáneo" de
+clips ultra-cortos, no por audiencia real. El pico del canal (6,529 vistas)
+fue justo el día que se publicó este batch — plausible que la señal de
+calidad promedio dañada haya frenado el alcance de los días siguientes.
+
+**Acción tomada (22 jul):** los 12 se pasaron a privado. Se encontraron 3
+MÁS con el mismo bug programados para publicarse el mismo 22 jul (10:45/13:45/
+16:45 UTC) — se cancelaron (privado sin `publishAt`) antes de salir al aire.
+
+**Pendiente de código:** no existe ningún guardrail que bloquee la subida de
+un video con duración final por debajo del mínimo de 60s — `_check_pacing()`
+solo avisa ANTES de generar el TTS, nada verifica el video FINAL. Este es el
+fix de raíz para que el bug no se repita.
+
+**No hay señal de "breakout" real todavía** (ningún video llega a 5-10x el
+promedio del resto de forma genuina, descontando los 2 inflados por el bug).
