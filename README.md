@@ -58,6 +58,26 @@ sticker en el timestamp exacto donde se dice, no solo una vez por escena.
 Las escenas sin ninguna keyword narrada siguen usando el fallback anterior
 (foto real recortada de Wikimedia o emoji).
 
+## Estudiar que funciono (reporte de rendimiento)
+
+`performance_report.py` cruza `video_log.csv` (topic, estilo, duracion,
+keyword_score/title_score de research -- ya se guarda solo al subir cada
+video) con las metricas REALES de YouTube Analytics (vistas, retencion,
+likes) via API, y exporta un CSV para analizar en Excel/Sheets. Es lo mismo
+que bajar el reporte avanzado a mano desde YouTube Studio (Analytics >
+Overview > Ver mas > modo avanzado > Descargar), pero automatico y ya
+cruzado con los datos de produccion de cada video.
+
+```powershell
+py performance_report.py                       # todas las cuentas del log
+py performance_report.py --account impixxel    # solo un canal
+```
+
+Ademas de generar el CSV, imprime un resumen: retencion alta vs baja, videos
+cortos vs largos, y si el keyword_score/title_score de la fase de research
+(vidIQ) predijo algo real -- para no tener que armar esas comparaciones a
+mano en la planilla cada vez.
+
 ## Generar un video con un clic
 
 Doble clic en **`generar_video.bat`** (en la carpeta del proyecto). Internamente corre

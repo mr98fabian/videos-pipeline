@@ -421,6 +421,52 @@ def auto_add_to_playlist(video_id: str, title: str, description: str = "",
     return playlist_id
 
 
+def video_metrics_batch(video_ids: list[str], start_date: str = "2015-01-01",
+                         end_date: str | None = None, account: str = "default") -> dict[str, dict]:
+    """Metricas por video para una lista puntual de video_ids (a diferencia de
+    top_videos, que trae el ranking de TODO el canal) -- pensado para cruzar
+    contra video_log.csv en performance_report.py: cada video ya tiene su
+    topic/estilo/keyword_score guardado, esto le suma como le fue de verdad.
+    Devuelve {video_id: {metric: valor}}; video sin datos (muy nuevo, sin
+    vistas) simplemente no aparece en el dict.
+
+    Tambien intenta impressions/impressionsClickThroughRate (aproximacion mas
+    cercana a 'viewed vs swiped away' de Shorts que expone la API publica --
+    Studio muestra VVSA pero esa metrica puntual NO esta documentada en la
+    Analytics API; si el pedido falla se sigue sin esas 2 columnas en vez de
+    frenar todo el reporte)."""
+    from datetime import date
+    if not video_ids:
+        return {}
+    analytics = get_analytics_client(account)
+    cid = get_channel_id(account)
+    end = end_date or date.today().isoformat()
+    base_metrics = "views,averageViewDuration,averageViewPercentage,likes,comments,subscribersGained,shares"
+
+    out: dict[str, dict] = {}
+    batch_size = 200  # limite prudente para el valor de filters=video==... (no documentado con precision)
+    for i in range(0, len(video_ids), batch_size):
+        batch = video_ids[i:i + batch_size]
+        try:
+            resp = _yt_execute(analytics.reports().query(
+                ids=f"channel=={cid}", startDate=start_date, endDate=end,
+                metrics=base_metrics + ",impressions,impressionsClickThroughRate",
+                dimensions="video", filters=f"video=={','.join(batch)}", maxResults=len(batch),
+            ))
+        except HttpError as e:
+            print(f"[metrics] impressions no disponible para esta cuenta/rango ({e}), sigo sin esa columna")
+            resp = _yt_execute(analytics.reports().query(
+                ids=f"channel=={cid}", startDate=start_date, endDate=end,
+                metrics=base_metrics, dimensions="video",
+                filters=f"video=={','.join(batch)}", maxResults=len(batch),
+            ))
+        headers = [h["name"] for h in resp.get("columnHeaders", [])]
+        for row in resp.get("rows", []):
+            data = dict(zip(headers, row))
+            out[data["video"]] = data
+    return out
+
+
 def search_terms(start_date: str, end_date: str, video_id: str | None = None,
                   max_results: int = 15, account: str = "default") -> list[list]:
     """Terminos de busqueda de YouTube que generaron vistas (canal completo, o
@@ -548,6 +594,11 @@ if __name__ == "__main__":
                        help="Limita a un video; sin esto es el canal completo")
     p_st.add_argument("--n", type=int, default=15)
 
+    p_vm = sub.add_parser("video-metrics")
+    p_vm.add_argument("video_ids", help="separados por coma, ej: abc123,def456")
+    p_vm.add_argument("--start", default="2015-01-01")
+    p_vm.add_argument("--end", default=None)
+
     p_com = sub.add_parser("comment")
     p_com.add_argument("video_id")
     p_com.add_argument("--text", required=True)
@@ -574,6 +625,10 @@ if __name__ == "__main__":
     elif args.cmd == "search-terms":
         print(json.dumps(search_terms(args.start, args.end, video_id=args.video_id,
                                        max_results=args.n, account=args.account),
+                          indent=2, ensure_ascii=False))
+    elif args.cmd == "video-metrics":
+        ids = [v.strip() for v in args.video_ids.split(",") if v.strip()]
+        print(json.dumps(video_metrics_batch(ids, args.start, args.end, account=args.account),
                           indent=2, ensure_ascii=False))
     elif args.cmd == "comment":
         add_comment(args.video_id, args.text, account=args.account)

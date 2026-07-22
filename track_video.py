@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent
 LOG_PATH = ROOT / "video_log.csv"
 FIELDS = ["logged_at", "output_dir", "video_id", "youtube_url", "title",
           "style_summary", "music_mood", "word_count", "duration_sec", "privacy",
-          "keyword_score", "title_score", "outlier_reference"]
+          "keyword_score", "title_score", "outlier_reference", "account"]
 
 
 def _style_summary(style: str | None) -> str:
@@ -96,6 +96,10 @@ def log_video(output_dir: str | Path, video_id: str, privacy: str = "unlisted",
         "keyword_score": keyword_score if keyword_score is not None else "",
         "title_score": title_score if title_score is not None else "",
         "outlier_reference": outlier_reference or "",
+        # que cuenta/canal es dueno del video -- necesario para performance_report.py,
+        # que tiene que pedirle las metricas a la API con las credenciales del canal
+        # correcto (cada canal tiene su propio token_<account>.json, ver youtube_api.py).
+        "account": account,
     }
 
     is_new = not LOG_PATH.exists()
