@@ -40,10 +40,11 @@ py pipeline.py --auto
 
 ## Libreria de stickers (generar una sola vez)
 
-`sticker_library.py` genera ~100 stickers con IA (Nano Banana) para las
-palabras clave que mas se repiten en los guiones de los dos canales (finanzas
-y gamer/Skick) y los guarda en `assets/stickers/` para reusar en todos los
-videos futuros, sin regenerar ni pagar el mismo icono dos veces.
+`sticker_library.py` genera 200 stickers con IA (Nano Banana) para las
+palabras clave que mas se repiten en los guiones de los tres canales
+(finanzas, gamer/Skick, gethiddenfacts) y los guarda en `assets/stickers/`
+para reusar en todos los videos futuros, sin regenerar ni pagar el mismo
+icono dos veces.
 
 ```powershell
 py -m pip install rembg onnxruntime   # opcional: recorta el fondo a transparente
