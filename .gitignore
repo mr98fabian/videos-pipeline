@@ -17,6 +17,7 @@ assets/lol_db/
 assets/characters/
 assets/skick/
 assets/creator_reference/
+assets/stickers/
 *.mp4
 *.mp3
 *.wav
@@ -38,3 +39,4 @@ motion_graphics/node_modules/
 motion_graphics/out/
 motion_graphics/public/collage_photo.png
 motion_graphics/public/scene_sticker_*.png
+motion_graphics/public/sticker_*.png

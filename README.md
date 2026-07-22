@@ -38,6 +38,25 @@ py pipeline.py --auto
 # Opciones: --voice en-US-AriaNeural --rate "+5%" --clips 6
 ```
 
+## Libreria de stickers (generar una sola vez)
+
+`sticker_library.py` genera ~100 stickers con IA (Nano Banana) para las
+palabras clave que mas se repiten en los guiones de los dos canales (finanzas
+y gamer/Skick) y los guarda en `assets/stickers/` para reusar en todos los
+videos futuros, sin regenerar ni pagar el mismo icono dos veces.
+
+```powershell
+py -m pip install rembg onnxruntime   # opcional: recorta el fondo a transparente
+py sticker_library.py --list          # ver el catalogo y que falta generar
+py sticker_library.py --generate      # genera los que faltan (tarda por el delay entre llamadas)
+```
+
+El pipeline los usa automaticamente: cada vez que el guion narra una palabra
+clave del catalogo (ej. "money", "lag", "nivel", "explosion"), aparece ese
+sticker en el timestamp exacto donde se dice, no solo una vez por escena.
+Las escenas sin ninguna keyword narrada siguen usando el fallback anterior
+(foto real recortada de Wikimedia o emoji).
+
 ## Generar un video con un clic
 
 Doble clic en **`generar_video.bat`** (en la carpeta del proyecto). Internamente corre

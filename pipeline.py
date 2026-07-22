@@ -36,6 +36,8 @@ from pathlib import Path
 
 import requests
 
+import sticker_library
+
 # Windows con tarea programada suele heredar stdout en cp1252; un titulo con
 # emoji o caracter fuera de ese charset lanza UnicodeEncodeError y tumba la
 # corrida DESPUES de haber gastado creditos de TTS/imagenes/musica (visto
@@ -2146,14 +2148,15 @@ def _photo_sticker(query: str, clips_dir: Path, tag: str) -> str | None:
 
 
 def add_scene_stickers(video_path: Path, search_terms: list[str], durations: list[float],
-                        out_dir: Path) -> Path:
-    """UN sticker por escena (search_term), en el punto medio de su duracion
-    -- reemplaza el esquema anterior atado a sfx_cues (max 4 por regla de
-    'solo eventos narrados', muy poco denso). Cada sticker intenta primero
-    una FOTO REAL recortada (Wikimedia) del objeto/lugar de la escena y cae a
-    emoji si no hay candidato libre de un solo sujeto (pedido usuario 21 jul
-    2026). Si Remotion/Node no esta disponible o falla, devuelve el video sin
-    tocar."""
+                        out_dir: Path, words: list[tuple[float, float, str]] | None = None) -> Path:
+    """Sticker por cada palabra clave REALMENTE narrada (words, con timestamp
+    real de TTS) usando la libreria pre-generada de sticker_library.py --
+    pedido usuario 22 jul 2026: 'asegurate de usarlo en cada palabra clave
+    que se diga', no solo 1 por escena. Las escenas que no tienen ninguna
+    keyword narrada caen al esquema viejo (foto real recortada de Wikimedia,
+    y si no hay candidato, emoji -- ver HISTORIAL_MEJORAS.md 21 jul 2026) para
+    no perder densidad visual. Si Remotion/Node no esta disponible o falla,
+    devuelve el video sin tocar."""
     if not (MOTION_DIR / "node_modules").exists():
         log("motion", "motion_graphics/node_modules no existe, salteando (correr npm install)")
         return video_path
@@ -2162,11 +2165,19 @@ def add_scene_stickers(video_path: Path, search_terms: list[str], durations: lis
     video_dur = ffprobe_duration(video_path)
     fps = FPS
 
-    cues = []
+    library_cues = sticker_library.prepare_render_cues(words, MOTION_DIR / "public") if words else []
+    log("motion", f"{len(library_cues)} stickers de la libreria (keywords narradas)")
+
+    cues = list(library_cues)
     t = 0.0
     for i, (term, dur) in enumerate(zip(search_terms, durations)):
+        scene_start, scene_end = t, t + dur
         mid = t + dur / 2
         t += dur
+        # ya hay un sticker de la libreria narrado en esta escena -- no
+        # duplicar con el fallback generico (1 sticker visible a la vez)
+        if any(scene_start <= c["time"] < scene_end for c in library_cues):
+            continue
         keyword, emoji, photo_query = _scene_hint(term)
         photo = _photo_sticker(photo_query, clips_dir, str(i)) if photo_query else None
         cues.append({"time": mid, "keyword": keyword, "emoji": emoji, "photo": photo})
@@ -2174,6 +2185,7 @@ def add_scene_stickers(video_path: Path, search_terms: list[str], durations: lis
             log("motion", f"escena {i+1}: foto real ({photo_query})")
         else:
             log("motion", f"escena {i+1}: emoji fallback ({keyword or '?'})")
+    cues.sort(key=lambda c: c["time"])
 
     props = {"cues": cues, "durationInFrames": max(int(round(video_dur * fps)), 1), "fps": fps,
               "width": WIDTH, "height": HEIGHT}
@@ -2730,7 +2742,7 @@ def main() -> int:
         # antes de caer a emoji (ver HISTORIAL_MEJORAS.md). No aplica al modo
         # silent_card_mode (sin escenas narradas) ni si el usuario paso --no-motion.
         if not silent_card_mode and not args.no_motion:
-            final = add_scene_stickers(final, data["search_terms"], durations, out_dir)
+            final = add_scene_stickers(final, data["search_terms"], durations, out_dir, words=words)
 
         # collage de foto real (21 jul 2026): campo del guion 'collage_subjects'
         # (lista de {"subject", "time" opcional}) o el viejo 'collage_subject'
