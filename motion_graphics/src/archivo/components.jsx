@@ -254,12 +254,15 @@ export const ActionFX = ({ action, cx = 540, cy = 640, from = 0 }) => {
                 stroke={GOLD} strokeWidth={10} strokeLinecap="round" opacity={oBurst} />
         );
       })}
-      {streak && Array.from({ length: 6 }).map((_, k) => {
-        const sp = interpolate(al, [0, 10], [0, 1], { extrapolateRight: "clamp" });
-        const yy = cy - 160 + k * 60;
-        const x1 = cx - 40 - sp * 520, x2 = x1 + 130;
+      {streak && Array.from({ length: 5 }).map((_, k) => {
+        // las lineas TRASERAN al sujeto que se desliza (misma curva que flee),
+        // a la altura del torso, para que se lean como su estela
+        const dur = (action.dur ?? 16) + 8;
+        const fdx = interpolate(al, [0, dur], [0, 980], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.5, 0, 0.9, 0.4) });
+        const yy = cy - 40 + k * 42;
+        const x2 = cx + fdx * 0.5 - 70, x1 = x2 - 190;
         return <line key={k} x1={x1} y1={yy} x2={x2} y2={yy} stroke={RED} strokeWidth={9} strokeLinecap="round"
-                     opacity={interpolate(al, [0, 4, 16], [0, 0.85, 0], { extrapolateRight: "clamp" })} />;
+                     opacity={interpolate(al, [0, 4, 18], [0, 0.85, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })} />;
       })}
       {word && (
         <text x={cx} y={cy - 210} textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight={900}
