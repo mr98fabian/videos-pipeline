@@ -9,6 +9,7 @@ import {
   ImpactFlash,
   Stamp,
   Typewriter,
+  CaseAnnotations,
   ColdOpen,
   SubscribeStamp,
   CaseClosed,
@@ -68,7 +69,7 @@ const SceneBlock = ({ scene, index }) => {
       <Backdrop src={staticFile(scene.bg)} sceneDur={scene.dur} />
       {scene.treatment === "sticker" && scene.fg ? (
         <>
-        <GroundCard index={index} />
+        <GroundCard index={index} hasSticker={(b.stickers || []).length > 0} />
         <Cutout
           src={staticFile(scene.fg)}
           from={0}
@@ -221,7 +222,7 @@ const LibSticker = ({ src, from, side }) => {
 };
 
 // --- tarjeta que ancla al recorte principal: nunca mas "cabeza flotante" -----
-const GroundCard = ({ index }) => {
+const GroundCard = ({ index, hasSticker = false }) => {
   const frame = _ucf();
   const p = _pop(frame - 1, 9);
   return (
@@ -234,6 +235,8 @@ const GroundCard = ({ index }) => {
         boxShadow: "14px 16px 0 rgba(26,18,8,0.45)",
         opacity: 0.96,
       }}
-    />
+    >
+      <CaseAnnotations from={10} index={index} hasSticker={hasSticker} />
+    </div>
   );
 };

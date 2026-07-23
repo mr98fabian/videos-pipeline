@@ -381,6 +381,72 @@ export const Stamp = ({ text, from, x, y, rot = -8, color = RED }) => {
   );
 };
 
+// ============================================================================
+// MARGINALIA DE EXPEDIENTE — llena el papel en blanco de la tarjeta con
+// anotaciones de investigador dibujadas a mano (etiqueta + flecha al sujeto +
+// circulo + "?"), que se trazan solas. Convierte el vacio en narrativa.
+// Coordenadas relativas a la tarjeta 840x940 (se renderiza como hijo del card).
+// ============================================================================
+const _HANDWRITE = "'Segoe Print', 'Ink Free', 'Bradley Hand', 'Comic Sans MS', cursive";
+const _CASE_LABELS = [
+  "WHO?", "UNKNOWN", "SUSPECT", "NO FILE",
+  "SEALED", "REDACTED", "AGENT ?", "OPEN",
+];
+
+// trazo animado generico (dibuja el path de 0 a 1 en [f0,f1])
+const _Draw = ({ d, from, dur = 8, w = 7, delay = 0, dash = false }) => {
+  const frame = useCurrentFrame();
+  const drawn = interpolate(frame - from - delay, [0, dur], [0, 1], {
+    extrapolateLeft: "clamp", extrapolateRight: "clamp",
+    easing: Easing.bezier(0.3, 0, 0.2, 1),
+  });
+  return (
+    <path
+      d={d} stroke={RED} strokeWidth={w} fill="none" strokeLinecap="round" strokeLinejoin="round"
+      pathLength={1} strokeDasharray={dash ? "10 12" : 1} strokeDashoffset={1 - drawn}
+      style={{ opacity: 0.9 }}
+    />
+  );
+};
+
+export const CaseAnnotations = ({ from = 8, index = 0 }) => {
+  const frame = useCurrentFrame();
+  if (frame - from < 0) return null;
+  const alt = index % 2 === 0;
+  const label = _CASE_LABELS[index % _CASE_LABELS.length];
+  // jitter idle sutil de tinta (todo respira)
+  const j = Math.sin((frame - from) / 24) * 1.2;
+  // TODA la marginalia va en las ESQUINAS INFERIORES del papel: son la zona
+  // fiablemente vacia (el sujeto se para centrado y su cabeza/brazos ocupan el
+  // centro-arriba). Asi nunca choca con el sujeto, el sticker de biblioteca ni
+  // se sale del borde, sea el recorte angosto o ancho.
+  const labelWrite = interpolate(frame - from, [0, 10], [0, label.length], {
+    extrapolateLeft: "clamp", extrapolateRight: "clamp",
+  });
+  // etiqueta abajo-izquierda + flecha corta que sube hacia el sujeto; "?" abajo-derecha
+  const arrow = "M 150 815 Q 250 720, 340 640";
+  const head = "M 340 640 L 356 674 M 340 640 L 304 656";
+  const qO = interpolate(frame - from, [10, 20], [0, 0.4], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <svg
+      viewBox="0 0 840 940" width="840" height="940"
+      style={{ position: "absolute", left: 0, top: 0, overflow: "visible", transform: `translateY(${j}px)` }}
+    >
+      {/* flecha corta desde la nota hacia el sujeto (siempre dentro del papel) */}
+      <_Draw d={arrow} from={from} dur={9} w={7} delay={4} />
+      <_Draw d={head} from={from} dur={5} w={7} delay={11} />
+      {/* "?" grande y tenue en la esquina inferior-derecha */}
+      <text x={745} y={890} fontFamily={_HANDWRITE} fontSize={120} fontWeight="700" fill={RED} textAnchor="middle"
+            opacity={qO} transform="rotate(9 745 890)">?</text>
+      {/* nota manuscrita en la esquina inferior-izquierda, se escribe sola */}
+      <text x={55} y={895} fontFamily={_HANDWRITE} fontSize={56} fontWeight="700" fill={RED} textAnchor="start"
+            transform={`rotate(${alt ? -4 : -6} 55 895)`} style={{ letterSpacing: 1 }}>
+        {label.slice(0, Math.round(labelWrite))}
+      </text>
+    </svg>
+  );
+};
+
 export const MarkerUnderline = ({ from, x, y, w, tilt = -1.5 }) => {
   const frame = useCurrentFrame();
   const local = frame - from;
