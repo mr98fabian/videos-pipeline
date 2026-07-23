@@ -1,0 +1,28 @@
+{
+  "script": "In 1953, a young lawyer named Fidel Castro led over a hundred rebels in a surprise attack, and it failed completely. Their target was the Moncada Barracks, the second largest military fortress in all of Cuba, defended by hundreds of soldiers. The plan fell apart within minutes, as their cars got lost in the unfamiliar city and the rebels lost the element of surprise. Dozens of Castro's men were captured, brutally tortured, and then executed by the furious soldiers of the dictator Batista. Castro himself was caught days later hiding in the mountains, and dragged into a courtroom to be silenced for good. But here is the twist that nobody in power expected: he turned his own trial into a weapon against them. He delivered a two hour speech that ended with four unforgettable words, history will absolve me. Sentenced to fifteen years, he was quietly freed in under two, and slipped away to Mexico to rebuild his army. Six years after his humiliating defeat, Fidel Castro marched into Havana and seized control of the entire country. And to this very day, Cuba's revolution is named the twenty sixth of July, after the exact battle that he lost.",
+  "search_terms": [
+    "a determined young rebel leader's face in extreme close-up, intense eyes, somber vintage documentary style",
+    "a huge stone military barracks fortress across an empty plaza at dawn, wide shot, vintage documentary style",
+    "a group of rebels in a stalled old car on a narrow city street, full figures, tense vintage documentary style",
+    "a captured rebel held by two uniformed soldiers in a bare courtyard, full figures, somber vintage documentary style",
+    "a bearded man in handcuffs led into a courtroom by guards, full figure, tense vintage documentary style",
+    "a lone defendant standing before stern seated judges in a bare courtroom, full figure, dramatic vintage documentary style",
+    "a man delivering a passionate speech with a raised fist in a courtroom, full figure, dramatic vintage documentary style",
+    "a man in a plain coat walking away down a train platform with a suitcase, full figure, vintage documentary style",
+    "rebel fighters marching into a city plaza with raised rifles, full figures, dramatic vintage documentary style",
+    "the determined rebel leader's face again in close-up, echoing the opening, somber vintage documentary style"
+  ],
+  "hook_card": "His first battle was a total disaster. It still won.",
+  "title": "How Fidel Castro's Worst Defeat Became Cuba's Revolution",
+  "description": "July 26, 1953: Fidel Castro led over a hundred rebels against the Moncada Barracks. The attack was a catastrophe. Most were captured, tortured, or killed, and Castro was put on trial. He turned it into his famous 'History Will Absolve Me' speech, walked free in two years, and six years later seized Cuba. The revolution named itself after the date of that defeat.\n\nWas the Moncada attack a reckless disaster or a genius gamble? DISASTER or GENIUS. Say your pick below.\n\nA new historical secret every day. Subscribe so you don't miss tomorrow's.\n\n#history #coldwar #cuba #castro #historyfacts #shorts",
+  "share_card": {
+    "line1": "He lost his first battle",
+    "line2": "and named a revolution after it."
+  },
+  "visual_beats": {
+    "3": {"censor": {"x": 190, "y": 620, "w": 700, "h": 170, "at": 6, "reveal": 52, "label": "EXECUTED"}},
+    "6": {"typewriter": {"text": "HISTORY WILL ABSOLVE ME", "at": 20, "x": 110, "y": 190}}
+  },
+  "music_mood": "tense slow-building revolutionary ambient, low ominous strings and sparse marching percussion swelling toward a defiant rise at the end, grave documentary tone, low volume drone",
+  "style": "1990s Nickelodeon rubber-hose cartoon style, exaggerated comic-book expressions with big unsettling eyes, thick wobbly hand-drawn black outlines, snappy low-frame animation feel. Color palette: sepia, dusty burnt yellow, aged parchment, dark brown shadows instead of pure black. Heavy vintage film grain and scratched-film texture overlaid, retro documentary aesthetic, slightly distorted, high contrast, hand-drawn sketch look. No bright saturated colors. Only human characters, never humanoid animals."
+}
