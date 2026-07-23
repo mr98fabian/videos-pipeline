@@ -311,6 +311,46 @@ export const PhotoScrap = ({ src, from, x, y, w, h, fromDir = "right", rot = 2, 
 // ============================================================================
 // TIER 1.1 — BARRA CENSURADA que se ARRANCA en el reveal
 // ============================================================================
+// ============================================================================
+// EVIDENCIA REAL — foto de archivo de licencia libre (Wikimedia) clavada al
+// tablero con chincheta; B&N envejecida + etiqueta "REAL <año>". El momento
+// "esto paso de verdad" junto a la caricatura. Va en una esquina superior
+// (zona vacia sobre la ficha) para no tapar al sujeto.
+// ============================================================================
+export const EvidencePhoto = ({ src, from = 8, year = "", side = "right" }) => {
+  const frame = useCurrentFrame();
+  const local = frame - from;
+  if (local < 0) return null;
+  const p = pop(local, 10);
+  const drift = Math.sin(local / 18) * 4;
+  const x = side === "right" ? 672 : 56;
+  const rot0 = side === "right" ? 5 : -5;
+  return (
+    <div
+      style={{
+        position: "absolute", left: x, top: 70 + drift, width: 352, height: 392,
+        rotate: `${rot0 + Math.sin(local / 24) * 1.3}deg`,
+        scale: `${0.85 + 0.15 * p}`, transformOrigin: "top center",
+        background: PAPER_LIGHT, padding: 16, border: `4px solid ${INK}`,
+        boxShadow: "13px 16px 0 rgba(26,18,8,0.5)",
+      }}
+    >
+      <Img
+        src={src}
+        style={{
+          width: "100%", height: "80%", objectFit: "cover", border: `2px solid ${INK}`,
+          filter: "grayscale(1) contrast(1.12) sepia(0.32) brightness(0.98)",
+        }}
+      />
+      <div style={{ textAlign: "center", fontFamily: "'Courier New', monospace", fontWeight: 700, fontSize: 30, color: INK, marginTop: 10, letterSpacing: 3 }}>
+        REAL{year ? ` · ${year}` : ""}
+      </div>
+      {/* chincheta roja */}
+      <div style={{ position: "absolute", left: "50%", top: -16, marginLeft: -18, width: 36, height: 36, borderRadius: "50%", background: RED, border: `3px solid ${INK}`, boxShadow: "0 3px 6px rgba(0,0,0,0.45)" }} />
+    </div>
+  );
+};
+
 export const CensorBar = ({ x, y, w, h, from = 0, revealFrame, label = "CENSORED" }) => {
   const frame = useCurrentFrame();
   const local = frame - from;

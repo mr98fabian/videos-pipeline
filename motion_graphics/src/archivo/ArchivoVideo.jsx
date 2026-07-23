@@ -11,6 +11,7 @@ import {
   Typewriter,
   CaseAnnotations,
   ActionFX,
+  EvidencePhoto,
   ColdOpen,
   SubscribeStamp,
   CaseClosed,
@@ -108,6 +109,7 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
       {b.stamp ? <Stamp text={b.stamp.text} from={b.stamp.at} x={90} y={280} rot={-8} /> : null}
       {b.typewriter ? <Typewriter text={b.typewriter.text} from={b.typewriter.at} x={b.typewriter.x ?? 120} y={b.typewriter.y ?? 210} /> : null}
       {b.action ? <ActionFX action={b.action} from={0} cx={540} cy={640} /> : null}
+      {b.evidence ? <EvidencePhoto src={staticFile(b.evidence.src)} from={b.evidence.at} year={b.evidence.year} side={index % 2 === 0 ? "right" : "left"} /> : null}
     </Board>
   );
 };

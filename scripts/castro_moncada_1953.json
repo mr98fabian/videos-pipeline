@@ -20,9 +20,34 @@
     "line2": "and named a revolution after it."
   },
   "visual_beats": {
-    "3": {"censor": {"x": 190, "y": 620, "w": 700, "h": 170, "at": 6, "reveal": 52, "label": "EXECUTED"}},
-    "6": {"typewriter": {"text": "HISTORY WILL ABSOLVE ME", "at": 20, "x": 110, "y": 190}}
+    "3": {
+      "censor": {
+        "x": 190,
+        "y": 620,
+        "w": 700,
+        "h": 170,
+        "at": 6,
+        "reveal": 52,
+        "label": "EXECUTED"
+      }
+    },
+    "6": {
+      "typewriter": {
+        "text": "HISTORY WILL ABSOLVE ME",
+        "at": 20,
+        "x": 110,
+        "y": 190
+      }
+    }
   },
   "music_mood": "tense slow-building revolutionary ambient, low ominous strings and sparse marching percussion swelling toward a defiant rise at the end, grave documentary tone, low volume drone",
-  "style": "1990s Nickelodeon rubber-hose cartoon style, exaggerated comic-book expressions with big unsettling eyes, thick wobbly hand-drawn black outlines, snappy low-frame animation feel. Color palette: sepia, dusty burnt yellow, aged parchment, dark brown shadows instead of pure black. Heavy vintage film grain and scratched-film texture overlaid, retro documentary aesthetic, slightly distorted, high contrast, hand-drawn sketch look. No bright saturated colors. Only human characters, never humanoid animals."
+  "style": "1990s Nickelodeon rubber-hose cartoon style, exaggerated comic-book expressions with big unsettling eyes, thick wobbly hand-drawn black outlines, snappy low-frame animation feel. Color palette: sepia, dusty burnt yellow, aged parchment, dark brown shadows instead of pure black. Heavy vintage film grain and scratched-film texture overlaid, retro documentary aesthetic, slightly distorted, high contrast, hand-drawn sketch look. No bright saturated colors. Only human characters, never humanoid animals.",
+  "real_photo": {
+    "query": "Fidel Castro 1953",
+    "scenes": [
+      5,
+      8
+    ],
+    "year": "1953"
+  }
 }

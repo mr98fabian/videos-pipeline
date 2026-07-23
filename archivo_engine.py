@@ -95,6 +95,70 @@ def _detect_action(text: str):
     return None
 
 
+_TITLE_STOP = {"how", "why", "the", "what", "when", "who", "a", "an", "this",
+               "that", "his", "her", "their", "one", "man", "became", "of", "in"}
+
+
+def _auto_subject(title: str):
+    """Nombre propio mas prominente del titulo para buscar su foto real
+    (ej. 'How Fidel Castro's...' -> 'Fidel Castro'). None si no hay uno claro."""
+    words = title.replace("|", " ").replace("'s", "").split()
+    run = []
+    best = []
+    for w in words:
+        clean = re.sub(r"[^A-Za-z]", "", w)
+        if clean and clean[0].isupper() and clean.lower() not in _TITLE_STOP:
+            run.append(clean)
+        else:
+            if len(run) > len(best):
+                best = run
+            run = []
+    if len(run) > len(best):
+        best = run
+    return " ".join(best) if best else None
+
+
+def _fetch_real_photo(query: str, pub: Path, slug: str):
+    """Descarga una foto de archivo REAL con licencia libre (Wikimedia Commons,
+    mismo fetch del pipeline clasico) y la guarda como evidencia. No la recorta:
+    va como foto rectangular clavada al tablero. Devuelve la ruta relativa o None."""
+    import io
+    import re as _re
+    import urllib.request
+    import pipeline as pl
+    from PIL import Image
+    # variantes: como viene, sin años/números (Wikimedia no matchea "X 1953"),
+    # y solo las dos primeras palabras (nombre propio) como último recurso
+    bare = _re.sub(r"\s+\d{3,4}", "", query).strip()
+    variants = list(dict.fromkeys([query, bare, " ".join(bare.split()[:2])]))
+    cands = []
+    for v in variants:
+        cands = pl._wikimedia_commons_search(v, bias_portrait=True)
+        if cands:
+            break
+    # preferir dominio público / CC0 (sin obligación de atribución en el Short)
+    cands.sort(key=lambda c: 0 if any(t in (c.get("license") or "").lower()
+                                      for t in ("public domain", "cc0", "pd")) else 1)
+    for c in cands:
+        url = c.get("url")
+        if not url:
+            continue
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "HiddenFactsBot/1.0"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                im = Image.open(io.BytesIO(r.read())).convert("RGB")
+            w, h = im.size
+            if w < 260 or h < 260 or w / h > 2.2 or h / w > 2.2:
+                continue  # descarta miniaturas y panoramicas raras
+            im.thumbnail((900, 900))
+            im.save(pub / "real.png")
+            print(f"[archivo] foto real: '{query}' <- {c.get('license', '?')} ({c.get('title', '')[:40]})")
+            return f"archivo/{slug}/real.png"
+        except Exception:
+            continue
+    return None
+
+
 _DATE_PAT = re.compile(
     r"\b(January|February|March|April|May|June|July|August|September|October|November|December)"
     r"\s+\d{1,2},?\s+(1[89]\d\d|20\d\d)\b", re.I)
@@ -223,6 +287,26 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
         if at is None:
             at = max(int(s_["dur"] * 0.4), 6)
         s_["beats"]["action"] = {"type": atype, "at": at, "dur": 16}
+
+    # 5. FOTO REAL de archivo (Wikimedia libre) clavada como EVIDENCIA en 1-2
+    #    escenas clave -> momento "esto paso de verdad" (feedback 24 jul).
+    rp = data.get("real_photo")
+    if rp is None:
+        subj = _auto_subject(data.get("title", ""))
+        if subj:
+            rp = {"query": subj}
+    if rp and rp.get("query"):
+        try:
+            real_rel = _fetch_real_photo(rp["query"], pub, slug)
+            if real_rel:
+                mid = max(len(scenes) - 2, 1)
+                targets = rp.get("scenes") or [1, mid]
+                yr = rp.get("year") or (mdate.group(2) if mdate else "")
+                for si in targets:
+                    if 0 <= si < len(scenes):
+                        scenes[si]["beats"]["evidence"] = {"src": real_rel, "at": 8, "year": yr}
+        except Exception as e:
+            print(f"[archivo] foto real no disponible: {e}")
 
     # beats del guion (autor manda): visual_beats = {"<scene_idx>": {...}}
     for k, beat in (data.get("visual_beats") or {}).items():
