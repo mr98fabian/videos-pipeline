@@ -37,17 +37,57 @@ def _sha1(path: Path) -> str:
     return h.hexdigest()
 
 
-def cached_cutout(src: Path) -> Path:
-    """Recorte rembg de `src`, cacheado por hash del contenido. La primera vez
-    corre rembg (lento); despues es una copia instantanea. Devuelve la ruta del
-    PNG recortado dentro del cache."""
+# Modelo de segmentacion. BiRefNet (SOTA 2024) recorta bordes limpios y captura
+# el cuerpo completo -> menos "cabezas flotantes" y sin el halo amarillo de u2net
+# (comparado con datos reales 23 jul 2026). CPU-only tarda ~30-60s/imagen, pero el
+# recorte se cachea de por vida, asi que solo se paga una vez. Override: REMBG_MODEL.
+import os
+
+REMBG_MODEL = os.environ.get("REMBG_MODEL", "birefnet-general")
+_SESSIONS: dict = {}
+
+
+def _session(model: str):
+    """Sesion rembg reusada (crearla es caro; una por modelo por proceso)."""
+    if model not in _SESSIONS:
+        from rembg import new_session
+        _SESSIONS[model] = new_session(model)
+    return _SESSIONS[model]
+
+
+def _clean_alpha(png_bytes: bytes) -> bytes:
+    """Limpia el borde del recorte: erosiona 1px el canal alfa (mata el halo de
+    pixeles semitransparentes claros) y lo suaviza levemente para anti-alias.
+    Es lo que hace que el troquelado blanco del motor se asiente limpio."""
+    import io
+    from PIL import Image, ImageFilter
+    im = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
+    a = im.getchannel("A")
+    a = a.filter(ImageFilter.MinFilter(3))       # erosion 1px: quita la franja fantasma
+    a = a.filter(ImageFilter.GaussianBlur(0.6))  # anti-alias suave del nuevo borde
+    im.putalpha(a)
+    buf = io.BytesIO()
+    im.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def cached_cutout(src: Path, model: str | None = None) -> Path:
+    """Recorte rembg de `src`, cacheado por (hash del contenido + modelo). La
+    primera vez corre rembg (lento) y limpia el alfa; despues es copia instantanea.
+    El modelo entra en la clave para que cambiarlo regenere sin pisar lo viejo."""
     src = Path(src)
+    model = model or REMBG_MODEL
     key = _sha1(src)
-    out = CUTOUTS_DIR / f"{key}.png"
+    out = CUTOUTS_DIR / f"{key}.{model}.png"
     if out.exists():
         return out
     from rembg import remove  # import perezoso: solo paga el arranque si hace falta
-    out.write_bytes(remove(src.read_bytes()))
+    raw = remove(src.read_bytes(), session=_session(model))
+    try:
+        raw = _clean_alpha(raw)
+    except Exception:
+        pass  # si PIL falla por lo que sea, mejor el recorte crudo que ningun recorte
+    out.write_bytes(raw)
     return out
 
 

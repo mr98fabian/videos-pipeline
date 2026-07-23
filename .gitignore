@@ -45,3 +45,4 @@ motion_graphics/public/sticker_*.png
 *.bak
 performance_report.csv
 vidiq_key.txt
+assets/cache/
