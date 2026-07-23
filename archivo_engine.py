@@ -74,6 +74,26 @@ def words_from_ass(ass_path: Path) -> list[tuple[float, str]]:
     return out
 
 
+# verbo narrado -> tipo de accion (el orden es prioridad; el mas especifico primero)
+_ACTION_KW = [
+    ("explosion", ("explod", "explos", "detonat", "blast", "blew up", "blew apart", "bombed", "erupt")),
+    ("impact",    ("slam", "smash", "struck", "strike", "shrapnel", "rammed", "crash", "hurl", "tore ", "torn ")),
+    ("topple",    ("collaps", "toppl", "crumbl", " fell", "fall", "knocked down", "brought down")),
+    ("sink",      ("sank", "sunk", " sink", "drown", "underwater", "beneath the wa", "went under")),
+    ("shoot",     ("shot ", "shoot", "fired", "firing", "gunned", "execut", "bullet", "opened fire")),
+    ("flee",      ("escap", "fled", " flee", "slipp", "smuggl", "sneak", "snuck", "fleeing", " ran ")),
+    ("rise",      ("emerg", "stood up", "rebuil", "rose up", "rising up")),
+]
+
+
+def _detect_action(text: str):
+    t = f" {text.lower()} "
+    for atype, kws in _ACTION_KW:
+        if any(k in t for k in kws):
+            return atype
+    return None
+
+
 _DATE_PAT = re.compile(
     r"\b(January|February|March|April|May|June|July|August|September|October|November|December)"
     r"\s+\d{1,2},?\s+(1[89]\d\d|20\d\d)\b", re.I)
@@ -189,6 +209,31 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                 "x": -70 if si % 2 == 0 else 70,
                 "y": 60,
             }
+
+    # 4. ACCION: detecta el verbo narrado por escena y lo ACTUA (el recorte se
+    #    transforma + FX de comic), sincronizado al frame en que se dice. Solo
+    #    los tipos de impacto llevan palabra (BANG/BOOM/CRASH); el resto no.
+    terms = data.get("search_terms") or []
+    scene_words = {si: [] for si in range(len(scenes))}
+    for wd in wframes:
+        for si, s_ in enumerate(scenes):
+            if s_["from"] <= wd["t"] < s_["from"] + s_["dur"]:
+                scene_words[si].append(wd)
+                break
+    for si, s_ in enumerate(scenes):
+        narr = " ".join(w["w"] for w in scene_words[si])
+        term = terms[si] if si < len(terms) else ""
+        atype = _detect_action(narr) or _detect_action(term)
+        if not atype:
+            continue
+        at = None
+        for w in scene_words[si]:  # frame local del verbo narrado
+            if _detect_action(w["w"]) == atype:
+                at = max(w["t"] - s_["from"], 4)
+                break
+        if at is None:
+            at = max(int(s_["dur"] * 0.4), 6)
+        s_["beats"]["action"] = {"type": atype, "at": at, "dur": 16}
 
     # beats del guion (autor manda): visual_beats = {"<scene_idx>": {...}}
     for k, beat in (data.get("visual_beats") or {}).items():
