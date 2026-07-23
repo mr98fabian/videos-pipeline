@@ -409,6 +409,24 @@ const _Draw = ({ d, from, dur = 8, w = 7, delay = 0, dash = false }) => {
   );
 };
 
+// sello de expediente compacto dentro del SVG (rect + texto), golpea al entrar
+const _MiniStamp = ({ x, y, rot, text, from, delay = 0, size = 30 }) => {
+  const frame = useCurrentFrame();
+  const local = frame - from - delay;
+  if (local < 0) return null;
+  const s = interpolate(local, [0, 4], [2.1, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: SLAM_EASE });
+  const o = interpolate(local, [0, 3], [0, 0.82], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const w = text.length * size * 0.62 + 26;
+  const h = size + 20;
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`} opacity={o}>
+      <rect x={0} y={0} width={w} height={h} rx={6} fill="none" stroke={RED} strokeWidth={4} />
+      <text x={w / 2} y={h / 2 + size * 0.36} textAnchor="middle" fontFamily="Arial Black, sans-serif"
+            fontWeight={900} fontSize={size} fill={RED} style={{ letterSpacing: 2 }}>{text}</text>
+    </g>
+  );
+};
+
 export const CaseAnnotations = ({ from = 8, index = 0 }) => {
   const frame = useCurrentFrame();
   if (frame - from < 0) return null;
@@ -416,33 +434,48 @@ export const CaseAnnotations = ({ from = 8, index = 0 }) => {
   const label = _CASE_LABELS[index % _CASE_LABELS.length];
   // jitter idle sutil de tinta (todo respira)
   const j = Math.sin((frame - from) / 24) * 1.2;
-  // TODA la marginalia va en las ESQUINAS INFERIORES del papel: son la zona
-  // fiablemente vacia (el sujeto se para centrado y su cabeza/brazos ocupan el
-  // centro-arriba). Asi nunca choca con el sujeto, el sticker de biblioteca ni
-  // se sale del borde, sea el recorte angosto o ancho.
+  // TODA la marginalia va en las ESQUINAS del papel (extremas arriba, e inferiores):
+  // zona fiablemente vacia (el sujeto se para centrado, cabeza/brazos al centro).
+  // Asi nunca choca con el sujeto ni se sale del borde, angosto o ancho.
   const labelWrite = interpolate(frame - from, [0, 10], [0, label.length], {
     extrapolateLeft: "clamp", extrapolateRight: "clamp",
   });
-  // etiqueta abajo-izquierda + flecha corta que sube hacia el sujeto; "?" abajo-derecha
-  const arrow = "M 150 815 Q 250 720, 340 640";
+  const arrow = "M 150 815 Q 250 720, 340 640";       // nota -> sujeto
   const head = "M 340 640 L 356 674 M 340 640 L 304 656";
   const qO = interpolate(frame - from, [10, 20], [0, 0.4], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const caseNo = `Nº 0${(index % 9) + 1}`;
+  const exhibit = `EXHIBIT ${String.fromCharCode(65 + (index % 6))}`;
+  const underlineDrawn = interpolate(frame - from - 12, [0, 7], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.3, 0, 0.2, 1) });
+  const tallies = 3 + (index % 3);
   return (
     <svg
       viewBox="0 0 840 940" width="840" height="940"
       style={{ position: "absolute", left: 0, top: 0, overflow: "visible", transform: `translateY(${j}px)` }}
     >
-      {/* flecha corta desde la nota hacia el sujeto (siempre dentro del papel) */}
+      {/* sellos en las esquinas EXTREMAS superiores (casi siempre vacias) */}
+      <_MiniStamp x={58} y={70} rot={-9} text={caseNo} from={from} delay={0} size={30} />
+      <_MiniStamp x={560} y={78} rot={7} text={exhibit} from={from} delay={6} size={26} />
+      {/* flecha corta desde la nota hacia el sujeto */}
       <_Draw d={arrow} from={from} dur={9} w={7} delay={4} />
       <_Draw d={head} from={from} dur={5} w={7} delay={11} />
+      {/* marcas de conteo sobre la nota */}
+      {Array.from({ length: tallies }).map((_, k) => (
+        <line key={k} x1={64 + k * 22} y1={760} x2={72 + k * 22} y2={805}
+              stroke={RED} strokeWidth={6} strokeLinecap="round"
+              opacity={interpolate(frame - from - 14 - k * 2, [0, 3], [0, 0.85], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })} />
+      ))}
       {/* "?" grande y tenue en la esquina inferior-derecha */}
       <text x={745} y={890} fontFamily={_HANDWRITE} fontSize={120} fontWeight="700" fill={RED} textAnchor="middle"
             opacity={qO} transform="rotate(9 745 890)">?</text>
-      {/* nota manuscrita en la esquina inferior-izquierda, se escribe sola */}
+      {/* nota manuscrita inferior-izquierda + subrayado que se dibuja */}
       <text x={55} y={895} fontFamily={_HANDWRITE} fontSize={56} fontWeight="700" fill={RED} textAnchor="start"
             transform={`rotate(${alt ? -4 : -6} 55 895)`} style={{ letterSpacing: 1 }}>
         {label.slice(0, Math.round(labelWrite))}
       </text>
+      <path d={`M 52 916 Q ${52 + label.length * 17} 906, ${60 + label.length * 34} 914`}
+            stroke={RED} strokeWidth={9} fill="none" strokeLinecap="round"
+            pathLength={1} strokeDasharray={1} strokeDashoffset={1 - underlineDrawn}
+            transform={`rotate(${alt ? -4 : -6} 55 895)`} style={{ opacity: 0.9 }} />
     </svg>
   );
 };
