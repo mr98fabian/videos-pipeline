@@ -6,9 +6,10 @@
     "render": "remotion render"
   },
   "dependencies": {
-    "remotion": "^4.0.300",
     "@remotion/cli": "^4.0.300",
+    "@remotion/transitions": "^4.0.495",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.300"
   }
 }

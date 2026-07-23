@@ -1,0 +1,288 @@
+"""Motor "Archivo Vivo" — integracion pipeline <-> Remotion (23 jul 2026).
+
+Toma los artefactos que el pipeline YA genera (imagenes de escena nb_i.png,
+voz con timestamps, guion JSON) y produce el video completo en el estilo
+aprobado (ver memoria estilo-archivo-vivo) via la composicion ArchivoVideo:
+
+  1. Recortes rembg CACHEADOS por hash (visual_cache) + regla de tratamiento
+     por cobertura (sticker troquelado vs foto de archivo clavada).
+  2. Captions cineticos con los timestamps REALES del TTS (adios ASS quemado).
+  3. Beats visuales: sello de fecha automatico (regex sobre el guion) +
+     "visual_beats" opcionales del guion JSON (censura, zoom, typewriter).
+  4. Cold-open censurado (Tier 3) usando la escena de climax.
+  5. Cierre de franquicia: mapa vivo + share-card + CASE #N CLOSED + SUBSCRIBE.
+  6. Mux final: video del motor (con sus SFX frame-exactos) + voz + musica.
+
+Uso standalone (regenerar un video ya producido, costo API cero):
+  py archivo_engine.py output/2026-07-23-hitler-s-first-coup-collapsed-in-one-aft
+
+Desde pipeline.py se invoca con render_from_parts() (flag --archivo).
+"""
+from __future__ import annotations
+
+import json
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+ROOT = Path(__file__).resolve().parent
+MOTION = ROOT / "motion_graphics"
+FPS = 30
+COLD_FRAMES = 22  # duracion del cold-open censurado
+CLOSE_TAIL = 112  # frames de cierre tras terminar la voz (~3.7s)
+
+
+def _run(cmd: list[str], cwd: Path | None = None, timeout: float = 900.0) -> None:
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+    if r.returncode != 0:
+        raise RuntimeError(f"cmd fallo ({cmd[0]}):\n{r.stderr[-1200:]}")
+
+
+def _ffprobe_dur(p: Path) -> float:
+    r = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)],
+        capture_output=True, text=True, timeout=30,
+    )
+    return float(r.stdout.strip())
+
+
+# --- timestamps por palabra: en memoria (pipeline) o desde subs.ass (standalone)
+_ASS_ACTIVE = re.compile(r"\\t\(0,90[^}]*\}([^{]+)\{")
+_ASS_LINE = re.compile(r"Dialogue: 0,(\d+:\d+:\d+\.\d+),")
+
+
+def words_from_ass(ass_path: Path) -> list[tuple[float, str]]:
+    """Reconstruye [(start_seg, palabra)] desde el karaoke del subs.ass ya
+    generado (un evento por palabra, la activa lleva el tag de pop \\t(0,90...)."""
+    out = []
+    for line in ass_path.read_text(encoding="utf-8").splitlines():
+        m = _ASS_LINE.match(line)
+        if not m:
+            continue
+        h, mnt, s = m.group(1).split(":")
+        t = int(h) * 3600 + int(mnt) * 60 + float(s)
+        w = _ASS_ACTIVE.search(line)
+        if w:
+            word = w.group(1).strip()
+            if word:
+                out.append((t, word))
+    return out
+
+
+_DATE_PAT = re.compile(
+    r"\b(January|February|March|April|May|June|July|August|September|October|November|December)"
+    r"\s+\d{1,2},?\s+(1[89]\d\d|20\d\d)\b", re.I)
+
+
+def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
+                    audio_dur: float, slug: str) -> dict:
+    """Arma el manifest para ArchivoVideo. words = [(start_seg, palabra)]."""
+    sys.path.insert(0, str(ROOT))
+    from visual_cache import cached_cutout, cutout_coverage
+    import pipeline as pl
+
+    clips = out_dir / "clips"
+    imgs = sorted(clips.glob("nb_*.png"), key=lambda p: int(p.stem.split("_")[1]))
+    if not imgs:
+        raise RuntimeError(f"no hay nb_*.png en {clips} (el motor necesita imagenes de escena)")
+    n = len(imgs)
+
+    # carpeta de assets publicos del video
+    pub = MOTION / "public" / "archivo" / slug
+    pub.mkdir(parents=True, exist_ok=True)
+
+    # duraciones por escena con cortes en fin de frase (regla existente del pipeline)
+    pl_words = [(t, t, w) for t, w in words]
+    durations = pl._scene_boundaries(pl_words, n, audio_dur)
+
+    cold_shift = COLD_FRAMES
+    scenes = []
+    cursor = cold_shift
+    for i, img in enumerate(imgs):
+        shutil.copyfile(img, pub / f"bg_{i}.png")
+        fg_rel = None
+        treatment = "photo"
+        try:
+            cut = cached_cutout(img)
+            if cutout_coverage(cut) > 0.17:  # v2: recortes chicos (cabezas sueltas) -> foto clavada, que es lo que el usuario ama
+                shutil.copyfile(cut, pub / f"fg_{i}.png")
+                fg_rel = f"archivo/{slug}/fg_{i}.png"
+                treatment = "sticker"
+        except Exception as e:
+            print(f"[archivo] recorte escena {i} fallo ({e}); foto clavada")
+        dur_f = max(int(round(durations[i] * FPS)), 12)
+        scenes.append({
+            "from": cursor, "dur": dur_f,
+            "bg": f"archivo/{slug}/bg_{i}.png", "fg": fg_rel,
+            "treatment": treatment, "beats": {},
+        })
+        cursor += dur_f
+
+    # palabras -> frames globales (desplazadas por el cold-open)
+    wframes = [{"t": int(round(t * FPS)) + cold_shift, "w": w} for t, w in words]
+
+    # beat automatico: sello con la FECHA narrada, en la escena donde se narra
+    mdate = _DATE_PAT.search(data.get("script", ""))
+    if mdate:
+        date_text = mdate.group(0).upper().replace(",", ", ").replace("  ", " ")
+        script_words = data["script"].split()
+        # indice aproximado de la palabra del mes en el guion
+        for wi, sw in enumerate(script_words):
+            if sw.lower().startswith(mdate.group(1).lower()):
+                if wi < len(wframes):
+                    g = wframes[wi]["t"]
+                    for s in scenes:
+                        if s["from"] <= g < s["from"] + s["dur"]:
+                            s["beats"]["stamp"] = {"text": date_text, "at": max(g - s["from"], 4)}
+                            break
+                break
+
+    # ---- DENSIDAD AUTOMATICA v2 (feedback 23 jul: escenas ralas) ----
+    # 1. stickers de la biblioteca (112) por palabra clave REALMENTE narrada
+    try:
+        import sticker_library as sl
+        for start, sid, phrase in sl.find_keyword_cues(pl_words, min_gap=2.5, max_cues=20):
+            g = int(round(start * FPS)) + cold_shift
+            for s_ in scenes:
+                if s_["from"] <= g < s_["from"] + s_["dur"]:
+                    st_list = s_["beats"].setdefault("stickers", [])
+                    if len(st_list) < 2:
+                        entry = sl.load_manifest().get(sid)
+                        if entry:
+                            src = sl.STICKERS_DIR / entry["file"]
+                            if src.exists():
+                                dst = pub / f"st_{sid}.png"
+                                if not dst.exists():
+                                    shutil.copyfile(src, dst)
+                                st_list.append({"at": max(g - s_["from"], 4),
+                                                 "src": f"archivo/{slug}/st_{sid}.png"})
+                    break
+    except Exception as e:
+        print(f"[archivo] stickers de biblioteca no disponibles: {e}")
+
+    # 2. numeros narrados grandes -> mini sello rojo ("150", "883", "1934" ya va en fecha)
+    for wi, wd in enumerate(wframes):
+        raw = wd["w"].strip(".,!?").replace(",", "")
+        if raw.isdigit() and len(raw) >= 2 and not (1800 <= int(raw) <= 2099):
+            g = wd["t"]
+            for s_ in scenes:
+                if s_["from"] <= g < s_["from"] + s_["dur"] and "numstamp" not in s_["beats"]:
+                    s_["beats"]["numstamp"] = {"text": raw, "at": max(g - s_["from"], 4)}
+                    break
+
+    # 3. zoom-evidencia alternado en toda escena con aire (>55 frames)
+    for si, s_ in enumerate(scenes):
+        if s_["dur"] > 55 and "zoom" not in s_["beats"]:
+            s_["beats"]["zoom"] = {
+                "at": int(s_["dur"] * 0.42),
+                "scale": 1.2 if si % 2 == 0 else 1.26,
+                "x": -70 if si % 2 == 0 else 70,
+                "y": 60,
+            }
+
+    # beats del guion (autor manda): visual_beats = {"<scene_idx>": {...}}
+    for k, beat in (data.get("visual_beats") or {}).items():
+        idx = int(k)
+        if 0 <= idx < len(scenes):
+            scenes[idx]["beats"].update(beat)
+
+    voice_end = cold_shift + int(round(audio_dur * FPS))
+    close_from = voice_end + 4
+    # sin gap por redondeo: la ultima escena cubre hasta el cierre
+    if scenes:
+        scenes[-1]["dur"] = close_from - scenes[-1]["from"]
+
+    # serie y numero de caso desde el titulo "... | WWII Secrets"
+    title = data.get("title", "")
+    series = title.split("|")[-1].strip() if "|" in title else "HIDDEN FACTS"
+    share = data.get("share_card") or {}
+
+    def _word_safe(text: str, limit: int = 58) -> str:
+        text = text.strip()
+        if len(text) <= limit:
+            return text
+        cut = text[:limit].rsplit(" ", 1)[0]
+        return cut.rstrip(".,;: ")
+
+    return {
+        "durationInFrames": close_from + CLOSE_TAIL,
+        "coldOpen": {"src": f"archivo/{slug}/bg_{n - 1}.png", "label": "CLASSIFIED",
+                      "tag": "IN 60 SECONDS...", "frames": COLD_FRAMES},
+        "scenes": scenes,
+        "words": wframes,
+        "close": {
+            "from": close_from, "series": series,
+            "caseNo": int(data.get("case_no", 1)),
+            "share1": share.get("line1", _word_safe(
+                (data.get("hook_card") or title.split("|")[0]).split(".")[0] + ".")),
+            "share2": share.get("line2", "True story."),
+        },
+    }
+
+
+def render_from_parts(out_dir: Path, data: dict, words: list[tuple[float, str]],
+                       audio_path: Path) -> Path:
+    """Renderiza el video Archivo Vivo completo y muxea voz + musica."""
+    sys.path.insert(0, str(ROOT))
+    import pipeline as pl
+
+    out_dir = Path(out_dir)
+    slug = out_dir.name[-40:].strip("-")
+    audio_dur = _ffprobe_dur(audio_path)
+    manifest = build_manifest(out_dir, data, words, audio_dur, slug)
+
+    props = out_dir / "clips" / "archivo_manifest.json"
+    props.parent.mkdir(exist_ok=True)
+    props.write_text(json.dumps({"manifest": manifest}, ensure_ascii=False), encoding="utf-8")
+    print(f"[archivo] manifest: {len(manifest['scenes'])} escenas, "
+          f"{len(manifest['words'])} palabras, {manifest['durationInFrames']} frames")
+
+    engine_mp4 = out_dir / "clips" / "archivo_engine.mp4"
+    npx = shutil.which("npx") or "npx"
+    print("[archivo] renderizando composicion (esto tarda unos minutos)...")
+    _run([npx, "remotion", "render", "src/index.jsx", "ArchivoVideo",
+          str(engine_mp4.resolve()), "--props", str(props.resolve())], cwd=MOTION)
+
+    # mux: motor (video + sfx del motor) + voz desplazada por el cold-open + musica
+    cold_ms = int(COLD_FRAMES / FPS * 1000)
+    music = pl._pick_music()
+    final = out_dir / "video.mp4"
+    inputs = ["-i", str(engine_mp4), "-i", str(audio_path)]
+    fc = f"[1:a]adelay={cold_ms}|{cold_ms}[voice];"
+    labels = "[0:a][voice]"
+    ninputs = 2
+    if music:
+        inputs += ["-i", str(music)]
+        fc += "[2:a]aloop=loop=-1:size=2e9,volume=0.06[bg];"
+        labels += "[bg]"
+        ninputs = 3
+    fc += f"{labels}amix=inputs={ninputs}:normalize=0:duration=first[a]"
+    _run(["ffmpeg", "-y", *inputs, "-filter_complex", fc,
+          "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+          str(final)])
+    print(f"[archivo] LISTO: {final}")
+    return final
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print(__doc__)
+        return 1
+    out_dir = Path(sys.argv[1])
+    data = json.loads((out_dir / "script.json").read_text(encoding="utf-8"))
+    words = words_from_ass(out_dir / "subs.ass")
+    if not words:
+        print("ERROR: no pude reconstruir timestamps desde subs.ass")
+        return 1
+    print(f"[archivo] {len(words)} palabras reconstruidas del ASS")
+    render_from_parts(out_dir, data, words, out_dir / "voice.mp3")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

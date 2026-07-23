@@ -40,3 +40,7 @@ motion_graphics/out/
 motion_graphics/public/collage_photo.png
 motion_graphics/public/scene_sticker_*.png
 motion_graphics/public/sticker_*.png
+
+# backups y reportes runtime (no codigo)
+*.bak
+performance_report.csv

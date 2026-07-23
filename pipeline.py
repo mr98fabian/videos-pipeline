@@ -546,8 +546,13 @@ def _split_index(tokens: list[str]) -> int:
 
 
 # Colores ASS (formato BBGGRR): palabra activa amarilla, resto blanco.
-_CAP_ACTIVE = r"{\c&H00FFFF&}"
-_CAP_WHITE = r"{\c&HFFFFFF&}"
+# La activa ademas hace un "pop" de escala: sube a 113% en 90ms y se sostiene
+# mientras se pronuncia. El movimiento sobre la palabra hablada fija mas la
+# mirada que solo el cambio de color -- clave con ~50% viendo en mute y para
+# no-nativos (tecnica estandar de captions estilo TikTok). El reset devuelve las
+# demas palabras a blanco y escala 100 para que el efecto no se arrastre.
+_CAP_ACTIVE = r"{\c&H00FFFF&\fscx100\fscy100\t(0,90,\fscx113\fscy113)}"
+_CAP_WHITE = r"{\c&HFFFFFF&\fscx100\fscy100}"
 
 
 def generate_subtitles(words: list[tuple[float, float, str]], out_dir: Path,
@@ -1091,9 +1096,14 @@ def _seedream_generate_image(prompt: str, path: Path, api_key: str,
 
 def _static_image_clip(image_path: Path, duration: float, path: Path, zoom_in: bool = True,
                         punch: bool = False, hook: bool = False, static: bool = False,
-                        hook_strong: bool = False) -> None:
+                        hook_strong: bool = False, move: int = 0) -> None:
     """Convierte una imagen fija en un clip con efecto Ken Burns (zoom lento, gratis).
-    Alterna zoom-in/zoom-out entre clips para variar el movimiento visual.
+    move: indice de escena -- rota entre 6 movimientos distintos (zoom-in/out
+    centrado + 4 paneos direccionales) para que dos escenas seguidas nunca se
+    sientan clonadas. Antes solo alternaba zoom-in/zoom-out, ambos centrados, y
+    todas las escenas se percibian iguales (feedback visual 22 jul 2026). El
+    parametro zoom_in quedo obsoleto (lo reemplaza 'move'); se mantiene por
+    compatibilidad de firma pero ya no se usa en el modo normal.
     punch=True: quieto los primeros ~60% y zoom rapido "golpe" el resto -- usar
     en la escena del remate/giro comico para dar un acento visual.
     hook=True: golpe de entrada -- zoom-in rapido en el primer ~20% y luego se
@@ -1105,6 +1115,13 @@ def _static_image_clip(image_path: Path, duration: float, path: Path, zoom_in: b
     static=True: sin ningun movimiento (modo caption -- la imagen ya comparte
     el frame con texto fijo, el zoom se sentia inconsistente con esa quietud)."""
     frames = max(int(round(duration * FPS)), 1)
+    # x/y por defecto: ventana de recorte centrada (comportamiento clasico).
+    # Los paneos la desplazan; usan zoom FIJO porque con zoom bajo (~1.0) no hay
+    # "slack" para moverse sin mostrar borde negro -- a z=1.12 el rango valido de
+    # x/y es [0, 0.107*iw] con centro en 0.054*iw, asi que un offset de +/-0.04*iw
+    # se queda siempre dentro del recorte.
+    xexpr = "iw/2-(iw/zoom/2)"
+    yexpr = "ih/2-(ih/zoom/2)"
     if static:
         zexpr = "1.0"
     elif hook and hook_strong:
@@ -1117,12 +1134,30 @@ def _static_image_clip(image_path: Path, duration: float, path: Path, zoom_in: b
         hold = max(int(frames * 0.6), 1)
         zexpr = f"if(lt(on,{hold}),1.0,min(1.0+0.045*(on-{hold}),1.35))"
     else:
-        zexpr = "min(zoom+0.0015,1.18)" if zoom_in else "if(eq(on,1),1.18,max(zoom-0.0015,1.0))"
+        # progreso lineal -1 -> +1 a lo largo del clip, para los paneos
+        prog = f"((2*on/{frames})-1)"
+        variant = move % 6
+        if variant == 0:      # zoom-in centrado
+            zexpr = "min(zoom+0.0015,1.18)"
+        elif variant == 1:    # zoom-out centrado
+            zexpr = "if(eq(on,1),1.18,max(zoom-0.0015,1.0))"
+        elif variant == 2:    # paneo izquierda -> derecha (zoom fijo)
+            zexpr = "1.12"
+            xexpr = f"iw/2-(iw/zoom/2)+(iw*0.04)*{prog}"
+        elif variant == 3:    # paneo derecha -> izquierda
+            zexpr = "1.12"
+            xexpr = f"iw/2-(iw/zoom/2)-(iw*0.04)*{prog}"
+        elif variant == 4:    # paneo arriba -> abajo (zoom fijo)
+            zexpr = "1.12"
+            yexpr = f"ih/2-(ih/zoom/2)+(ih*0.04)*{prog}"
+        else:                 # paneo abajo -> arriba
+            zexpr = "1.12"
+            yexpr = f"ih/2-(ih/zoom/2)-(ih*0.04)*{prog}"
     vf = (
         f"scale={WIDTH * 2}:{HEIGHT * 2}:force_original_aspect_ratio=increase,"
         f"crop={WIDTH * 2}:{HEIGHT * 2},"
         f"zoompan=z='{zexpr}':d={frames}:s={WIDTH}x{HEIGHT}:fps={FPS}:"
-        f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)',setsar=1"
+        f"x='{xexpr}':y='{yexpr}',setsar=1"
     )
     run([
         "ffmpeg", "-y", "-loop", "1", "-i", str(image_path), "-t", f"{duration:.2f}",
@@ -1363,7 +1398,7 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                     else:
                         log("media", f"clip {i + 1}/{n_clips}: Veo fallo, cae a imagen estatica")
                 if not got:
-                    _static_image_clip(img_path, durations[i] + 1.0, raw, zoom_in=(i % 2 == 0),
+                    _static_image_clip(img_path, durations[i] + 1.0, raw, move=i,
                                         punch=(i == punch_index), hook=(i == 0), static=static,
                                         hook_strong=hook_strong)
                     got = True
@@ -1415,6 +1450,20 @@ def _lyria_generate_music(mood_prompt: str, out_path: Path, api_key: str) -> boo
 
 
 SFX_DIR = ROOT / "assets" / "sfx"
+
+# Capa OPCIONAL (--sticker-sfx) de sonido de ENTRADA de sticker: un swish de
+# papel suave en el frame exacto en que el sticker hace pop. NO es SFX diegetico
+# (no describe un evento de la narracion) -- es el "sonido del collage armandose",
+# motivado por la estetica de recortes de papel que ya usan los stickers
+# (tarjeta beige + borde de tinta + flecha dibujada a mano). Reglas para que no
+# se sienta "puesto por ponerlo": UN solo sonido consistente (firma del canal),
+# volumen bajo bajo la narracion, y se OMITE entero si el tono del video es
+# sombrio. Capa separada de pick_sfx_cues (que sigue siendo 100% diegetico).
+STICKER_SFX_DEFAULT = "Paper___book_ManualTurnPage_AP1.1244.mp3"  # swish de papel, 0.58s
+STICKER_SFX_VOLUME = 0.16
+_SOMBER_TONE_WORDS = ("sad", "tragic", "mournful", "grief", "sorrow", "solemn",
+                       "melancholy", "funeral", "elegy", "lament", "somber", "sombre",
+                       "requiem", "heartbreaking")
 
 
 def _list_sfx() -> list[Path]:
@@ -2148,7 +2197,9 @@ def _photo_sticker(query: str, clips_dir: Path, tag: str) -> str | None:
 
 
 def add_scene_stickers(video_path: Path, search_terms: list[str], durations: list[float],
-                        out_dir: Path, words: list[tuple[float, float, str]] | None = None) -> Path:
+                        out_dir: Path, words: list[tuple[float, float, str]] | None = None,
+                        sticker_sfx: bool = False, tone: str | None = None,
+                        sticker_sfx_file: str | None = None) -> Path:
     """Sticker por cada palabra clave REALMENTE narrada (words, con timestamp
     real de TTS) usando la libreria pre-generada de sticker_library.py --
     pedido usuario 22 jul 2026: 'asegurate de usarlo en cada palabra clave
@@ -2217,16 +2268,49 @@ def add_scene_stickers(video_path: Path, search_terms: list[str], durations: lis
     # el resto del pipeline (subida, QA, este mismo main()) asume que el
     # resultado final siempre vive en out_dir/video.mp4 -- se compone a un
     # archivo temporal y se reemplaza in-place, nunca se cambia el nombre.
+    # capa opcional de sonido de entrada de sticker (swish de papel en cada pop).
+    # Se omite si: el flag esta apagado, no hay cues, no existe el archivo, o el
+    # tono del video es sombrio (respeta la misma logica de tono que pick_sfx_cues).
+    sfx_path = SFX_DIR / (sticker_sfx_file or STICKER_SFX_DEFAULT)
+    somber = bool(tone) and any(w in tone.lower() for w in _SOMBER_TONE_WORDS)
+    sfx_cue_times = [c["time"] for c in cues]
+    use_sticker_sfx = bool(sticker_sfx and sfx_cue_times and sfx_path.exists() and not somber)
+    if sticker_sfx and somber:
+        log("motion", "sticker-sfx omitido: tono sombrio")
+    elif sticker_sfx and not sfx_path.exists():
+        log("motion", f"sticker-sfx omitido: no existe {sfx_path.name}")
+
     composited = clips_dir / "video_with_motion.mp4"
     try:
-        run([
-            "ffmpeg", "-y", "-i", str(video_path), "-i", str(overlay_path),
-            "-filter_complex",
-            "[1:v]format=yuva420p[ov];[0:v][ov]overlay=0:0[v]",
-            "-map", "[v]", "-map", "0:a", "-c:a", "copy",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-            str(composited),
-        ])
+        if use_sticker_sfx:
+            # un input del sonido por cada pop, retrasado a su tiempo y a volumen
+            # bajo; se suma (amix normalize=0) sobre el audio original sin pisarlo.
+            inputs = ["-i", str(video_path), "-i", str(overlay_path)]
+            fc = "[1:v]format=yuva420p[ov];[0:v][ov]overlay=0:0[v];"
+            labels = "[0:a]"
+            for k, t in enumerate(sfx_cue_times):
+                inputs += ["-i", str(sfx_path)]
+                ms = int(round(t * 1000))
+                fc += f"[{2 + k}:a]adelay={ms}|{ms},volume={STICKER_SFX_VOLUME}[ssf{k}];"
+                labels += f"[ssf{k}]"
+            fc += f"{labels}amix=inputs={1 + len(sfx_cue_times)}:normalize=0:duration=first[a]"
+            run([
+                "ffmpeg", "-y", *inputs,
+                "-filter_complex", fc,
+                "-map", "[v]", "-map", "[a]",
+                "-c:a", "aac", "-b:a", "192k",
+                "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
+                str(composited),
+            ])
+        else:
+            run([
+                "ffmpeg", "-y", "-i", str(video_path), "-i", str(overlay_path),
+                "-filter_complex",
+                "[1:v]format=yuva420p[ov];[0:v][ov]overlay=0:0[v]",
+                "-map", "[v]", "-map", "0:a", "-c:a", "copy",
+                "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
+                str(composited),
+            ])
     except Exception as e:
         log("motion", f"Composicion ffmpeg fallo, se sigue sin motion graphics: {e}")
         return video_path
@@ -2503,6 +2587,16 @@ def main() -> int:
     parser.add_argument("--no-collage", action="store_true",
                         help="Desactiva la escena de collage con foto real recortada aunque el "
                              "guion tenga 'collage_subject'.")
+    parser.add_argument("--sticker-sfx", action="store_true",
+                        help="Capa opcional (opt-in, para A/B): un swish de papel suave en el "
+                             "frame en que cada sticker hace pop -- el 'sonido del collage "
+                             "armandose', motivado por la estetica de recortes. Volumen bajo, "
+                             "se omite entero si el music_mood del video es sombrio. NO toca "
+                             "pick_sfx_cues (que sigue siendo puramente diegetico).")
+    parser.add_argument("--sticker-sfx-file", default=None, metavar="NOMBRE",
+                        help="Nombre de archivo dentro de assets/sfx/ para reemplazar el swish "
+                             f"de papel por defecto ({STICKER_SFX_DEFAULT}). Para probar de oido "
+                             "otro sonido sin tocar el codigo.")
     parser.add_argument("--nanobanana", action="store_true",
                         help="Usa imagenes estaticas generadas con Nano Banana (Gemini) en vez de "
                              "Pexels/gradiente. Requiere GEMINI_API_KEY.")
@@ -2742,7 +2836,9 @@ def main() -> int:
         # antes de caer a emoji (ver HISTORIAL_MEJORAS.md). No aplica al modo
         # silent_card_mode (sin escenas narradas) ni si el usuario paso --no-motion.
         if not silent_card_mode and not args.no_motion:
-            final = add_scene_stickers(final, data["search_terms"], durations, out_dir, words=words)
+            final = add_scene_stickers(final, data["search_terms"], durations, out_dir, words=words,
+                                       sticker_sfx=args.sticker_sfx, tone=data.get("music_mood"),
+                                       sticker_sfx_file=args.sticker_sfx_file)
 
         # collage de foto real (21 jul 2026): campo del guion 'collage_subjects'
         # (lista de {"subject", "time" opcional}) o el viejo 'collage_subject'
