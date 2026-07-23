@@ -215,7 +215,7 @@ const LibSticker = ({ src, from, side }) => {
         display: "flex", alignItems: "center", justifyContent: "center",
       }}
     >
-      <_Img src={src} style={{ width: "82%", height: "82%", objectFit: "contain" }} />
+      <_Img src={src} style={{ width: "82%", height: "82%", objectFit: "contain", filter: "sepia(0.55) saturate(0.85)" }} />
     </div>
   );
 };

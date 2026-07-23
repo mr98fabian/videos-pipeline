@@ -2655,6 +2655,11 @@ def main() -> int:
                         help="Modo del premise card (campo 'hook_card' del guion): 'overlay' "
                              "(se superpone mientras ya narra) o 'read' (frame congelado 2.2s, "
                              "solo musica/stinger, la narracion arranca despues).")
+    parser.add_argument("--archivo", action="store_true",
+                        help="Renderiza con el motor visual 'Archivo Vivo' (Remotion, "
+                             "collage documental punchy) en vez del ensamblado FFmpeg "
+                             "clasico. Requiere imagenes de escena (--nanobanana/--seedream). "
+                             "Ver archivo_engine.py.")
     parser.add_argument("--ideas", action="store_true",
                         help="Genera 5 ideas de tema nuevas (usando topics.txt como referencia) y termina")
     parser.add_argument("--auto", action="store_true",
@@ -2807,47 +2812,55 @@ def main() -> int:
                               hook_strong=hook_strong,
                               wan_hero_path=args.wan_hero)
 
-        sfx_cues_full = ([] if (args.no_sfx or silent_card_mode) else
-                    pick_sfx_cues(words, tone=data.get("music_mood"),
-                                  script=data.get("script"),
-                                  search_terms=data.get("search_terms")))
-        sfx_cues = [(t, p) for t, p, _ in sfx_cues_full]
-        # silent_card_mode (sin narrador, card de texto largo): NO generar musica
-        # propia -- estos videos se pensaron para reemplazar la musica con un
-        # audio trending del nicho, agregado a mano en el editor de Shorts de
-        # Studio (ver memoria musica-trending-videos-solo-lectura). Generar
-        # musica igual solo gastaria cuota/plata de Lyria para algo que se va a
-        # descartar.
-        final = assemble(clips, audio_path, ass_path, out_dir,
-                          music_mood=(None if silent_card_mode else data.get("music_mood")),
-                          sfx_cues=sfx_cues,
-                          durations=durations, watermark=args.watermark or None,
-                          cta_text=args.cta_text, cta_position=args.cta_position,
-                          intro_stinger=intro_stinger,
-                          split_first_clip=args.split_first_clip,
-                          caption_header=data.get("caption_header"),
-                          caption_text=data.get("caption_text"),
-                          caption_keywords=data.get("caption_keywords"),
-                          hook_card=hook_card, hook_card_mode=args.hook_card_mode,
-                          hook_punch=hook_strong)
+        if args.archivo and not silent_card_mode:
+            # Motor "Archivo Vivo" (23 jul 2026): la composicion Remotion
+            # manifest-driven reemplaza ensamblado FFmpeg + ASS + stickers +
+            # collage (ver archivo_engine.py y memoria estilo-archivo-vivo)
+            import archivo_engine
+            final = archivo_engine.render_from_parts(
+                out_dir, data, [(ws, w) for ws, _we, w in words], audio_path)
+        else:
+            sfx_cues_full = ([] if (args.no_sfx or silent_card_mode) else
+                        pick_sfx_cues(words, tone=data.get("music_mood"),
+                                      script=data.get("script"),
+                                      search_terms=data.get("search_terms")))
+            sfx_cues = [(t, p) for t, p, _ in sfx_cues_full]
+            # silent_card_mode (sin narrador, card de texto largo): NO generar musica
+            # propia -- estos videos se pensaron para reemplazar la musica con un
+            # audio trending del nicho, agregado a mano en el editor de Shorts de
+            # Studio (ver memoria musica-trending-videos-solo-lectura). Generar
+            # musica igual solo gastaria cuota/plata de Lyria para algo que se va a
+            # descartar.
+            final = assemble(clips, audio_path, ass_path, out_dir,
+                              music_mood=(None if silent_card_mode else data.get("music_mood")),
+                              sfx_cues=sfx_cues,
+                              durations=durations, watermark=args.watermark or None,
+                              cta_text=args.cta_text, cta_position=args.cta_position,
+                              intro_stinger=intro_stinger,
+                              split_first_clip=args.split_first_clip,
+                              caption_header=data.get("caption_header"),
+                              caption_text=data.get("caption_text"),
+                              caption_keywords=data.get("caption_keywords"),
+                              hook_card=hook_card, hook_card_mode=args.hook_card_mode,
+                              hook_punch=hook_strong)
 
-        # stickers automaticos (21 jul 2026): UNO por escena (search_term), no
-        # atado a sfx_cues -- mas denso, y cada uno intenta foto real recortada
-        # antes de caer a emoji (ver HISTORIAL_MEJORAS.md). No aplica al modo
-        # silent_card_mode (sin escenas narradas) ni si el usuario paso --no-motion.
-        if not silent_card_mode and not args.no_motion:
-            final = add_scene_stickers(final, data["search_terms"], durations, out_dir, words=words,
-                                       sticker_sfx=args.sticker_sfx, tone=data.get("music_mood"),
-                                       sticker_sfx_file=args.sticker_sfx_file)
+            # stickers automaticos (21 jul 2026): UNO por escena (search_term), no
+            # atado a sfx_cues -- mas denso, y cada uno intenta foto real recortada
+            # antes de caer a emoji (ver HISTORIAL_MEJORAS.md). No aplica al modo
+            # silent_card_mode (sin escenas narradas) ni si el usuario paso --no-motion.
+            if not silent_card_mode and not args.no_motion:
+                final = add_scene_stickers(final, data["search_terms"], durations, out_dir, words=words,
+                                           sticker_sfx=args.sticker_sfx, tone=data.get("music_mood"),
+                                           sticker_sfx_file=args.sticker_sfx_file)
 
-        # collage de foto real (21 jul 2026): campo del guion 'collage_subjects'
-        # (lista de {"subject", "time" opcional}) o el viejo 'collage_subject'
-        # singular (compatibilidad) -- ver add_real_photo_collages().
-        collage_subjects = data.get("collage_subjects")
-        if collage_subjects is None and data.get("collage_subject"):
-            collage_subjects = [{"subject": data["collage_subject"], "time": data.get("collage_time")}]
-        if collage_subjects and not args.no_collage and not silent_card_mode:
-            final = add_real_photo_collages(final, collage_subjects, out_dir)
+            # collage de foto real (21 jul 2026): campo del guion 'collage_subjects'
+            # (lista de {"subject", "time" opcional}) o el viejo 'collage_subject'
+            # singular (compatibilidad) -- ver add_real_photo_collages().
+            collage_subjects = data.get("collage_subjects")
+            if collage_subjects is None and data.get("collage_subject"):
+                collage_subjects = [{"subject": data["collage_subject"], "time": data.get("collage_time")}]
+            if collage_subjects and not args.no_collage and not silent_card_mode:
+                final = add_real_photo_collages(final, collage_subjects, out_dir)
     except Exception:
         if args.auto:
             _log_auto_failure(topic)
