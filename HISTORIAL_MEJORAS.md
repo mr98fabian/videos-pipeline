@@ -154,3 +154,21 @@ Formato por entrada:
   sesión reusada, modelo en la clave de caché, y `_clean_alpha` erosiona 1px el
   canal alfa (mata la franja fantasma) + anti-alias. CPU ~30-60s/imagen pero se
   cachea de por vida. Validado sobre pergamino: silueta limpia, sin halo.
+
+## 2026-07-23 — Capa de ACCION: lo narrado se actúa en pantalla
+
+- Feedback usuario: "las acciones no quedan claras; me gustaría que lo que dice
+  se acompañe de una representación visual" + "no vi animaciones 3D".
+- `actionMotion` (components.jsx): el recorte de pose fija se transforma según el
+  verbo — explosion/impact (sacude + salta en Z), recoil, topple (se voltea),
+  flee (se desliza fuera), sink (se hunde), rise, shoot/lunge. El salto en Z
+  (translateZ) hace el 3D visible en los golpes.
+- `ActionFX`: FX de cómic sincronizado — estrella de impacto dorada, palabra
+  BANG/BOOM/CRASH (SOLO en impactos, elección del usuario), líneas de velocidad.
+- Sacudida de cámara en el golpe. `Cutout` acepta action={}.
+- `archivo_engine._detect_action`: escanea narración + search_term de cada escena,
+  detecta el verbo y engancha la acción al frame en que se dice (sincronía con la
+  voz). Override manual: 'action' en visual_beats del JSON. Selectivo (no dispara
+  en frases sin acción). Validado contra frases reales de los guiones.
+- Aplicado por re-render a Pilecki y Orden 227 (junto con BiRefNet + marginalia).
+  Black Tom queda como estaba (decisión usuario).
