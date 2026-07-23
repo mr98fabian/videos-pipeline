@@ -124,3 +124,21 @@ Formato por entrada:
   la búsqueda y descarta automáticamente fotos con más de una persona, sin
   curación manual del término de búsqueda (pedido explícito del usuario:
   automatización 100%, "si no no tiene chiste y contrato un editor de video").
+
+## 2026-07-23 — Suite vidIQ por HTTP directo: gate de títulos + outliers en vivo
+
+- Problema: el MCP de vidIQ exige re-auth OAuth y sus tools no cargan en
+  sesiones continuadas — el gate obligatorio de títulos quedaba bloqueado.
+- Nuevo `vidiq_tools.py`: cliente JSON-RPC directo contra mcp.vidiq.com/mcp con
+  la API key (gitignored). Subcomandos: balance / outliers / xoutliers (TikTok+IG
+  con análisis de hook 0-3s) / watch (desglose escena por escena) / transcript /
+  similar / comments / radar-terms.
+- `topic_radar.py --outliers auto`: capa de outliers en vivo (YouTube +
+  TikTok/IG) sin archivo manual; los temas que matchean suben +3 [OUTLIER].
+- Gate aplicado a los 5 programados (24-28 jul): títulos 92→95, 90→90, 89→91,
+  88→93, 84→92 (híbrido "sugerencia top | Marca de Serie"; la marca resta 2-4
+  puntos pero la serialización manda). Descripciones/tags reescritos con
+  keyword_research: "world war 2" (580k/mes) > "wwii", #historyfacts (331k/mes)
+  > #hiddenfacts, "USS Indianapolis" (56k/mes) añadido.
+- Dato clave de channel_performance_trends: mediana 4 vistas a las 12h, despegue
+  día 2-7 → ningún veredicto A/B antes del día 3 (regla en skill /canal audit).
