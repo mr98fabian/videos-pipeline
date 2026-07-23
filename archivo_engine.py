@@ -101,6 +101,9 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     durations = pl._scene_boundaries(pl_words, n, audio_dur)
 
     cold_shift = COLD_FRAMES
+    # escenas (1-based, como visual_beats) donde el recorte rembg sale lavado ->
+    # forzar foto clavada sin intentar el sticker
+    force_photo = {int(k) for k in data.get("force_photo", [])}
     scenes = []
     cursor = cold_shift
     for i, img in enumerate(imgs):
@@ -108,6 +111,8 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
         fg_rel = None
         treatment = "photo"
         try:
+            if (i + 1) in force_photo:
+                raise ValueError("force_photo")
             cut = cached_cutout(img)
             if cutout_coverage(cut) > 0.17:  # v2: recortes chicos (cabezas sueltas) -> foto clavada, que es lo que el usuario ama
                 shutil.copyfile(cut, pub / f"fg_{i}.png")
@@ -254,13 +259,17 @@ def render_from_parts(out_dir: Path, data: dict, words: list[tuple[float, str]],
     final = out_dir / "video.mp4"
     inputs = ["-i", str(engine_mp4), "-i", str(audio_path)]
     fc = f"[1:a]adelay={cold_ms}|{cold_ms}[voice];"
-    labels = "[0:a][voice]"
-    ninputs = 2
     if music:
+        # DUCKING (fix 23 jul): la musica baja cuando habla la voz, igual que en
+        # assemble() clasico (sidechaincompress con los mismos parametros probados)
         inputs += ["-i", str(music)]
-        fc += "[2:a]aloop=loop=-1:size=2e9,volume=0.06[bg];"
-        labels += "[bg]"
-        ninputs = 3
+        fc += ("[voice]asplit=2[vmix][vtrig];"
+               "[2:a]aloop=loop=-1:size=2e9,volume=0.06[bg0];"
+               "[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[bg];")
+        labels, ninputs = "[0:a][vmix][bg]", 3
+    else:
+        fc += "[voice]anull[vmix];"
+        labels, ninputs = "[0:a][vmix]", 2
     fc += f"{labels}amix=inputs={ninputs}:normalize=0:duration=first[a]"
     _run(["ffmpeg", "-y", *inputs, "-filter_complex", fc,
           "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
