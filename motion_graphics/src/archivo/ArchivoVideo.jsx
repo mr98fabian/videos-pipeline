@@ -10,6 +10,7 @@ import {
   Stamp,
   Typewriter,
   CaseAnnotations,
+  ActionFX,
   ColdOpen,
   SubscribeStamp,
   CaseClosed,
@@ -56,6 +57,9 @@ const SceneBlock = ({ scene, index }) => {
   const shakes = [{ frame: 2, amp: 6 }];
   if (b.stamp) shakes.push({ frame: b.stamp.at, amp: 8 });
   if (b.censor) shakes.push({ frame: b.censor.reveal, amp: 8 });
+  // sacudida de camara al golpe de accion (impacto/explosion/derrumbe)
+  if (b.action && ["explosion", "impact", "topple", "fall", "collapse", "shoot"].includes(b.action.type))
+    shakes.push({ frame: b.action.at ?? 6, amp: 16, dur: 8 });
   const beats = [];
   if (b.zoom) {
     beats.push({ frame: b.zoom.at, scale: b.zoom.scale ?? 1.35, x: b.zoom.x ?? 0, y: b.zoom.y ?? 0, dur: 7 });
@@ -79,6 +83,7 @@ const SceneBlock = ({ scene, index }) => {
           h={1080}
           fromDir={dir}
           rot={alt ? -2 : 2}
+          action={b.action || null}
         />
         </>
       ) : (
@@ -102,6 +107,7 @@ const SceneBlock = ({ scene, index }) => {
       ) : null}
       {b.stamp ? <Stamp text={b.stamp.text} from={b.stamp.at} x={90} y={280} rot={-8} /> : null}
       {b.typewriter ? <Typewriter text={b.typewriter.text} from={b.typewriter.at} x={b.typewriter.x ?? 120} y={b.typewriter.y ?? 210} /> : null}
+      {b.action ? <ActionFX action={b.action} from={0} cx={540} cy={640} /> : null}
     </Board>
   );
 };

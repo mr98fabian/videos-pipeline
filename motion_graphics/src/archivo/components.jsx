@@ -142,7 +142,61 @@ const DIE_CUT =
     })
     .join(" ") + " drop-shadow(14px 18px 0px rgba(26,18,8,0.55))";
 
-export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, driftAmp = 5 }) => {
+// ============================================================================
+// CAPA DE ACCION — el recorte (pose fija) se transforma para ACTUAR el verbo
+// que narra esa escena, sincronizado con la voz. Devuelve transform extra.
+//   action = { type, at, dur }   (at = frame local en que dispara)
+// ============================================================================
+const actionMotion = (action, local) => {
+  const z = { dx: 0, dy: 0, rot: 0, scale: 1, popZ: 0, origin: "center" };
+  if (!action) return z;
+  const al = local - (action.at ?? 6);
+  if (al < 0) return z;
+  const dur = action.dur ?? 16;
+  const p = interpolate(al, [0, dur], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: SLAM_EASE });
+  const decay = Math.max(0, 1 - al / 16);
+  switch (action.type) {
+    case "explosion":
+    case "impact":
+      z.dx = Math.sin(al * 9) * 30 * decay;
+      z.dy = Math.cos(al * 11) * 18 * decay;
+      z.scale = 1 + 0.06 * decay;
+      z.popZ = 40 * decay; // salta hacia adelante en Z (3D visible)
+      break;
+    case "recoil":
+      z.dx = interpolate(al, [0, 4, dur], [0, -70, 0], { extrapolateRight: "clamp", easing: SLAM_EASE });
+      z.rot = interpolate(al, [0, 4, dur], [0, -12, 0], { extrapolateRight: "clamp" });
+      break;
+    case "topple":
+    case "fall":
+    case "collapse":
+      z.rot = interpolate(al, [0, dur], [0, 82], { extrapolateRight: "clamp", easing: Easing.bezier(0.6, 0, 0.9, 0.35) });
+      z.dy = interpolate(al, [0, dur], [0, 70], { extrapolateRight: "clamp" });
+      z.origin = "bottom center";
+      break;
+    case "flee":
+    case "escape":
+      z.dx = interpolate(al, [0, dur + 8], [0, 980], { extrapolateRight: "clamp", easing: Easing.bezier(0.5, 0, 0.9, 0.4) });
+      z.rot = 6;
+      break;
+    case "sink":
+      z.dy = interpolate(al, [0, dur + 10], [0, 540], { extrapolateRight: "clamp", easing: Easing.in(Easing.quad) });
+      z.scale = 1 - 0.28 * p;
+      break;
+    case "rise":
+      z.dy = interpolate(al, [0, dur], [240, 0], { extrapolateRight: "clamp", easing: POP_EASE });
+      break;
+    case "shoot":
+    case "lunge":
+      z.scale = 1 + interpolate(al, [0, 4, 12], [0, 0.14, 0], { extrapolateRight: "clamp" });
+      z.dx = interpolate(al, [0, 4, 12], [0, 26, 0], { extrapolateRight: "clamp" });
+      z.popZ = interpolate(al, [0, 4, 12], [0, 30, 0], { extrapolateRight: "clamp" });
+      break;
+  }
+  return z;
+};
+
+export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, driftAmp = 5, action = null }) => {
   const frame = useCurrentFrame();
   const local = frame - from;
   if (local < 0) return null;
@@ -152,21 +206,68 @@ export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, dr
   const flip = (fromDir === "right" ? -55 : 55) * (1 - p); // 3D: gira al aterrizar
   const drift = Math.sin(local / 13) * driftAmp;
   const tilt = rot + Math.sin(local / 17) * 1.6;
+  const a = actionMotion(action, local); // actua el verbo de la escena
   return (
     <div style={{ position: "absolute", left: x, top: y + drift, width: w, height: h, perspective: 1200 }}>
       <div
         style={{
           width: "100%",
           height: "100%",
-          translate: `${offX}px ${offY}px`,
-          rotate: `${tilt}deg`,
-          scale: `${0.85 + 0.15 * p}`,
-          transform: `rotateY(${flip}deg)`,
+          translate: `${offX + a.dx}px ${offY + a.dy}px`,
+          rotate: `${tilt + a.rot}deg`,
+          scale: `${(0.85 + 0.15 * p) * a.scale}`,
+          transform: `rotateY(${flip}deg) translateZ(${a.popZ}px)`,
+          transformOrigin: a.origin,
         }}
       >
         <Img src={src} style={{ width: "100%", height: "100%", objectFit: "contain", filter: DIE_CUT }} />
       </div>
     </div>
+  );
+};
+
+// FX de comic encima de la accion: estrella de impacto, palabra ("BOOM"),
+// lineas de velocidad. Comunica el verbo al instante, estilo Nickelodeon.
+const _ACTION_WORD = { explosion: "BOOM", impact: "BANG", shoot: "BANG", topple: "CRASH", fall: "CRASH", collapse: "CRASH" };
+export const ActionFX = ({ action, cx = 540, cy = 640, from = 0 }) => {
+  const frame = useCurrentFrame();
+  if (!action) return null;
+  const al = frame - from - (action.at ?? 6);
+  if (al < 0 || al > 34) return null;
+  const t = action.type;
+  const burst = ["explosion", "impact", "shoot", "topple", "fall", "collapse"].includes(t);
+  const streak = ["flee", "escape"].includes(t);
+  const word = _ACTION_WORD[t];
+  const rays = 12;
+  const rBurst = interpolate(al, [0, 8], [10, 320], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: POP_EASE });
+  const oBurst = interpolate(al, [4, 20], [0.95, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const wScale = interpolate(al, [0, 4], [2.4, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: SLAM_EASE });
+  const wO = interpolate(al, [0, 3, 22, 30], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <svg width={1080} height={1920} style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none", overflow: "visible" }}>
+      {burst && oBurst > 0 && Array.from({ length: rays }).map((_, k) => {
+        const ang = (k / rays) * Math.PI * 2 + (action.at ?? 0);
+        const r0 = rBurst * 0.45, r1 = rBurst;
+        return (
+          <line key={k} x1={cx + Math.cos(ang) * r0} y1={cy + Math.sin(ang) * r0}
+                x2={cx + Math.cos(ang) * r1} y2={cy + Math.sin(ang) * r1}
+                stroke={GOLD} strokeWidth={10} strokeLinecap="round" opacity={oBurst} />
+        );
+      })}
+      {streak && Array.from({ length: 6 }).map((_, k) => {
+        const sp = interpolate(al, [0, 10], [0, 1], { extrapolateRight: "clamp" });
+        const yy = cy - 160 + k * 60;
+        const x1 = cx - 40 - sp * 520, x2 = x1 + 130;
+        return <line key={k} x1={x1} y1={yy} x2={x2} y2={yy} stroke={RED} strokeWidth={9} strokeLinecap="round"
+                     opacity={interpolate(al, [0, 4, 16], [0, 0.85, 0], { extrapolateRight: "clamp" })} />;
+      })}
+      {word && (
+        <text x={cx} y={cy - 210} textAnchor="middle" fontFamily="Arial Black, sans-serif" fontWeight={900}
+              fontSize={130} fill={RED} stroke={PAPER_LIGHT} strokeWidth={8} paintOrder="stroke"
+              opacity={wO} transform={`rotate(-8 ${cx} ${cy - 210}) scale(${wScale})`}
+              style={{ transformBox: "fill-box", transformOrigin: "center" }}>{word}</text>
+      )}
+    </svg>
   );
 };
 
