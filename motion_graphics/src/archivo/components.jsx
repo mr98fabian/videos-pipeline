@@ -531,7 +531,7 @@ const _MiniStamp = ({ x, y, rot, text, from, delay = 0, size = 30 }) => {
   );
 };
 
-export const CaseAnnotations = ({ from = 8, index = 0 }) => {
+export const CaseAnnotations = ({ from = 8, index = 0, caseBase = 1 }) => {
   const frame = useCurrentFrame();
   if (frame - from < 0) return null;
   const alt = index % 2 === 0;
@@ -547,7 +547,7 @@ export const CaseAnnotations = ({ from = 8, index = 0 }) => {
   const arrow = "M 150 815 Q 250 720, 340 640";       // nota -> sujeto
   const head = "M 340 640 L 356 674 M 340 640 L 304 656";
   const qO = interpolate(frame - from, [10, 20], [0, 0.4], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const caseNo = `Nº 0${(index % 9) + 1}`;
+  const caseNo = `Nº ${caseBase}`;
   const exhibit = `EXHIBIT ${String.fromCharCode(65 + (index % 6))}`;
   const underlineDrawn = interpolate(frame - from - 12, [0, 7], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.3, 0, 0.2, 1) });
   const tallies = 3 + (index % 3);

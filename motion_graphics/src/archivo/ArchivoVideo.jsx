@@ -52,7 +52,7 @@ const BurnFlash = ({ at }) => {
   );
 };
 
-const SceneBlock = ({ scene, index }) => {
+const SceneBlock = ({ scene, index, caseBase = 1 }) => {
   const b = scene.beats || {};
   const shakes = [{ frame: 2, amp: 6 }];
   if (b.stamp) shakes.push({ frame: b.stamp.at, amp: 8 });
@@ -73,7 +73,7 @@ const SceneBlock = ({ scene, index }) => {
       <Backdrop src={staticFile(scene.bg)} sceneDur={scene.dur} />
       {scene.treatment === "sticker" && scene.fg ? (
         <>
-        <GroundCard index={index} hasSticker={(b.stickers || []).length > 0} />
+        <GroundCard index={index} caseBase={caseBase} />
         <Cutout
           src={staticFile(scene.fg)}
           from={0}
@@ -130,7 +130,7 @@ export const ArchivoVideo = ({ manifest }) => {
       {/* escenas */}
       {m.scenes.map((s, i) => (
         <Sequence key={i} from={s.from} durationInFrames={s.dur}>
-          <SceneBlock scene={s} index={i} />
+          <SceneBlock scene={s} index={i} caseBase={m.caseBase ?? 1} />
         </Sequence>
       ))}
 
@@ -228,7 +228,7 @@ const LibSticker = ({ src, from, side }) => {
 };
 
 // --- tarjeta que ancla al recorte principal: nunca mas "cabeza flotante" -----
-const GroundCard = ({ index, hasSticker = false }) => {
+const GroundCard = ({ index, caseBase = 1 }) => {
   const frame = _ucf();
   const p = _pop(frame - 1, 9);
   return (
@@ -242,7 +242,7 @@ const GroundCard = ({ index, hasSticker = false }) => {
         opacity: 0.96,
       }}
     >
-      <CaseAnnotations from={10} index={index} hasSticker={hasSticker} />
+      <CaseAnnotations from={10} index={index} caseBase={caseBase} />
     </div>
   );
 };

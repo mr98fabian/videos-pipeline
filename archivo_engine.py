@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import zlib
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -124,6 +125,12 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     # escenas (1-based, como visual_beats) donde el recorte rembg sale lavado ->
     # forzar foto clavada sin intentar el sticker
     force_photo = {int(k) for k in data.get("force_photo", [])}
+    # los primeros planos de CARA nunca se troquelan bien (cara flotante, borde
+    # sucio); van como foto clavada, que es donde lucen (feedback 23 jul)
+    _CLOSEUP_KW = ("close-up", "close up", "extreme close", "'s face", " a face", "portrait", "facial")
+    for ti, term in enumerate(terms_all := (data.get("search_terms") or [])):
+        if any(k in term.lower() for k in _CLOSEUP_KW):
+            force_photo.add(ti + 1)
     scenes = []
     cursor = cold_shift
     for i, img in enumerate(imgs):
@@ -168,27 +175,9 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                 break
 
     # ---- DENSIDAD AUTOMATICA v2 (feedback 23 jul: escenas ralas) ----
-    # 1. stickers de la biblioteca (112) por palabra clave REALMENTE narrada
-    try:
-        import sticker_library as sl
-        for start, sid, phrase in sl.find_keyword_cues(pl_words, min_gap=2.5, max_cues=20):
-            g = int(round(start * FPS)) + cold_shift
-            for s_ in scenes:
-                if s_["from"] <= g < s_["from"] + s_["dur"]:
-                    st_list = s_["beats"].setdefault("stickers", [])
-                    if len(st_list) < 2:
-                        entry = sl.load_manifest().get(sid)
-                        if entry:
-                            src = sl.STICKERS_DIR / entry["file"]
-                            if src.exists():
-                                dst = pub / f"st_{sid}.png"
-                                if not dst.exists():
-                                    shutil.copyfile(src, dst)
-                                st_list.append({"at": max(g - s_["from"], 4),
-                                                 "src": f"archivo/{slug}/st_{sid}.png"})
-                    break
-    except Exception as e:
-        print(f"[archivo] stickers de biblioteca no disponibles: {e}")
+    # 1. [RETIRADO 23 jul] stickers de biblioteca por palabra clave: chocaban con
+    #    el sujeto y a veces salian de baja calidad. La marginalia de expediente +
+    #    la capa de accion ya dan densidad; menos ruido, cero choques.
 
     # 2. numeros narrados grandes -> mini sello rojo ("150", "883", "1934" ya va en fecha)
     for wi, wd in enumerate(wframes):
@@ -251,6 +240,12 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     title = data.get("title", "")
     series = title.split("|")[-1].strip() if "|" in title else "HIDDEN FACTS"
     share = data.get("share_card") or {}
+    # numero de caso ALEATORIZADO (feedback 23 jul: "CASE #1" en cada video se ve
+    # falso). Determinista desde el hash del tema -> mismo video = mismo numero,
+    # pero variado entre videos, sensacion de "archivo de mil casos". Override
+    # explicito con case_no en el JSON.
+    case_no = int(data["case_no"]) if str(data.get("case_no", "")).isdigit() and int(data.get("case_no", 1)) > 1 \
+        else 12 + (zlib.crc32(slug.encode()) % 460)
 
     def _word_safe(text: str, limit: int = 58) -> str:
         text = text.strip()
@@ -265,9 +260,10 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                       "tag": "IN 60 SECONDS...", "frames": COLD_FRAMES},
         "scenes": scenes,
         "words": wframes,
+        "caseBase": case_no,
         "close": {
             "from": close_from, "series": series,
-            "caseNo": int(data.get("case_no", 1)),
+            "caseNo": case_no,
             "share1": share.get("line1", _word_safe(
                 (data.get("hook_card") or title.split("|")[0]).split(".")[0] + ".")),
             "share2": share.get("line2", "True story."),
