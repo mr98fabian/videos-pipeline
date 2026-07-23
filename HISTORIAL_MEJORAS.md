@@ -142,3 +142,15 @@ Formato por entrada:
   > #hiddenfacts, "USS Indianapolis" (56k/mes) añadido.
 - Dato clave de channel_performance_trends: mediana 4 vistas a las 12h, despegue
   día 2-7 → ningún veredicto A/B antes del día 3 (regla en skill /canal audit).
+
+## 2026-07-23 — Recorte troquelado: BiRefNet + limpieza de alfa
+
+- Feedback usuario: "la idea (sticker troquelado) es increíble, la ejecución no" —
+  bordes dentados, halo amarillo y cabezas flotantes con el rembg u2net por defecto.
+- Comparación real de 3 modelos sobre escena con persona: u2net (halo amarillo en el
+  pelo, cov 0.36), u2net_human_seg (recorta de más, cov 0.11), birefnet-general
+  (bordes crujientes, captura cuerpo completo, cov 0.39). Ganó BiRefNet.
+- `visual_cache.cached_cutout` ahora usa birefnet-general (override REMBG_MODEL),
+  sesión reusada, modelo en la clave de caché, y `_clean_alpha` erosiona 1px el
+  canal alfa (mata la franja fantasma) + anti-alias. CPU ~30-60s/imagen pero se
+  cachea de por vida. Validado sobre pergamino: silueta limpia, sin halo.
