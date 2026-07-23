@@ -44,3 +44,4 @@ motion_graphics/public/sticker_*.png
 # backups y reportes runtime (no codigo)
 *.bak
 performance_report.csv
+vidiq_key.txt

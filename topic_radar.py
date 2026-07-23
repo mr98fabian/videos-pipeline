@@ -201,13 +201,28 @@ def main() -> int:
     ap.add_argument("--date", default=None, help="fecha puntual MM-DD (ignora --days)")
     ap.add_argument("--outliers", default=None,
                      help="archivo con titulos de outliers de vidIQ (1 por linea) "
-                          "para subir el score de temas que matcheen")
+                          "para subir el score de temas que matcheen; 'auto' los "
+                          "trae en vivo via vidiq_tools (YouTube + TikTok/IG, ~25 cr)")
     ap.add_argument("--append-topics", action="store_true",
                      help="agrega el top al final de topics.txt (temas nuevos, sin duplicar)")
     args = ap.parse_args()
 
     outlier_terms: list[str] = []
-    if args.outliers:
+    if args.outliers == "auto":
+        # fetch en vivo (YouTube + TikTok/IG); si vidIQ falla, el radar sigue sin la capa
+        try:
+            import subprocess
+            r = subprocess.run(
+                [sys.executable, str(Path(__file__).parent / "vidiq_tools.py"),
+                 "radar-terms", "--cross-platform"],
+                capture_output=True, text=True, encoding="utf-8", timeout=180)
+            titles = [ln for ln in (r.stdout or "").splitlines() if ln and not ln.startswith("#")]
+            outlier_terms = [w.strip().lower() for t in titles for w in t.split()
+                             if len(w.strip()) >= 4]
+            print(f"[radar] outliers en vivo: {len(titles)} titulos ({len(outlier_terms)} terminos)")
+        except Exception as e:
+            print(f"[radar] aviso: outliers auto fallo ({e}), sigo sin capa de outliers")
+    elif args.outliers:
         p = Path(args.outliers)
         if p.exists():
             outlier_terms = [w.strip().lower() for w in p.read_text(encoding="utf-8").split()
