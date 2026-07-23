@@ -77,9 +77,18 @@ SCRIPT_SCHEMA = {
         "search_terms": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "8-12 concrete, visual stock-footage queries (objects/scenes, not concepts). "
+            "description": "8-12 concrete, visual queries (objects/scenes, not concepts). "
                             "More, shorter scenes beat fewer long ones -- retention research shows "
-                            "high-performing Shorts cut every 2-4 seconds, not every 8-9.",
+                            "high-performing Shorts cut every 2-4 seconds, not every 8-9. "
+                            "CUT-OUT FRIENDLY (the engine isolates the subject as a die-cut sticker): "
+                            "each MIDDLE term should show ONE clear subject as a FULL or HALF figure "
+                            "with a clean silhouette, doing one readable action, on an uncluttered "
+                            "background -- e.g. 'a soldier crouching in a trench, full figure' NOT "
+                            "'a soldier's face in extreme close-up'. Extreme face close-ups isolate "
+                            "as ugly floating heads. The ONLY exception is the FIRST (and its echo, "
+                            "the last) term: a single intense face close-up there is encouraged for "
+                            "the thumbnail scroll-stop -- the engine renders those as a clean taped "
+                            "photo, not a cut-out.",
         },
         "title": {"type": "string", "description": "YouTube Shorts title, <90 chars, curiosity-driven"},
         "description": {"type": "string", "description": "YouTube description with 3-5 hashtags at the end"},
