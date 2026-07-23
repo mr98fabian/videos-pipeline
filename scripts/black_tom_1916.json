@@ -1,0 +1,29 @@
+{
+  "script": "At two in the morning on July 30th, 1916, a colossal explosion tore New York Harbor apart, and almost nobody today remembers why it happened. The target was Black Tom Island, a giant munitions depot packed with two million pounds of ammunition waiting to be shipped to the Allies. The blast was so violent that it registered on seismographs like an earthquake and was felt as far away as Philadelphia and Maryland. Red-hot shrapnel screamed across the water and slammed directly into the Statue of Liberty herself. The damage to her raised arm was so serious that her torch has stayed closed to the public from that night all the way to this very day. But here is the secret the newspapers quietly buried in the days that followed: this was no accident at all. German secret agents had slipped into a still-neutral America and set the entire depot ablaze on purpose. The United States was not even in the war yet, and enemy saboteurs were already striking on American soil. It took decades of patient investigation before Germany was finally forced to pay for the entire attack in 1953. And so a deliberate act of war scarred one of America's greatest icons, then quietly vanished from the pages of history.",
+  "search_terms": [
+    "a massive night explosion lighting up a 1910s harbor skyline, dramatic somber vintage documentary style",
+    "a sprawling waterfront munitions depot stacked with crates and rail cars at night, vintage documentary style",
+    "a shockwave rippling outward across a map of the american northeast, dramatic vintage documentary style",
+    "glowing metal fragments striking the statue of liberty in the dark, dramatic somber vintage documentary style",
+    "the raised torch of the statue of liberty closed off with a barrier, somber vintage documentary style",
+    "an old newspaper with a redacted blacked-out headline about an explosion, tense vintage documentary style",
+    "shadowy saboteurs planting charges among crates at a dark dock, tense vintage documentary style",
+    "a spy in a long coat slipping past a harbor fence under an american flag, tense vintage documentary style",
+    "officials signing a formal reparations document at a polished table, somber vintage documentary style",
+    "the statue of liberty at night with the harbor smoldering behind her, echoing the opening, somber vintage documentary style"
+  ],
+  "hook_card": "German spies blew up New York. And nobody remembers.",
+  "title": "Why the Statue of Liberty's Torch Has Been Closed for 110 Years",
+  "description": "July 30, 1916: German saboteurs detonated the Black Tom munitions depot in New York Harbor. The blast hit like an earthquake, shattered windows across Manhattan, and drove shrapnel into the Statue of Liberty. Her torch has been closed to the public ever since. America wasn't even in World War 1 yet.\n\n110 years later, should the Statue of Liberty's torch finally reopen? REOPEN or KEEP IT CLOSED. Say your pick below.\n\nA new historical secret every day. Subscribe so you don't miss tomorrow's.\n\n#history #worldwar1 #ww1 #statueofliberty #historyfacts #shorts",
+  "case_no": 1,
+  "share_card": {
+    "line1": "German spies blew up New York",
+    "line2": "and scarred the Statue of Liberty."
+  },
+  "visual_beats": {
+    "2": {"typewriter": {"text": "2,000,000 LBS OF AMMUNITION", "at": 16, "x": 110, "y": 190}},
+    "6": {"censor": {"x": 190, "y": 620, "w": 700, "h": 170, "at": 6, "reveal": 55, "label": "SABOTAGE"}}
+  },
+  "music_mood": "tense slow-building suspense ambient with a quiet dread, low ominous strings and sparse deep percussion swelling toward a grim reveal, grave documentary tone, low volume drone",
+  "style": "1990s Nickelodeon rubber-hose cartoon style, exaggerated comic-book expressions with big unsettling eyes, thick wobbly hand-drawn black outlines, snappy low-frame animation feel. Color palette: sepia, dusty burnt yellow, aged parchment, dark brown shadows instead of pure black. Heavy vintage film grain and scratched-film texture overlaid, retro documentary aesthetic, slightly distorted, high contrast, hand-drawn sketch look. No bright saturated colors. Only human characters, never humanoid animals."
+}
