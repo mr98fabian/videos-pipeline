@@ -75,22 +75,24 @@ def words_from_ass(ass_path: Path) -> list[tuple[float, str]]:
     return out
 
 
-# verbo narrado -> tipo de accion (el orden es prioridad; el mas especifico primero)
+# verbo narrado -> tipo de accion (orden = prioridad). Regex con limites de
+# palabra donde el substring colisiona (p.ej. "fleet" NO debe disparar "flee",
+# "falling" NO debe disparar "fall"); prefijos sueltos para conjugaciones.
 _ACTION_KW = [
-    ("explosion", ("explod", "explos", "detonat", "blast", "blew up", "blew apart", "bombed", "erupt")),
-    ("impact",    ("slam", "smash", "struck", "strike", "shrapnel", "rammed", "crash", "hurl", "tore ", "torn ")),
-    ("topple",    ("collaps", "toppl", "crumbl", " fell", "fall", "knocked down", "brought down")),
-    ("sink",      ("sank", "sunk", " sink", "drown", "underwater", "beneath the wa", "went under")),
-    ("shoot",     ("shot ", "shoot", "fired", "firing", "gunned", "execut", "bullet", "opened fire")),
-    ("flee",      ("escap", "fled", " flee", "slipp", "smuggl", "sneak", "snuck", "fleeing", " ran ")),
-    ("rise",      ("emerg", "stood up", "rebuil", "rose up", "rising up")),
+    ("explosion", r"explod|explos|detonat|blast|blew up|blew apart|bombed|erupt"),
+    ("impact",    r"slam|smash|struck|\bstrike\b|shrapnel|rammed|crash|hurl|\btore\b|\btorn\b"),
+    ("topple",    r"collaps|toppl|crumbl|\bfell\b|knocked down|brought down"),
+    ("sink",      r"\bsank\b|\bsunk\b|\bsink\b|drown|underwater|beneath the wa|went under"),
+    ("shoot",     r"\bshot\b|\bshoot\b|\bfired\b|firing|gunned|execut|\bbullet|opened fire"),
+    ("flee",      r"escap|\bfled\b|\bflee\b|fleeing|slipp|smuggl|sneak|\bsnuck\b|\bran\b"),
+    ("rise",      r"emerg|stood up|rebuil|rose up|rising up"),
 ]
 
 
 def _detect_action(text: str):
-    t = f" {text.lower()} "
-    for atype, kws in _ACTION_KW:
-        if any(k in t for k in kws):
+    t = text.lower()
+    for atype, pat in _ACTION_KW:
+        if re.search(pat, t):
             return atype
     return None
 
@@ -122,18 +124,33 @@ def _fetch_real_photo(query: str, pub: Path, slug: str):
     """Descarga una foto de archivo REAL con licencia libre (Wikimedia Commons,
     mismo fetch del pipeline clasico) y la guarda como evidencia. No la recorta:
     va como foto rectangular clavada al tablero. Devuelve la ruta relativa o None."""
+    import hashlib
     import io
     import re as _re
+    import shutil as _sh
+    import time
     import urllib.request
     import pipeline as pl
     from PIL import Image
+    # cache de foto real por query -> se descarga UNA vez en la vida (evita el
+    # 429 de Wikimedia en cada re-render)
+    cache_dir = ROOT / "assets" / "cache" / "real"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    ckey = cache_dir / (hashlib.sha1(query.encode()).hexdigest() + ".png")
+    if ckey.exists():
+        _sh.copyfile(ckey, pub / "real.png")
+        return f"archivo/{slug}/real.png"
     # variantes: como viene, sin años/números (Wikimedia no matchea "X 1953"),
     # y solo las dos primeras palabras (nombre propio) como último recurso
     bare = _re.sub(r"\s+\d{3,4}", "", query).strip()
     variants = list(dict.fromkeys([query, bare, " ".join(bare.split()[:2])]))
     cands = []
     for v in variants:
-        cands = pl._wikimedia_commons_search(v, bias_portrait=True)
+        for _ in range(3):  # backoff ante 429 de Wikimedia
+            cands = pl._wikimedia_commons_search(v, bias_portrait=True)
+            if cands:
+                break
+            time.sleep(3)
         if cands:
             break
     # preferir dominio público / CC0 (sin obligación de atribución en el Short)
@@ -151,7 +168,8 @@ def _fetch_real_photo(query: str, pub: Path, slug: str):
             if w < 260 or h < 260 or w / h > 2.2 or h / w > 2.2:
                 continue  # descarta miniaturas y panoramicas raras
             im.thumbnail((900, 900))
-            im.save(pub / "real.png")
+            im.save(ckey)               # cache de por vida
+            _sh.copyfile(ckey, pub / "real.png")
             print(f"[archivo] foto real: '{query}' <- {c.get('license', '?')} ({c.get('title', '')[:40]})")
             return f"archivo/{slug}/real.png"
         except Exception:
