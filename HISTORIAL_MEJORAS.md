@@ -186,3 +186,16 @@ Formato por entrada:
   (no search_terms, que traen términos de cámara).
 - Video nuevo: "The Nuclear Bomb Test That Named Your Swimsuit" (Bikini/Crossroads,
   radar [OUTLIER] 80 aniv), programado 31 jul 01:00 UTC.
+
+## 2026-07-24 — Parallax multiplano 2.5D + push-in + atmósfera (in-engine)
+
+- Pedido usuario: parallax "increíble". Research: multiplano (capas a distinta
+  velocidad) + cámara push-in + atmósfera; DepthFlow (2.5D real por mapa de
+  profundidad) descartado por ahora (necesita GPU, pipeline nuevo, choca con
+  estabilización) → queda como tier fotorreal futuro post-A/B.
+- Route A (código puro Remotion, reversible): `parallaxDepth` diferencia el ritmo
+  de cada capa por profundidad (fondo 0.12 / GroundCard 0.55 / recorte 1.0);
+  `makeCamera` con deriva + push-in continuos de base; `Atmosphere` (motas de
+  polvo con parallax, barrido de luz, pulso de viñeta, sin blur).
+- Proof aprobado ("así está perfecto"). Aplica SOLO de aquí en adelante (no
+  re-render de los programados; Black Tom queda como está; respeta el A/B).
