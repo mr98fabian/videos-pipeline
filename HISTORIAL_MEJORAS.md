@@ -172,3 +172,17 @@ Formato por entrada:
   en frases sin acción). Validado contra frases reales de los guiones.
 - Aplicado por re-render a Pilecki y Orden 227 (junto con BiRefNet + marginalia).
   Black Tom queda como estaba (decisión usuario).
+
+## 2026-07-24 — Fotos reales de archivo en el motor + fixes de acción
+
+- Feedback usuario: el motor no mostraba fotos reales (solo estaban en el pipeline
+  clásico). Reintroducidas: `EvidencePhoto` (foto B&N clavada con chincheta + sello
+  "REAL <año>"), `archivo_engine._fetch_real_photo` (Wikimedia, prefiere dominio
+  público, cachea por query, reintenta ante 429), `_auto_subject` (nombre propio
+  del título) o `real_photo` explícito en el JSON. Proof validado: Castro (foto real
+  del discurso) y Bikini (foto real del estallido Baker 1946 junto a la caricatura).
+- Fix detección de acción: substring rompía ("fleet"→flee, "falling"→fall, "wide
+  shot"→shoot). Ahora regex con límites de palabra y SOLO desde la narración
+  (no search_terms, que traen términos de cámara).
+- Video nuevo: "The Nuclear Bomb Test That Named Your Swimsuit" (Bikini/Crossroads,
+  radar [OUTLIER] 80 aniv), programado 31 jul 01:00 UTC.
