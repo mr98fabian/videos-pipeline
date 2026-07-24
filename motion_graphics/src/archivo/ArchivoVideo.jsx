@@ -3,6 +3,7 @@ import { AbsoluteFill, Audio, Sequence, staticFile, interpolate, useCurrentFrame
 import {
   Board,
   Backdrop,
+  Atmosphere,
   Cutout,
   PhotoScrap,
   CensorBar,
@@ -19,6 +20,7 @@ import {
   WrinkledMap,
   KineticTimed,
   makeCamera,
+  parallaxDepth,
   LANES,
 } from "./components";
 
@@ -71,10 +73,10 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
   const dir = scene.enterDir || (alt ? "bottom" : "right");
   return (
     <Board camera={cam}>
-      <Backdrop src={staticFile(scene.bg)} sceneDur={scene.dur} />
+      <Backdrop src={staticFile(scene.bg)} sceneDur={scene.dur} camera={cam} depth={0.12} />
       {scene.treatment === "sticker" && scene.fg ? (
         <>
-        <GroundCard index={index} caseBase={caseBase} />
+        <GroundCard index={index} caseBase={caseBase} camera={cam} />
         <Cutout
           src={staticFile(scene.fg)}
           from={0}
@@ -85,6 +87,8 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
           fromDir={dir}
           rot={alt ? -2 : 2}
           action={b.action || null}
+          camera={cam}
+          depth={1.0}
         />
         </>
       ) : (
@@ -97,8 +101,11 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
           h={1010}
           fromDir={dir === "bottom" ? "right" : dir}
           rot={alt ? 1.8 : -1.8}
+          camera={cam}
+          depth={0.82}
         />
       )}
+      <Atmosphere camera={cam} />
       {(b.stickers || []).map((st, k) => (
         <LibSticker key={k} src={staticFile(st.src)} from={st.at} side={k % 2 === 0 ? (index % 2 === 0 ? "right" : "left") : (index % 2 === 0 ? "left" : "right")} />
       ))}
@@ -230,15 +237,16 @@ const LibSticker = ({ src, from, side }) => {
 };
 
 // --- tarjeta que ancla al recorte principal: nunca mas "cabeza flotante" -----
-const GroundCard = ({ index, caseBase = 1 }) => {
+const GroundCard = ({ index, caseBase = 1, camera = null }) => {
   const frame = _ucf();
   const p = _pop(frame - 1, 9);
+  const par = parallaxDepth(camera, frame, 0.55); // plano MEDIO
   return (
     <div
       style={{
-        position: "absolute", left: 120, top: 300, width: 840, height: 940,
+        position: "absolute", left: 120 + par.tx, top: 300 + par.ty, width: 840, height: 940,
         rotate: `${index % 2 === 0 ? -2.5 : 2.5}deg`,
-        scale: `${0.92 + 0.08 * p}`,
+        scale: `${(0.92 + 0.08 * p) * par.sc}`,
         background: PAPER_LIGHT, border: `5px solid ${INK}`,
         boxShadow: "14px 16px 0 rgba(26,18,8,0.45)",
         opacity: 0.96,

@@ -37,9 +37,11 @@ export const pop = (local, dur = 8) =>
 //   shakes: [{frame, amp, dur}]     — sacudida de impacto (determinista)
 // ============================================================================
 export const makeCamera = (beats = [], shakes = []) => (frame) => {
-  let scale = 1.02;
-  let x = 0;
-  let y = 0;
+  // BASE: deriva + push-in lentos SIEMPRE presentes -> con la diferenciación por
+  // profundidad de cada capa, esto genera parallax constante (no un zoom plano).
+  let scale = 1.03 + (Math.sin(frame / 96) + 1) * 0.028; // respira 1.03 -> ~1.09
+  let x = Math.sin(frame / 64) * 17;
+  let y = Math.cos(frame / 78) * 10;
   for (const b of beats) {
     const p = interpolate(frame, [b.frame, b.frame + (b.dur ?? 6)], [0, 1], {
       extrapolateLeft: "clamp",
@@ -59,6 +61,56 @@ export const makeCamera = (beats = [], shakes = []) => (frame) => {
     }
   }
   return { scale, x, y };
+};
+
+// Extra transform por capa segun su PROFUNDIDAD (0=lejos, 1=cerca). El Board
+// mueve todo por igual; esto diferencia el ritmo de cada plano -> parallax real
+// multiplano: la capa cercana se mueve/crece mas que la lejana.
+export const parallaxDepth = (camFn, frame, depth = 0.5) => {
+  if (!camFn) return { tx: 0, ty: 0, sc: 1 };
+  const c = camFn(frame);
+  const panRate = 0.30 + 0.95 * depth;   // lejos ~0.30, cerca ~1.25
+  const scaleRate = 0.45 + 1.05 * depth; // lejos ~0.45, cerca ~1.50 (push-in)
+  return {
+    tx: c.x * (panRate - 1),
+    ty: c.y * (panRate - 1),
+    sc: 1 + (c.scale - 1) * (scaleRate - 1),
+  };
+};
+
+// ============================================================================
+// ATMOSFERA — motas de polvo con parallax, barrido de luz, pulso de viñeta.
+// SIN blur (regla dura). Es lo que da la sensacion "de cine".
+// ============================================================================
+export const Atmosphere = ({ camera, motes = 16 }) => {
+  const frame = useCurrentFrame();
+  const par = parallaxDepth(camera, frame, 0.9); // el polvo flota cerca de camara
+  const sweep = ((frame % 300) / 300) * 160 - 30; // barrido lento de luz (%)
+  const vig = 0.30 + Math.sin(frame / 70) * 0.06;  // pulso de viñeta
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none", overflow: "hidden" }}>
+      {/* barrido de luz cálido */}
+      <AbsoluteFill style={{
+        background: `linear-gradient(115deg, transparent ${sweep - 18}%, rgba(255,238,200,0.10) ${sweep}%, transparent ${sweep + 18}%)`,
+        mixBlendMode: "screen",
+      }} />
+      {/* motas de polvo (parallax cercano) */}
+      <svg width="100%" height="100%" style={{ position: "absolute", overflow: "visible", transform: `translate(${par.tx * 1.4}px, ${par.ty * 1.4}px)` }}>
+        {Array.from({ length: motes }).map((_, i) => {
+          const seed = i * 97.13;
+          const bx = (seed * 13) % 1080;
+          const by = (Math.sin(seed) * 0.5 + 0.5) * 1920;
+          const drift = Math.sin(frame / (40 + (i % 7) * 6) + seed) * 22;
+          const rise = ((by - frame * (0.25 + (i % 5) * 0.06)) % 1920 + 1920) % 1920;
+          const r = 1.4 + (i % 4) * 0.9;
+          const op = 0.10 + ((i % 3) * 0.06);
+          return <circle key={i} cx={bx + drift} cy={rise} r={r} fill="#FBEFCB" opacity={op} />;
+        })}
+      </svg>
+      {/* pulso de viñeta */}
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse at center, transparent 55%, rgba(40,26,8,${vig}) 100%)` }} />
+    </AbsoluteFill>
+  );
 };
 
 // ============================================================================
@@ -106,14 +158,15 @@ export const Board = ({ children, camera, tilt3d = true }) => {
   );
 };
 
-// --- Fondo "impresion lavada" (nitido, multiply) ----------------------------
-export const Backdrop = ({ src, sceneDur = 150 }) => {
+// --- Fondo "impresion lavada" (nitido, multiply) — plano LEJANO del parallax --
+export const Backdrop = ({ src, sceneDur = 150, camera, depth = 0.12 }) => {
   const frame = useCurrentFrame();
-  const s = interpolate(frame, [0, sceneDur], [1.08, 1.15]);
-  const px = Math.sin(frame / 41) * 14; // contrafase vs camara = paralaje
+  const s = interpolate(frame, [0, sceneDur], [1.16, 1.24]); // base amplia: al moverse poco nunca revela bordes
+  const px = Math.sin(frame / 41) * 14; // deriva propia
   const py = Math.cos(frame / 57) * 9;
+  const par = parallaxDepth(camera, frame, depth); // se mueve MENOS que el sujeto
   return (
-    <AbsoluteFill style={{ scale: `${s}`, translate: `${px}px ${py}px` }}>
+    <AbsoluteFill style={{ scale: `${s * par.sc}`, translate: `${px + par.tx}px ${py + par.ty}px` }}>
       <Img
         src={src}
         style={{
@@ -196,7 +249,7 @@ const actionMotion = (action, local) => {
   return z;
 };
 
-export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, driftAmp = 5, action = null }) => {
+export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, driftAmp = 5, action = null, camera = null, depth = 1.0 }) => {
   const frame = useCurrentFrame();
   const local = frame - from;
   if (local < 0) return null;
@@ -207,8 +260,10 @@ export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, dr
   const drift = Math.sin(local / 13) * driftAmp;
   const tilt = rot + Math.sin(local / 17) * 1.6;
   const a = actionMotion(action, local); // actua el verbo de la escena
+  const par = parallaxDepth(camera, frame, depth); // plano CERCANO: se mueve/crece mas
   return (
-    <div style={{ position: "absolute", left: x, top: y + drift, width: w, height: h, perspective: 1200 }}>
+    <div style={{ position: "absolute", left: x, top: y + drift, width: w, height: h, perspective: 1200,
+      translate: `${par.tx}px ${par.ty}px`, scale: `${par.sc}` }}>
       <div
         style={{
           width: "100%",
@@ -274,7 +329,7 @@ export const ActionFX = ({ action, cx = 540, cy = 640, from = 0 }) => {
   );
 };
 
-export const PhotoScrap = ({ src, from, x, y, w, h, fromDir = "right", rot = 2, children }) => {
+export const PhotoScrap = ({ src, from, x, y, w, h, fromDir = "right", rot = 2, children, camera = null, depth = 0.85 }) => {
   const frame = useCurrentFrame();
   const local = frame - from;
   if (local < 0) return null;
@@ -283,8 +338,10 @@ export const PhotoScrap = ({ src, from, x, y, w, h, fromDir = "right", rot = 2, 
   const flip = (fromDir === "right" ? -60 : 60) * (1 - p);
   const drift = Math.sin(local / 15) * 4;
   const tilt = rot + Math.sin(local / 19) * 1.2;
+  const par = parallaxDepth(camera, frame, depth);
   return (
-    <div style={{ position: "absolute", left: x, top: y + drift, width: w, height: h, perspective: 1200 }}>
+    <div style={{ position: "absolute", left: x, top: y + drift, width: w, height: h, perspective: 1200,
+      translate: `${par.tx}px ${par.ty}px`, scale: `${par.sc}` }}>
       <div
         style={{
           width: "100%",
