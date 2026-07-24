@@ -293,8 +293,9 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                 break
     for si, s_ in enumerate(scenes):
         narr = " ".join(w["w"] for w in scene_words[si])
-        term = terms[si] if si < len(terms) else ""
-        atype = _detect_action(narr) or _detect_action(term)
+        # SOLO la narracion (lo que se dice); los search_terms traen terminos de
+        # camara ("wide shot", "close-up") que dispararian falsos (shot->shoot)
+        atype = _detect_action(narr)
         if not atype:
             continue
         at = None
