@@ -172,6 +172,21 @@ def _fetch_real_photo(query: str, pub: Path, slug: str):
             time.sleep(3)
         if cands:
             break
+    # GUARDA DE RELEVANCIA (bug 25 jul 2026): la busqueda por variante corta
+    # devolvia cualquier cosa y el motor la clavaba con el sello "REAL <ano>"
+    # -> un retrato mexicano de 1859 presentado como la CIA en 1961. Ahora el
+    # titulo del archivo tiene que compartir alguna palabra fuerte con la query;
+    # si nada matchea, MEJOR SIN FOTO que con una foto falsa.
+    keys = {w.lower() for w in _re.findall(r"[A-Za-z]{4,}", query)}
+    keys |= {w.lower() for w in _re.findall(r"\b[A-Z]{2,}\b", query)}  # siglas: CIA, FBI
+    keys -= {"the", "and", "with", "from", "headquarters"}
+    if keys:
+        relevant = [c for c in cands
+                    if any(k in (c.get("title") or "").lower() for k in keys)]
+        if not relevant:
+            print(f"[archivo] foto real descartada: nada relevante para '{query}'")
+            return None
+        cands = relevant
     # preferir dominio público / CC0 (sin obligación de atribución en el Short)
     cands.sort(key=lambda c: 0 if any(t in (c.get("license") or "").lower()
                                       for t in ("public domain", "cc0", "pd")) else 1)

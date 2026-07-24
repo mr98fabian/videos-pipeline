@@ -45,10 +45,8 @@
     }
   },
   "real_photo": {
-    "query": "CIA headquarters Langley",
-    "scenes": [
-      8
-    ],
+    "query": "",
+    "scenes": [],
     "year": "1961"
   },
   "music_mood": "dry cold-war spy ambient with a faint absurd wink, low pulsing bass and sparse ticking clock, deadpan documentary tone, low volume",

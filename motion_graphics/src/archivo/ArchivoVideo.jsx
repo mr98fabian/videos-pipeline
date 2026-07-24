@@ -94,15 +94,19 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
           // estaba en la imagen original, con su propia profundidad y su propia
           // accion (uno actua, los otros reaccionan) -> interactuan entre si.
           parts.map((pt, k) => {
-            const gw = pt.nw * STAGE.w * PART_GROW;
-            const gh = pt.nh * STAGE.h * PART_GROW;
+            const gw = Math.min(pt.nw * STAGE.w * PART_GROW, STAGE.w);
+            const gh = Math.min(pt.nh * STAGE.h * PART_GROW, STAGE.h);
+            // clamp al lienzo: una pieza que nacio pegada al borde de la imagen
+            // fuente se saldria del cuadro al agrandarla (medido 25 jul 2026:
+            // los oficiales de los extremos quedaban cortados)
+            const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
             return (
               <Cutout
                 key={k}
                 src={staticFile(pt.src)}
                 from={pt.from ?? 0}
-                x={STAGE.x + pt.nx * STAGE.w - gw / 2}
-                y={STAGE.y + pt.ny * STAGE.h - gh / 2}
+                x={clamp(STAGE.x + pt.nx * STAGE.w - gw / 2, 62, 1018 - gw)}
+                y={clamp(STAGE.y + pt.ny * STAGE.h - gh / 2, LANES.safeTop, LANES.captionTop - gh * 0.62)}
                 w={gw}
                 h={gh}
                 fromDir={pt.dir || dir}
