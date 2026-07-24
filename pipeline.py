@@ -127,6 +127,19 @@ Rhythm (follow this cadence, it is not optional): short sentence. Short sentence
 longer sentence that adds depth or nuance. Short sentence. A question, roughly every
 4-6 sentences, to keep the viewer mentally engaged.
 
+Tone — DRY, SARDONIC WIT, CALIBRATED TO THE SUBJECT'S GRAVITY (nobody opens social
+media wanting to be lectured; funny/absurd gets SHARED, which is what grows the channel):
+- The humor comes from the ABSURDITY of the TRUE fact, delivered deadpan — never jokes,
+  puns, or breaking the documentary voice. A short, dry punch-line tag at the end of a
+  sentence is the tool ("...in exchange for soda.", "Marketing."). The narration is TTS
+  and flat, so the wit must live in the WORDING (irony, understatement, juxtaposition),
+  not in delivery.
+- SCALE IT INVERSELY TO GRAVITY. Light topics (odd deals, naming quirks, con artists,
+  bureaucratic absurdity, pointless traditions) → lean fully into the wit. Grave topics
+  (genocide, executions, massacres, war dead, tragedy) → NO jokes at all; there the only
+  "humor" allowed is the bitter irony of the injustice, and it must never mock the victims.
+  When in doubt, stay respectful. The `music_mood` you pick signals which end you are on.
+
 Instructions:
 1. Open with a hook in the first sentence: a curiosity gap, a bold claim, or a surprising
    number. The first 1-2 seconds decide whether the viewer swipes away (this is the single
