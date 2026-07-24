@@ -199,3 +199,15 @@ Formato por entrada:
   polvo con parallax, barrido de luz, pulso de viñeta, sin blur).
 - Proof aprobado ("así está perfecto"). Aplica SOLO de aquí en adelante (no
   re-render de los programados; Black Tom queda como está; respeta el A/B).
+
+## 2026-07-24 — Vida secundaria del personaje (respiración + balanceo)
+
+- Pedido: animar articulaciones de los personajes. El parallax NO sirve para eso
+  (mueve capas planas, no dobla codos). Rigging 2D real descartado (habría que
+  segmentar cada PNG generado por IA → no automatizable). IA image-to-video
+  (Kling/Hailuo) queda como tier hero post-A/B (créditos, render lento, rompe la
+  estética de troquelado, riesgo desmonetización).
+- Opción 1 elegida (aprobada "me gustó"): movimiento secundario procedural en el
+  Cutout — respiración squash/stretch + balanceo + micro-wobble, pivotando desde
+  los pies. Ilusión de vida sin articular, se compone sobre parallax + acción.
+  Fijo en el motor para próximos videos (no re-render de programados).
