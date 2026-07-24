@@ -11,6 +11,7 @@ import {
   Stamp,
   Typewriter,
   CaseAnnotations,
+  CTAStamp,
   ActionFX,
   EvidencePhoto,
   ColdOpen,
@@ -155,6 +156,7 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
       {b.typewriter ? <Typewriter text={b.typewriter.text} from={b.typewriter.at} x={b.typewriter.x ?? 120} y={b.typewriter.y ?? 210} /> : null}
       {b.action ? <ActionFX action={b.action} from={0} cx={fxAt.x} cy={fxAt.y} /> : null}
       {b.evidence ? <EvidencePhoto src={staticFile(b.evidence.src)} from={b.evidence.at} year={b.evidence.year} side={index % 2 === 0 ? "right" : "left"} /> : null}
+      {b.cta ? <CTAStamp from={b.cta.at} caseNo={caseBase} dur={b.cta.dur ?? 46} label={b.cta.label} /> : null}
     </Board>
   );
 };

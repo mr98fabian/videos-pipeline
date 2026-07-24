@@ -1051,6 +1051,40 @@ export const SubscribeStamp = ({ from, x = 330, y = 1180 }) => {
 };
 
 // ============================================================================
+// CTA DE MEDIO VIDEO (25 jul 2026) — el pedido de suscripcion NO puede vivir
+// solo en el cierre: ahi el 60% ya se fue. Este sello golpea ~1,5s en el momento
+// del GIRO (cuando el video acaba de pagar su promesa y el espectador esta en
+// deuda), en la franja libre justo encima de los captions, y se va. Diegetico:
+// es un sello de expediente, no un banner de YouTube -> no rompe el mundo.
+// ============================================================================
+export const CTAStamp = ({ from, caseNo = 1, dur = 46, label = "NEW FILE TOMORROW" }) => {
+  const frame = useCurrentFrame();
+  const local = frame - from;
+  if (local < 0 || local > dur) return null;
+  const s = interpolate(local, [0, 4], [2.2, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: SLAM_EASE });
+  const o = interpolate(local, [0, 3, dur - 8, dur], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const wiggle = local > 8 ? Math.sin(local / 6) * 1.2 : 0;
+  return (
+    <div
+      style={{
+        position: "absolute", left: 96, top: 1168, width: 888,
+        rotate: `${-3 + wiggle}deg`, scale: `${s}`, opacity: o * 0.97,
+        border: `7px solid ${RED}`, borderRadius: 10, padding: "8px 0 12px",
+        background: "rgba(247,241,225,0.88)", textAlign: "center",
+        boxShadow: "9px 11px 0 rgba(26,18,8,0.45)",
+      }}
+    >
+      <div style={{ fontFamily: "Arial Black, sans-serif", fontWeight: 900, fontSize: 34, color: INK, letterSpacing: 6, opacity: 0.85 }}>
+        {`CASE Nº ${caseNo} · ${label}`}
+      </div>
+      <div style={{ fontFamily: "Arial Black, sans-serif", fontWeight: 900, fontSize: 66, color: RED, letterSpacing: 8, lineHeight: 1.05 }}>
+        SUBSCRIBE
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
 // CAPTIONS CON TIMESTAMPS REALES DE TTS (reemplaza el ASS quemado)
 //   words: [{t: frameInicio, w: "palabra"}] en frames GLOBALES del video.
 //   Agrupa en bloques de hasta 3 palabras / 18 chars (misma regla del pipeline),

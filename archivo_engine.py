@@ -376,6 +376,22 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
         except Exception as e:
             print(f"[archivo] foto real no disponible: {e}")
 
+    # 6. CTA DE MEDIO VIDEO (25 jul 2026): el pedido de sub va en el GIRO, no en
+    #    el cierre (ahi ya se fue medio publico). Se engancha a la palabra de la
+    #    promesa de serie que el guion dice en voz alta ("...uno nuevo MANANA"),
+    #    asi imagen y voz piden lo mismo en el mismo frame. Solo en la 2a mitad.
+    _CTA_W = ("tomorrow", "manana", "mañana", "daily", "diario")
+    half = int((wframes[-1]["t"] if wframes else 0) * 0.45)
+    for wd in wframes:
+        if wd["t"] < half:
+            continue
+        if wd["w"].strip(".,!?").lower() in _CTA_W:
+            for s_ in scenes:
+                if s_["from"] <= wd["t"] < s_["from"] + s_["dur"] and "cta" not in s_["beats"]:
+                    s_["beats"]["cta"] = {"at": max(wd["t"] - s_["from"] - 6, 2), "dur": 46}
+                    break
+            break
+
     # beats del guion (autor manda): visual_beats = {"<scene_idx>": {...}}
     for k, beat in (data.get("visual_beats") or {}).items():
         idx = int(k)
