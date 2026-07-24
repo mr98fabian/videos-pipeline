@@ -89,6 +89,25 @@ _ACTION_KW = [
 ]
 
 
+# Como REACCIONA el resto de la escena al verbo que actua la pieza principal
+# (multi-recorte, 25 jul 2026): (tipo de reaccion, retardo en frames). El retardo
+# es lo que vende la causalidad: primero pasa, DESPUES los demas lo sufren.
+_REACTION = {
+    "explosion": ("topple", 6),
+    "impact":    ("topple", 5),
+    "shoot":     ("recoil", 5),
+    "lunge":     ("recoil", 5),
+    "topple":    ("recoil", 6),
+    "fall":      ("recoil", 6),
+    "collapse":  ("recoil", 6),
+    "flee":      ("lunge", 8),    # uno huye, el otro se lanza tras el
+    "escape":    ("lunge", 8),
+    "sink":      ("sink", 9),     # se hunden en cadena
+    "rise":      ("rise", 7),
+    "recoil":    ("recoil", 4),
+}
+
+
 def _detect_action(text: str):
     t = text.lower()
     for atype, pat in _ACTION_KW:
@@ -186,7 +205,7 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                     audio_dur: float, slug: str) -> dict:
     """Arma el manifest para ArchivoVideo. words = [(start_seg, palabra)]."""
     sys.path.insert(0, str(ROOT))
-    from visual_cache import cached_cutout, cutout_coverage
+    from visual_cache import cached_cutout, cutout_coverage, cutout_parts
     import pipeline as pl
 
     clips = out_dir / "clips"
@@ -219,6 +238,7 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
         shutil.copyfile(img, pub / f"bg_{i}.png")
         fg_rel = None
         treatment = "photo"
+        parts_rel = []
         try:
             if (i + 1) in force_photo:
                 raise ValueError("force_photo")
@@ -227,13 +247,30 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                 shutil.copyfile(cut, pub / f"fg_{i}.png")
                 fg_rel = f"archivo/{slug}/fg_{i}.png"
                 treatment = "sticker"
+                # MULTI-RECORTE: si la escena tiene varias figuras/objetos separados,
+                # cada uno sale como sticker propio para que puedan interactuar.
+                for k, pt in enumerate(cutout_parts(cut)):
+                    shutil.copyfile(pt["path"], pub / f"fg_{i}_p{k}.png")
+                    parts_rel.append({
+                        "src": f"archivo/{slug}/fg_{i}_p{k}.png",
+                        "nx": pt["nx"], "ny": pt["ny"], "nw": pt["nw"], "nh": pt["nh"],
+                        "area": pt["area"],
+                    })
+                if parts_rel:
+                    big = max(p["area"] for p in parts_rel)
+                    for k, p in enumerate(parts_rel):
+                        # el mas grande manda el plano cercano; los demas se alejan
+                        p["depth"] = round(0.70 + 0.30 * (p["area"] / big), 3)
+                        p["from"] = k * 3          # entradas escalonadas, no en bloque
+                        p["dir"] = "left" if p["nx"] < 0.45 else "right" if p["nx"] > 0.55 else "bottom"
+                    print(f"[archivo] escena {i}: {len(parts_rel)} piezas separadas")
         except Exception as e:
             print(f"[archivo] recorte escena {i} fallo ({e}); foto clavada")
         dur_f = max(int(round(durations[i] * FPS)), 12)
         scenes.append({
             "from": cursor, "dur": dur_f,
             "bg": f"archivo/{slug}/bg_{i}.png", "fg": fg_rel,
-            "treatment": treatment, "beats": {},
+            "parts": parts_rel, "treatment": treatment, "beats": {},
         })
         cursor += dur_f
 
@@ -306,6 +343,18 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
         if at is None:
             at = max(int(s_["dur"] * 0.4), 6)
         s_["beats"]["action"] = {"type": atype, "at": at, "dur": 16}
+        # INTERACCION entre piezas: la mas grande ACTUA el verbo, las demas
+        # REACCIONAN unos frames despues (causa -> efecto legible en pantalla).
+        for k, p in enumerate(s_.get("parts") or []):
+            if k == 0:
+                p["action"] = {"type": atype, "at": at, "dur": 16}
+            else:
+                rtype, lag = _REACTION.get(atype, ("recoil", 5))
+                # sentido: el que esta a la izquierda del que actua sale despedido
+                # hacia la izquierda (y viceversa) -> se lee empuje, no derrumbe
+                away = -1 if p["nx"] < (s_["parts"][0]["nx"] - 0.02) else 1
+                p["action"] = {"type": rtype, "at": at + lag + (k - 1) * 2,
+                                "dur": 16, "away": away, "amp": 0.7}
 
     # 5. FOTO REAL de archivo (Wikimedia libre) clavada como EVIDENCIA en 1-2
     #    escenas clave -> momento "esto paso de verdad" (feedback 24 jul).

@@ -88,7 +88,13 @@ SCRIPT_SCHEMA = {
                             "as ugly floating heads. The ONLY exception is the FIRST (and its echo, "
                             "the last) term: a single intense face close-up there is encouraged for "
                             "the thumbnail scroll-stop -- the engine renders those as a clean taped "
-                            "photo, not a cut-out.",
+                            "photo, not a cut-out. "
+                            "MULTI-SUBJECT: in 3-4 of the middle terms, ask for TWO or THREE figures "
+                            "(or a figure plus a key object) STANDING CLEARLY APART, not touching and "
+                            "not overlapping -- e.g. 'two officers standing apart facing each other "
+                            "across an empty room, full figures'. The engine cuts each one out "
+                            "separately and makes them ACT on each other (one shoves, the other "
+                            "topples), which only works if they do not overlap in the image.",
         },
         "title": {"type": "string", "description": "YouTube Shorts title, <90 chars, curiosity-driven"},
         "description": {"type": "string", "description": "YouTube description with 3-5 hashtags at the end"},
@@ -1416,8 +1422,31 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                       _flow_or_nanobanana_generate_image if media_source == "flow" else
                       _nanobanana_generate_image)
             gen_key = piapi_key if media_source == "seedream" else gemini_key
-            if gen_fn(gen_term, img_path, gen_key, reference_image=char_ref,
-                      reference_images=champ_refs, style_directive=style):
+            # CACHE DE ESCENAS GENERICAS: una escena sin nombres propios ni fechas
+            # sirve igual en cualquier video -> se genera una vez y se reusa (cero
+            # llamada de imagen). Las escenas con personaje de referencia quedan
+            # fuera: dependen del sheet, no son intercambiables.
+            gen_ok = False
+            cache_hit = None
+            if not char_ref and not champ_refs:
+                try:
+                    from visual_cache import scene_cache_lookup, scene_cache_store
+                    cache_hit = scene_cache_lookup(gen_term, style)
+                except Exception:
+                    cache_hit = None
+            if cache_hit:
+                shutil.copyfile(cache_hit, img_path)
+                gen_ok = True
+                log("media", f"clip {i + 1}/{n_clips}: escena cacheada (sin coste de API)")
+            else:
+                gen_ok = gen_fn(gen_term, img_path, gen_key, reference_image=char_ref,
+                                reference_images=champ_refs, style_directive=style)
+                if gen_ok and not char_ref and not champ_refs:
+                    try:
+                        scene_cache_store(gen_term, style, img_path)
+                    except Exception:
+                        pass
+            if gen_ok:
                 if i == veo_hero_index:
                     log("media", f"clip {i + 1}/{n_clips}: animando con Veo (~$1, puede tardar ~1-2 min)...")
                     video_bytes = _veo_animate_image(img_path, term, gemini_key)

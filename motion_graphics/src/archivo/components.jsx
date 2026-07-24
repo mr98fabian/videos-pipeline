@@ -208,6 +208,13 @@ const actionMotion = (action, local) => {
   const dur = action.dur ?? 16;
   const p = interpolate(al, [0, dur], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: SLAM_EASE });
   const decay = Math.max(0, 1 - al / 16);
+  // multi-recorte: sentido de la reaccion. Los que estan a la izquierda del que
+  // golpea caen/retroceden hacia la izquierda y viceversa -> se lee como que el
+  // golpe los EMPUJA, en vez de que todos se derrumben para el mismo lado.
+  const s = action.away ?? 1;
+  // amplitud: las piezas que solo REACCIONAN se mueven menos que la que actua,
+  // asi no se salen del papel ni le roban la atencion al sujeto principal
+  const amp = action.amp ?? 1;
   switch (action.type) {
     case "explosion":
     case "impact":
@@ -217,20 +224,20 @@ const actionMotion = (action, local) => {
       z.popZ = 40 * decay; // salta hacia adelante en Z (3D visible)
       break;
     case "recoil":
-      z.dx = interpolate(al, [0, 4, dur], [0, -70, 0], { extrapolateRight: "clamp", easing: SLAM_EASE });
-      z.rot = interpolate(al, [0, 4, dur], [0, -12, 0], { extrapolateRight: "clamp" });
+      z.dx = s * interpolate(al, [0, 4, dur], [0, -70, 0], { extrapolateRight: "clamp", easing: SLAM_EASE });
+      z.rot = s * interpolate(al, [0, 4, dur], [0, -12, 0], { extrapolateRight: "clamp" });
       break;
     case "topple":
     case "fall":
     case "collapse":
-      z.rot = interpolate(al, [0, dur], [0, 82], { extrapolateRight: "clamp", easing: Easing.bezier(0.6, 0, 0.9, 0.35) });
-      z.dy = interpolate(al, [0, dur], [0, 70], { extrapolateRight: "clamp" });
+      z.rot = s * amp * interpolate(al, [0, dur], [0, 82], { extrapolateRight: "clamp", easing: Easing.bezier(0.6, 0, 0.9, 0.35) });
+      z.dy = amp * interpolate(al, [0, dur], [0, 70], { extrapolateRight: "clamp" });
       z.origin = "bottom center";
       break;
     case "flee":
     case "escape":
-      z.dx = interpolate(al, [0, dur + 8], [0, 980], { extrapolateRight: "clamp", easing: Easing.bezier(0.5, 0, 0.9, 0.4) });
-      z.rot = 6;
+      z.dx = s * amp * interpolate(al, [0, dur + 8], [0, 980], { extrapolateRight: "clamp", easing: Easing.bezier(0.5, 0, 0.9, 0.4) });
+      z.rot = s * 6;
       break;
     case "sink":
       z.dy = interpolate(al, [0, dur + 10], [0, 540], { extrapolateRight: "clamp", easing: Easing.in(Easing.quad) });

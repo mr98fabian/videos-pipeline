@@ -39,6 +39,12 @@ import {
 // }
 // ============================================================================
 
+// escenario del sujeto: la caja donde vivia el recorte entero. Las piezas del
+// multi-recorte se mapean aqui con su geometria normalizada, asi la composicion
+// original de la imagen se respeta (quien esta a la izquierda sigue a la izquierda).
+const STAGE = { x: 50, y: LANES.safeTop + 90, w: 980, h: 1080 };
+const PART_GROW = 1.15; // las piezas sueltas se leen chicas: se agrandan un poco
+
 const BurnFlash = ({ at }) => {
   // aproximacion de film-burn: barrido calido 8 frames en el corte al cierre
   const frame = useCurrentFrame();
@@ -71,12 +77,43 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
   const cam = makeCamera(beats, shakes);
   const alt = index % 2 === 0;
   const dir = scene.enterDir || (alt ? "bottom" : "right");
+  const parts = scene.parts || [];
+  // centro (en px de lienzo) de la pieza que ACTUA -> ahi revienta el FX de comic
+  const fxAt = parts.length
+    ? { x: STAGE.x + parts[0].nx * STAGE.w, y: STAGE.y + parts[0].ny * STAGE.h }
+    : { x: 540, y: 640 };
   return (
     <Board camera={cam}>
       <Backdrop src={staticFile(scene.bg)} sceneDur={scene.dur} camera={cam} depth={0.12} />
       {scene.treatment === "sticker" && scene.fg ? (
         <>
         <GroundCard index={index} caseBase={caseBase} camera={cam} />
+        {parts.length >= 2 ? (
+          // MULTI-RECORTE: cada figura/objeto es su propio sticker, colocado donde
+          // estaba en la imagen original, con su propia profundidad y su propia
+          // accion (uno actua, los otros reaccionan) -> interactuan entre si.
+          parts.map((pt, k) => {
+            const gw = pt.nw * STAGE.w * PART_GROW;
+            const gh = pt.nh * STAGE.h * PART_GROW;
+            return (
+              <Cutout
+                key={k}
+                src={staticFile(pt.src)}
+                from={pt.from ?? 0}
+                x={STAGE.x + pt.nx * STAGE.w - gw / 2}
+                y={STAGE.y + pt.ny * STAGE.h - gh / 2}
+                w={gw}
+                h={gh}
+                fromDir={pt.dir || dir}
+                rot={k % 2 === 0 ? -2 : 2}
+                driftAmp={4 + k}          // deriva desfasada: no respiran al unisono
+                action={pt.action || null}
+                camera={cam}
+                depth={pt.depth ?? 1.0}
+              />
+            );
+          })
+        ) : (
         <Cutout
           src={staticFile(scene.fg)}
           from={0}
@@ -90,6 +127,7 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
           camera={cam}
           depth={1.0}
         />
+        )}
         </>
       ) : (
         <PhotoScrap
@@ -115,7 +153,7 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
       ) : null}
       {b.stamp ? <Stamp text={b.stamp.text} from={b.stamp.at} x={90} y={280} rot={-8} /> : null}
       {b.typewriter ? <Typewriter text={b.typewriter.text} from={b.typewriter.at} x={b.typewriter.x ?? 120} y={b.typewriter.y ?? 210} /> : null}
-      {b.action ? <ActionFX action={b.action} from={0} cx={540} cy={640} /> : null}
+      {b.action ? <ActionFX action={b.action} from={0} cx={fxAt.x} cy={fxAt.y} /> : null}
       {b.evidence ? <EvidencePhoto src={staticFile(b.evidence.src)} from={b.evidence.at} year={b.evidence.year} side={index % 2 === 0 ? "right" : "left"} /> : null}
     </Board>
   );
