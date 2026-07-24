@@ -258,9 +258,16 @@ export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, dr
   const offY = fromDir === "bottom" ? 800 * (1 - p) : fromDir === "top" ? -800 * (1 - p) : 0;
   const flip = (fromDir === "right" ? -55 : 55) * (1 - p); // 3D: gira al aterrizar
   const drift = Math.sin(local / 13) * driftAmp;
-  const tilt = rot + Math.sin(local / 17) * 1.6;
+  // VIDA SECUNDARIA (opción 1): respiración + balanceo, pivotando desde los pies.
+  // Ilusión de "estar vivo" sin articular; se compone sobre parallax y acción.
+  const breath = Math.sin(local / 26);
+  const lifeSX = 1 - breath * 0.010;                                   // pecho: ancho baja
+  const lifeSY = 1 + breath * 0.016;                                   // ...y alto sube
+  const sway = Math.sin(local / 38) * 1.1 + Math.sin(local / 15) * 0.35; // balanceo + micro-wobble
+  const tilt = rot + sway;
   const a = actionMotion(action, local); // actua el verbo de la escena
   const par = parallaxDepth(camera, frame, depth); // plano CERCANO: se mueve/crece mas
+  const baseS = (0.85 + 0.15 * p) * a.scale;
   return (
     <div style={{ position: "absolute", left: x, top: y + drift, width: w, height: h, perspective: 1200,
       translate: `${par.tx}px ${par.ty}px`, scale: `${par.sc}` }}>
@@ -270,9 +277,9 @@ export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, dr
           height: "100%",
           translate: `${offX + a.dx}px ${offY + a.dy}px`,
           rotate: `${tilt + a.rot}deg`,
-          scale: `${(0.85 + 0.15 * p) * a.scale}`,
+          scale: `${baseS * lifeSX} ${baseS * lifeSY}`,
           transform: `rotateY(${flip}deg) translateZ(${a.popZ}px)`,
-          transformOrigin: a.origin,
+          transformOrigin: a.origin === "center" ? "bottom center" : a.origin,
         }}
       >
         <Img src={src} style={{ width: "100%", height: "100%", objectFit: "contain", filter: DIE_CUT }} />
