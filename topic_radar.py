@@ -67,6 +67,19 @@ NAMEABLE_ANTAGONISTS = (
     "pol pot", "idi amin", "pinochet", "the stasi", "the cartel", "escobar",
 )
 
+# SATIRIZABLE: temas donde la voz del archivista cínico corre libre (golpea al
+# poder/absurdo, sin víctimas) -> bonus. Sesga el radar hacia contenido más
+# compartible y nos diversifica del cluster pesado de atrocidades (dirección
+# 24 jul: humor ácido = palanca de shares). Ver estabilizacion-y-tono-24jul.
+SATIRIZABLE = (
+    "hoax", "con man", "con artist", "fraud", "scam", "forgery", "counterfeit",
+    "impostor", "swindle", "ponzi", "embezzle", "fake", "absurd", "bizarre",
+    "ridiculous", "propaganda", "bureaucra", "red tape", "renamed", "named after",
+    "trading", "sold", "bought", "debt", "tax", "loophole", "tradition", "ceremon",
+    "ego", "vanity", "blunder", "fiasco", "botched", "backfired", "petty", "feud",
+    "corporate", "company", "advertising", "publicity stunt", "swimsuit", "toilet",
+)
+
 # Temas sobre-explotados en el nicho -> penalizacion (ver criterio-guiones).
 SATURATED = (
     "bermuda triangle", "flight 19", "area 51", "roswell", "loch ness",
@@ -163,18 +176,21 @@ def score_event(ev: dict, on_year: int, outlier_terms: list[str]) -> dict | None
     antagonist = _antagonist_in(text)
     anni_bonus, age = _anniversary_bonus(ev.get("year"), on_year)
     outlier_hit = any(t and t in low for t in outlier_terms)
+    satirizable = any(s in low for s in SATIRIZABLE)
 
     score = (
         min(len(themes), 3) * 2        # fuerza/variedad de tema (cap 3)
         + (4 if antagonist else 0)     # villano nombrable (senal #1)
         + anni_bonus                    # aniversario redondo
         + (3 if outlier_hit else 0)    # matchea un outlier real de vidIQ
+        + (2 if satirizable else 0)    # tema donde la voz acida corre libre (shares)
         + sat_pen                       # saturacion
     )
     return {
         "score": score, "year": ev.get("year"), "age": age, "text": text,
         "themes": themes, "antagonist": antagonist, "anni_bonus": anni_bonus,
-        "outlier_hit": outlier_hit, "angle": _hook_angle(text, antagonist),
+        "outlier_hit": outlier_hit, "satirizable": satirizable,
+        "angle": _hook_angle(text, antagonist),
     }
 
 
@@ -249,7 +265,8 @@ def main() -> int:
         anni = f" · {c['age']}º aniversario" if c["anni_bonus"] else ""
         vil = f" · villano: {c['antagonist'].title()}" if c["antagonist"] else ""
         out = " · [OUTLIER]" if c["outlier_hit"] else ""
-        print(f"{i:2d}. [score {c['score']}] {c['year']} — {', '.join(c['themes'])}{anni}{vil}{out}")
+        sat = " · [SATIRIZABLE]" if c.get("satirizable") else ""
+        print(f"{i:2d}. [score {c['score']}] {c['year']} — {', '.join(c['themes'])}{anni}{vil}{out}{sat}")
         print(f"    {c['text']}")
         print(f"    -> {c['angle']}\n")
 
