@@ -712,6 +712,25 @@ def cmd_script(a) -> int:
               "el espectador se queda por el resultado. Considera descartarlo.")
 
     cut = an.get("best_cut") or {}
+    payout_t = (an.get("payout") or {}).get("t") or 0
+    # EL RECORTE TIENE QUE CONTENER EL PAYOUT. El analisis a veces elige una
+    # ventana corta que se come el momento del resultado, y entonces el video
+    # se corta justo antes de lo unico que el espectador estaba esperando.
+    full_dur = _duration(target / "video.mp4") or src.get("duration") or 0
+    cuts_n = len(d.get("scenes") or []) or len(_scenes(target / "video.mp4"))
+    # Si el clip entero es corto y tiene varios planos, USARLO ENTERO. El
+    # analisis tiende a quedarse solo con el desenlace, y asi se pierde el
+    # intento fallido que es lo que hace que el desenlace signifique algo.
+    if 0 < full_dur <= 25 and cuts_n >= 2:
+        if (cut.get("end") or 0) - (cut.get("start") or 0) < full_dur * 0.8:
+            print(f"[script] usando el clip ENTERO ({full_dur:.1f}s): tiene {cuts_n} planos "
+                  f"y el montaje completo cuenta la historia")
+            cut = {"start": 0.0, "end": round(full_dur, 2)}
+    if payout_t and payout_t > (cut.get("end") or 0) - 0.5:
+        full_dur = full_dur or payout_t + 2
+        cut["end"] = min(payout_t + 1.5, full_dur)
+        print(f"[script] recorte extendido a {cut['end']:.1f}s para incluir el payout "
+              f"({payout_t:.1f}s)")
     clip_len = (cut.get("end") or src.get("duration") or 20) - (cut.get("start") or 0)
     # CUANTOS PLANOS TIENE EL ORIGINAL. Un clip de camara fija no aguanta una
     # narracion larga: por mucho que reencuadres, la imagen no cambia y el
