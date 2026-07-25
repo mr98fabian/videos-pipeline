@@ -32,23 +32,32 @@ def main() -> int:
     ap.add_argument("--cfg", type=float, default=0.5,
                     help="mas bajo = ritmo mas lento y pausado")
     ap.add_argument("--device", default="auto")
+    ap.add_argument("--lang", default="en",
+                    help="en usa el modelo ingles; cualquier otro (es, pt, fr...) "
+                         "carga el multilingue")
     a = ap.parse_args()
 
     import torch
     import torchaudio as ta
-    from chatterbox.tts import ChatterboxTTS
 
     device = a.device
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[chatterbox] device={device}", file=sys.stderr)
+    print(f"[chatterbox] device={device} lang={a.lang}", file=sys.stderr)
 
     text = Path(a.text_file).read_text(encoding="utf-8").strip()
-    model = ChatterboxTTS.from_pretrained(device=device)
     kw = {"exaggeration": a.exaggeration, "cfg_weight": a.cfg}
     if a.ref:
         kw["audio_prompt_path"] = a.ref
-    wav = model.generate(text, **kw)
+    if a.lang == "en":
+        # el modelo ingles dedicado suena algo mejor que el multilingue en ingles
+        from chatterbox.tts import ChatterboxTTS
+        model = ChatterboxTTS.from_pretrained(device=device)
+        wav = model.generate(text, **kw)
+    else:
+        from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+        model = ChatterboxMultilingualTTS.from_pretrained(device=device)
+        wav = model.generate(text, language_id=a.lang, **kw)
     ta.save(a.out, wav, model.sr)
     print(f"[chatterbox] {a.out}", file=sys.stderr)
     return 0

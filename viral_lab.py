@@ -857,13 +857,14 @@ def _circle_png(path: Path, size: int = 360) -> Path:
 CHATTERBOX_DIR = ROOT / "tools" / "chatterbox_tts"
 
 
-def _chatterbox(script: str, wav: Path, ref: str = "", exaggeration: float = 0.45) -> Path:
+def _chatterbox(script: str, wav: Path, ref: str = "", exaggeration: float = 0.45,
+                lang: str = "en") -> Path:
     """Voz con Chatterbox en su propio venv (arrastra torch; no se mezcla con el
     entorno principal, igual que Kokoro). Cacheada por hash de texto+parametros:
     en CPU tarda minutos, asi que re-renderizar el mismo guion no debe volver a
     sintetizar."""
     import hashlib
-    key = hashlib.sha1(f"{script}|{ref}|{exaggeration}".encode()).hexdigest()[:16]
+    key = hashlib.sha1(f"{script}|{ref}|{exaggeration}|{lang}".encode()).hexdigest()[:16]
     cache = ROOT / "assets" / "cache" / "voices"
     cache.mkdir(parents=True, exist_ok=True)
     cached = cache / f"{key}.wav"
@@ -876,7 +877,7 @@ def _chatterbox(script: str, wav: Path, ref: str = "", exaggeration: float = 0.4
     txt.write_text(script, encoding="utf-8")
     cmd = ["uv", "run", "--directory", str(CHATTERBOX_DIR), "synth.py",
            "--text-file", str(txt.resolve()), "--out", str(wav.resolve()),
-           "--exaggeration", str(exaggeration)]
+           "--exaggeration", str(exaggeration), "--lang", lang]
     if ref:
         cmd += ["--ref", str(Path(ref).resolve())]
     print("[edit] sintetizando con Chatterbox (en CPU esto tarda unos minutos)...")
@@ -930,7 +931,8 @@ def cmd_edit(a) -> int:
     # formato se evita de origen en vez de arreglarlo en la edicion).
     if a.voice == "chatterbox":
         voice = target / "voice.wav"
-        _chatterbox(sc["script"], voice, ref=a.ref, exaggeration=a.exaggeration)
+        _chatterbox(sc["script"], voice, ref=a.ref, exaggeration=a.exaggeration,
+                    lang=a.lang)
         words = _align_words(voice)
         print("[edit] voz Chatterbox alineada con whisper")
     elif a.voice.startswith(pl.KOKORO_VOICE_PREFIXES):
@@ -1310,6 +1312,8 @@ def main() -> int:
     e.add_argument("--voice", default="chatterbox",
                     help="'chatterbox' (mas real, local, MIT), una voz Kokoro "
                          "(am_/af_/bm_/bf_) o una de edge-tts")
+    e.add_argument("--lang", default="en",
+                    help="idioma de Chatterbox: en, es, pt, fr... (25 idiomas)")
     e.add_argument("--ref", default="",
                     help="wav de tu voz para clonarla con Chatterbox")
     e.add_argument("--exaggeration", type=float, default=0.45,
