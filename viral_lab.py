@@ -707,6 +707,158 @@ trivial (asi el video sigue corriendo mientras escriben). Ni insultante ni falso
     return 0
 
 
+# ---------------------------------------------------------------------- EDIT
+
+# cajas de desenfoque por posicion declarada de la marca de agua, en el lienzo
+# ya normalizado a 1080x1920 (x, y, w, h)
+_WM_BOXES = {
+    "superior derecha": (620, 60, 420, 190),
+    "superior izquierda": (40, 60, 420, 190),
+    "inferior derecha": (620, 1660, 420, 200),
+    "inferior izquierda": (40, 1660, 420, 200),
+    "superior": (240, 60, 600, 190),
+    "inferior": (240, 1660, 600, 200),
+}
+# zooms por frase: "cada frase = un cambio de perspectiva" es la regla del
+# formato; sin esto el espectador ve el mismo plano 20s y se va
+_ZOOMS = [1.0, 1.10, 1.04, 1.13, 1.06, 1.16, 1.02, 1.09]
+MAX_SLOWDOWN = 2.2  # mas alla se ve a camara lenta obvia
+
+
+def _letterbox(clip: Path, start: float, dur: float) -> str | None:
+    """Detecta franjas negras del clip original. Muchos reels traen un video
+    horizontal pegado en un lienzo vertical con barras: si no se quitan, el
+    short final desperdicia media pantalla en negro."""
+    r = _run(["ffmpeg", "-v", "info", "-ss", f"{start:.2f}", "-t", f"{min(dur, 4):.2f}",
+              "-i", str(clip), "-vf", "cropdetect=24:2:0", "-f", "null", "-"], timeout=180)
+    import re
+    hits = re.findall(r"crop=(\d+:\d+:\d+:\d+)", (r.stderr or ""))
+    if not hits:
+        return None
+    crop = hits[-1]
+    w, h, _, _ = (int(x) for x in crop.split(":"))
+    if w < 16 or h < 16:
+        return None
+    return crop
+
+
+def _wm_box(where: str):
+    w = (where or "").lower()
+    for k, box in _WM_BOXES.items():
+        if all(t in w for t in k.split()):
+            return box
+    return None
+
+
+def cmd_edit(a) -> int:
+    """Ensambla el short final: voz + clip estirado al largo de la narracion +
+    zoom por frase + subtitulos quemados + musica con ducking."""
+    import asyncio
+
+    sys.path.insert(0, str(ROOT))
+    import pipeline as pl
+
+    target = Path(a.target)
+    sj, aj = target / "script.json", target / "analysis.json"
+    if not sj.exists():
+        print(f"ERROR: falta {sj} — corre antes: py viral_lab.py script {target}")
+        return 2
+    sc = json.loads(sj.read_text(encoding="utf-8"))
+    an = json.loads(aj.read_text(encoding="utf-8"))["analysis"] if aj.exists() else {}
+    clip = target / "video.mp4"
+
+    # ---- 1. VOZ. Se sintetiza de una pieza: edge-tts no deja huecos entre
+    # frases, asi que no hay silencios que cortar despues (el error #1 del
+    # formato se evita de origen en vez de arreglarlo en la edicion).
+    voice = target / "voice.mp3"
+    words = asyncio.run(pl._tts(sc["script"], a.voice, a.rate, voice))
+    adur = _duration(voice)
+    print(f"[edit] voz: {adur:.1f}s, {len(words)} palabras")
+
+    # ---- 2. BASE: recorte, marca de agua tapada, estirado al largo de la voz
+    cut = sc.get("cut") or {}
+    s0 = float(cut.get("start") or 0)
+    s1 = float(cut.get("end") or _duration(clip))
+    cut_len = max(s1 - s0, 0.5)
+    ratio = min(max(adur / cut_len, 1.0), MAX_SLOWDOWN)
+    lb = None if a.no_crop else _letterbox(clip, s0, cut_len)
+    if lb:
+        print(f"[edit] franjas negras recortadas: crop={lb}")
+    chain = (f"[0:v]trim=start={s0}:end={s1},setpts=(PTS-STARTPTS)*{ratio:.4f},"
+             + (f"crop={lb}," if lb else "")
+             + f"scale=1080:1920:force_original_aspect_ratio=increase,"
+               f"crop=1080:1920,fps=30")
+    box = _wm_box(((an.get("watermark") or {}).get("where") or "")) \
+        if (an.get("watermark") or {}).get("present") else None
+    if box:
+        x, y, w, h = box
+        chain += (f",split[a][b];[b]crop={w}:{h}:{x}:{y},boxblur=22[bl];"
+                  f"[a][bl]overlay={x}:{y}[v]")
+        print(f"[edit] tapando marca de agua en {x},{y}")
+    else:
+        chain += "[v]"
+    base = target / "base.mp4"
+    r = _run(["ffmpeg", "-y", "-v", "error", "-i", str(clip), "-filter_complex", chain,
+              "-map", "[v]", "-an", "-c:v", "libx264", "-preset", "veryfast",
+              "-crf", "20", "-pix_fmt", "yuv420p", str(base)], timeout=600)
+    if r.returncode != 0:
+        print(f"ERROR base: {r.stderr[-500:]}")
+        return 2
+    print(f"[edit] base: {_duration(base):.1f}s (clip x{ratio:.2f})")
+
+    # ---- 3. ZOOM POR FRASE. Los cortes se reparten segun el peso en palabras de
+    # cada frase, que es la mejor aproximacion a cuando suena cada una.
+    lines = sc.get("lines") or [{"text": sc["script"]}]
+    counts = [max(len(l["text"].split()), 1) for l in lines]
+    total = sum(counts)
+    bounds, acc = [], 0.0
+    for c in counts:
+        d = adur * c / total
+        bounds.append((acc, acc + d))
+        acc += d
+    parts, labels = [], []
+    for i, (b0, b1) in enumerate(bounds):
+        z = _ZOOMS[i % len(_ZOOMS)]
+        cw, ch = int(1080 / z) // 2 * 2, int(1920 / z) // 2 * 2
+        parts.append(f"[0:v]trim=start={b0:.3f}:end={b1:.3f},setpts=PTS-STARTPTS,"
+                     f"crop={cw}:{ch}:{(1080 - cw) // 2}:{(1920 - ch) // 2},"
+                     f"scale=1080:1920[s{i}]")
+        labels.append(f"[s{i}]")
+    fc = ";".join(parts) + ";" + "".join(labels) + f"concat=n={len(parts)}:v=1:a=0[vz]"
+
+    # subtitulos palabra a palabra del pipeline (mismo estilo que el canal madre)
+    ass = pl.generate_subtitles(words, target)
+    ass_esc = str(ass.resolve()).replace("\\", "/").replace(":", "\\:")
+    fc += f";[vz]subtitles='{ass_esc}'[vout]"
+
+    # ---- 4. AUDIO: voz + musica con ducking (mismos parametros probados)
+    music = pl._pick_music() if not a.no_music else None
+    inputs = ["-stream_loop", "-1", "-i", str(base), "-i", str(voice)]
+    if music:
+        inputs += ["-i", str(music)]
+        fc += (";[1:a]asplit=2[vmix][vtrig];"
+               "[2:a]aloop=loop=-1:size=2e9,volume=0.14[bg0];"
+               "[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[bg];"
+               "[vmix][bg]amix=inputs=2:normalize=0:duration=first[aout]")
+    else:
+        fc += ";[1:a]anull[aout]"
+
+    out = target / "short.mp4"
+    r = _run(["ffmpeg", "-y", "-v", "error", *inputs, "-filter_complex", fc,
+              "-map", "[vout]", "-map", "[aout]", "-t", f"{adur:.3f}",
+              "-c:v", "libx264", "-preset", "medium", "-crf", "21",
+              "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", str(out)],
+             timeout=900)
+    if r.returncode != 0:
+        print(f"ERROR montaje: {r.stderr[-800:]}")
+        return 2
+    base.unlink(missing_ok=True)
+    print(f"[edit] LISTO: {out} ({_duration(out):.1f}s)")
+    print(f"[edit] credito obligatorio en la descripcion: {sc.get('source_credit', '')}")
+    print(f"[edit] revisa antes de publicar: py viral_lab.py qa {out}")
+    return 0
+
+
 # ----------------------------------------------------------------------- QA
 
 QA_PROMPT = """Eres el control de calidad de un canal de Shorts de historia. Te paso un
@@ -875,6 +1027,15 @@ def main() -> int:
                     help="mete un error factual pequeno a proposito para provocar "
                          "correcciones en comentarios (sube interaccion, baja credibilidad)")
     s.set_defaults(func=cmd_script)
+
+    e = sub.add_parser("edit", help="monta el short final (voz + clip + subs + musica)")
+    e.add_argument("target", help="carpeta de viral/ con script.json")
+    e.add_argument("--voice", default="en-US-AndrewNeural")
+    e.add_argument("--rate", default="+8%")
+    e.add_argument("--no-music", action="store_true")
+    e.add_argument("--no-crop", action="store_true",
+                    help="no recortar las franjas negras del clip original")
+    e.set_defaults(func=cmd_edit)
 
     q = sub.add_parser("qa", help="revision automatica de un video antes de publicar")
     q.add_argument("target", help="carpeta output/<video> o un .mp4")
