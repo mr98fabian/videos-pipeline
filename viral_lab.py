@@ -854,6 +854,41 @@ def _circle_png(path: Path, size: int = 360) -> Path:
     return path
 
 
+CHATTERBOX_DIR = ROOT / "tools" / "chatterbox_tts"
+
+
+def _chatterbox(script: str, wav: Path, ref: str = "", exaggeration: float = 0.45) -> Path:
+    """Voz con Chatterbox en su propio venv (arrastra torch; no se mezcla con el
+    entorno principal, igual que Kokoro). Cacheada por hash de texto+parametros:
+    en CPU tarda minutos, asi que re-renderizar el mismo guion no debe volver a
+    sintetizar."""
+    import hashlib
+    key = hashlib.sha1(f"{script}|{ref}|{exaggeration}".encode()).hexdigest()[:16]
+    cache = ROOT / "assets" / "cache" / "voices"
+    cache.mkdir(parents=True, exist_ok=True)
+    cached = cache / f"{key}.wav"
+    if cached.exists():
+        import shutil as _sh
+        _sh.copyfile(cached, wav)
+        print("[edit] voz Chatterbox desde cache")
+        return wav
+    txt = wav.with_suffix(".txt")
+    txt.write_text(script, encoding="utf-8")
+    cmd = ["uv", "run", "--directory", str(CHATTERBOX_DIR), "synth.py",
+           "--text-file", str(txt.resolve()), "--out", str(wav.resolve()),
+           "--exaggeration", str(exaggeration)]
+    if ref:
+        cmd += ["--ref", str(Path(ref).resolve())]
+    print("[edit] sintetizando con Chatterbox (en CPU esto tarda unos minutos)...")
+    r = _run(cmd, timeout=1800)
+    txt.unlink(missing_ok=True)
+    if r.returncode != 0 or not wav.exists():
+        raise RuntimeError(f"Chatterbox fallo: {(r.stderr or '')[-400:]}")
+    import shutil as _sh
+    _sh.copyfile(wav, cached)
+    return wav
+
+
 def _align_words(audio: Path) -> list[tuple[float, float, str]]:
     """Timestamps REALES de cada palabra sobre el audio ya sintetizado.
     Kokoro suena mucho mas humano que edge-tts pero devuelve los tiempos
@@ -893,7 +928,12 @@ def cmd_edit(a) -> int:
     # ---- 1. VOZ. Se sintetiza de una pieza: edge-tts no deja huecos entre
     # frases, asi que no hay silencios que cortar despues (el error #1 del
     # formato se evita de origen en vez de arreglarlo en la edicion).
-    if a.voice.startswith(pl.KOKORO_VOICE_PREFIXES):
+    if a.voice == "chatterbox":
+        voice = target / "voice.wav"
+        _chatterbox(sc["script"], voice, ref=a.ref, exaggeration=a.exaggeration)
+        words = _align_words(voice)
+        print("[edit] voz Chatterbox alineada con whisper")
+    elif a.voice.startswith(pl.KOKORO_VOICE_PREFIXES):
         voice = target / "voice.wav"
         pl._kokoro_tts(sc["script"], a.voice, voice, speed=a.speed)
         words = _align_words(voice)  # timing real, no la estimacion de Kokoro
@@ -1267,8 +1307,13 @@ def main() -> int:
 
     e = sub.add_parser("edit", help="monta el short final (voz + clip + subs + musica)")
     e.add_argument("target", help="carpeta de viral/ con script.json")
-    e.add_argument("--voice", default="am_michael",
-                    help="voz Kokoro (am_/af_/bm_/bf_, local y mas humana) o de edge-tts")
+    e.add_argument("--voice", default="chatterbox",
+                    help="'chatterbox' (mas real, local, MIT), una voz Kokoro "
+                         "(am_/af_/bm_/bf_) o una de edge-tts")
+    e.add_argument("--ref", default="",
+                    help="wav de tu voz para clonarla con Chatterbox")
+    e.add_argument("--exaggeration", type=float, default=0.45,
+                    help="0.3 sobrio / 0.7+ enfatico (solo Chatterbox)")
     e.add_argument("--rate", default="+8%", help="solo edge-tts")
     e.add_argument("--speed", type=float, default=1.05, help="solo Kokoro")
     e.add_argument("--no-sfx", action="store_true")

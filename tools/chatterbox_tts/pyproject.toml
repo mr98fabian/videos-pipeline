@@ -1,0 +1,10 @@
+[project]
+name = "chatterbox-tts-tool"
+version = "0.1.0"
+description = "Voz TTS con Chatterbox (Resemble AI, MIT) para viral_lab"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "chatterbox-tts>=0.1.2",
+    "soundfile>=0.13.0",
+    "numpy>=1.26",
+]
