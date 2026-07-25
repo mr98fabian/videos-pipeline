@@ -431,6 +431,149 @@ def cmd_read(a) -> int:
     return 0
 
 
+# --------------------------------------------------------------------- FIND
+
+# Nicho del canal de comentario: fitness/gimnasio en ingles (decision 25 jul
+# 2026). Editar aqui si cambia; cada consulta cuesta ~5 creditos de vidIQ.
+NICHE_QUERIES = [
+    "gym strength challenge heavy lift",
+    "fitness challenge fail vs success",
+    "strongman feat of strength",
+]
+AUDIENCE = "Culture/Region: US/Western Europe; Global: true"
+
+# senales de que el clip NO se puede transformar: alguien hablando a camara.
+# El formato necesita gente HACIENDO algo, la voz en off la ponemos nosotros.
+_TALKING = ("talking head", "voiceover", "voice-over", "speaking to camera",
+            "dialogue", "narration", "interview", "storytime", "podcast")
+_RISKY = ("blood", "fight", "firework", "gun", "weapon", "injury", "knockout")
+
+
+def _num(s: str) -> float:
+    """'1.1M' -> 1100000.0 ; '5.2K' -> 5200.0"""
+    s = s.strip().upper().replace(",", "")
+    mult = {"K": 1e3, "M": 1e6, "B": 1e9}.get(s[-1:], 1)
+    try:
+        return float(s[:-1]) * mult if mult > 1 else float(s)
+    except ValueError:
+        return 0.0
+
+
+def _parse_outliers(md: str) -> list[dict]:
+    """El endpoint de outliers cross-plataforma devuelve MARKDOWN, no JSON (por
+    eso no se puede usar call_json). Se parsea por bloques: cada candidato
+    empieza en una linea '**@handle** — "caption"'."""
+    import re
+    platform = "instagram"
+    items, cur = [], None
+    for raw in md.splitlines():
+        ln = raw.rstrip()
+        if ln.startswith("## "):
+            platform = ln[3:].strip().lower()
+            continue
+        m = re.match(r'\*\*@([\w.\-]+)\*\*\s*—\s*"?(.*)', ln)
+        if m:
+            if cur:
+                items.append(cur)
+            cur = {"platform": platform, "handle": m.group(1),
+                   "caption": m.group(2).strip('"'), "fields": {}}
+            continue
+        if cur is None:
+            continue
+        m = re.search(r"([\d.,]+[KMB]?)\s+views\s*\((\d+(?:\.\d+)?)x their median of ([\d.,]+[KMB]?)\)"
+                      r"(?:\s*·\s*([\d.,]+[KMB]?)\s+followers)?", ln)
+        if m:
+            cur.update(views=_num(m.group(1)), multiplier=float(m.group(2)),
+                       median=_num(m.group(3)), followers=_num(m.group(4) or "0"))
+            continue
+        m = re.match(r"\s*(reel|tiktok|post|video|short):\s*([\w\-]+)", ln)
+        if m:
+            cur["kind"], cur["vid"] = m.group(1), m.group(2)
+            continue
+        m = re.match(r"\s*\*\*(\w+)\*\*:\s*(.*)", ln)
+        if m and m.group(2).strip():
+            cur["fields"][m.group(1)] = m.group(2).strip()
+            continue
+        m = re.match(r"\s+(\w+):\s*(.+)", ln)
+        if m:
+            cur["fields"][m.group(1)] = m.group(2).strip()
+    if cur:
+        items.append(cur)
+    return [i for i in items if i.get("vid")]
+
+
+def _url_of(it: dict) -> str:
+    if it["platform"].startswith("tiktok"):
+        return f"https://www.tiktok.com/@{it['handle']}/video/{it['vid']}"
+    return f"https://www.instagram.com/reel/{it['vid']}/"
+
+
+def _judge(it: dict) -> tuple[float, list[str]]:
+    """Puntua y marca descartes. El multiplicador sobre la mediana DEL PROPIO
+    creador es la mejor senal: significa que el video se disparo solo, no que el
+    creador tenga audiencia. Un 200x de una cuenta de 7K vale mas que 1M vistas
+    de una cuenta de 2M."""
+    blob = " ".join([it.get("caption", ""), *it.get("fields", {}).values()]).lower()
+    flags = []
+    if any(w in blob for w in _TALKING):
+        flags.append("habla-a-camara")
+    if any(w in blob for w in _RISKY):
+        flags.append("riesgo-normas")
+    if "music only" not in blob and "audio_mix" in it.get("fields", {}):
+        flags.append("audio-con-voz")
+    score = it.get("multiplier", 0)
+    if it.get("views", 0) >= 1e6:
+        score *= 1.15  # volumen ya probado, no solo anomalia estadistica
+    if flags:
+        score *= 0.25
+    return round(score, 1), flags
+
+
+def cmd_find(a) -> int:
+    import vidiq_tools as v
+
+    queries = a.query or NICHE_QUERIES
+    print(f"[find] {len(queries)} consultas (~{len(queries) * 5} creditos vidIQ)")
+    seen, rows = set(), []
+    for q in queries:
+        try:
+            md = v.call("vidiq_instagram_tiktok_outlier_search", {
+                "query": q, "audienceQuery": AUDIENCE,
+                "resultsPerPlatform": a.limit, "collapseByCreator": True})
+        except Exception as e:
+            print(f"[find] fallo '{q}': {e}")
+            continue
+        for it in _parse_outliers(md):
+            if it["vid"] in seen:
+                continue
+            seen.add(it["vid"])
+            it["url"] = _url_of(it)
+            it["query"] = q
+            it["score"], it["flags"] = _judge(it)
+            # ya descargado en una corrida anterior -> no volver a proponerlo
+            it["done"] = (Path(a.dir) / f"{it['platform'].split()[0]}-{it['vid']}").exists()
+            rows.append(it)
+
+    rows.sort(key=lambda r: -r["score"])
+    Path(a.dir).mkdir(parents=True, exist_ok=True)
+    _write_json(Path(a.dir) / "queue.json", rows)
+
+    print(f"\n{'score':>6} {'xmed':>6} {'vistas':>9}  {'plataforma':10} candidato")
+    for r in rows[:a.top]:
+        mark = "·" if r["done"] else " "
+        note = (" [" + ",".join(r["flags"]) + "]") if r["flags"] else ""
+        concept = (r["fields"].get("reel_concept") or r["caption"])[:64].replace("\n", " ")
+        print(f"{r['score']:>6} {r.get('multiplier', 0):>5}x {int(r.get('views', 0)):>9} "
+              f"{r['platform'][:10]:10}{mark} @{r['handle'][:18]}{note}\n"
+              f"        {concept}\n        {r['url']}")
+    good = [r for r in rows if not r["flags"] and not r["done"]]
+    print(f"\n[find] {len(rows)} candidatos, {len(good)} limpios sin procesar "
+          f"-> {Path(a.dir) / 'queue.json'}")
+    if good:
+        print(f"[find] siguiente: py viral_lab.py read \"{good[0]['url']}\"")
+    return 0
+
+
 # ----------------------------------------------------------------------- QA
 
 QA_PROMPT = """Eres el control de calidad de un canal de Shorts de historia. Te paso un
@@ -567,6 +710,13 @@ def cmd_qa(a) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Laboratorio de clips virales de terceros")
     sub = ap.add_subparsers(dest="cmd", required=True)
+
+    f = sub.add_parser("find", help="busca virales del nicho y los rankea")
+    f.add_argument("query", nargs="*", help="consultas (por defecto NICHE_QUERIES)")
+    f.add_argument("--dir", default=str(DEFAULT_DIR))
+    f.add_argument("--limit", type=int, default=8, help="resultados por plataforma")
+    f.add_argument("--top", type=int, default=10, help="cuantos mostrar")
+    f.set_defaults(func=cmd_find)
 
     g = sub.add_parser("get", help="descarga un clip + su ficha de origen")
     g.add_argument("url")
