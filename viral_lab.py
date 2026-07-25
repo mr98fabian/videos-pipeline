@@ -127,6 +127,10 @@ def cmd_get(a) -> int:
         "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "permission": "none",  # cambiar a 'asked'/'granted' si se pide al creador
     }
+    # Instagram no devuelve duracion ni vistas por yt-dlp: la duracion la sacamos
+    # del fichero, y las vistas hay que traerlas del radar (vidiq xoutliers)
+    if not src["duration"] and video.exists():
+        src["duration"] = round(_duration(video), 1)
     _write_json(out / "source.json", src)
     mb = video.stat().st_size / 1e6 if video.exists() else 0
     print(f"[get] {out}  ({mb:.1f} MB, {src['duration']}s, {src['view_count']} vistas)")
@@ -184,6 +188,14 @@ def _transcribe(video: Path, model_size: str) -> dict:
         m = WhisperModel(model_size, device="cpu", compute_type="int8")
         segs, info = m.transcribe(str(wav), vad_filter=True)
         segs = list(segs)
+        # Whisper ALUCINA sobre pistas de solo musica (devuelve cosas como
+        # "gracias por ver el video" en un idioma random). Si apenas hay voz
+        # respecto a la duracion del clip, es musica: mejor nada que un texto
+        # inventado, que ademas contaminaria el analisis del guion.
+        speech = sum(s.end - s.start for s in segs)
+        dur = _duration(video)
+        if speech < 1.5 or (dur and speech / dur < 0.12):
+            return {"text": "", "note": "sin voz (pista de musica)"}
         return {
             "language": info.language,
             "text": " ".join(s.text.strip() for s in segs).strip(),
