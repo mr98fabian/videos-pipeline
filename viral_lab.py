@@ -768,9 +768,12 @@ Esto NO es un documental. Es alguien contandote algo raro que vio. La estructura
 que funciona en este nicho es PERSONA + RAREZA + POR QUE + RESULTADO:
   "Este es <nombre>, y tiene un problema bastante raro: cada vez que <hace algo>,
    <pasa algo inesperado>. Resulta que <explicacion>. Y por eso <resultado>."
-- Empieza presentando a UNA persona concreta, con nombre propio plausible. Si no
-  sabes como se llama, invéntalo (y listalo en `invented`). Un nombre convierte
-  un video de gente anonima en una historia de alguien.
+- Empieza anclando la historia en ALGUIEN concreto. Si el clip da el nombre real,
+  usalo. Si NO lo da, NO te lo inventes: la gente del clip es real, se le ve la
+  cara y en nichos pequenos se conocen entre ellos; ponerle un nombre falso a
+  alguien identificable es faltarle al respeto y ademas se nota. Usa en su lugar
+  una etiqueta concreta y verdadera: "this crew", "the guy in the red shirt",
+  "these five". Inventar CONTEXTO esta bien; inventar IDENTIDADES no.
 - Tono COLOQUIAL, de conversacion: frases cortas, conectores hablados ("resulta
   que", "lo raro es que", "y aqui viene lo bueno"). Nada de prosa informativa
   tipo "sostiene cuatrocientos kilogramos distribuidos en siete cuerpos".
@@ -801,7 +804,9 @@ REGLAS DURAS:
 `lines`: reparte las frases con el segundo del CLIP en que deben sonar.
 `pinned_comment`: un comentario del canal para fijar, que invite a responder algo
 trivial (asi el video sigue corriendo mientras escriben). Ni insultante ni falso.
-`title`: menos de 90 caracteres, curiosidad, sin clickbait mentiroso.
+`title`: menos de 90 caracteres, curiosidad, sin clickbait mentiroso. No pongas
+cifras que el espectador pueda contar mirando (cuantas personas hay) si no
+estas seguro: un numero desmentido por la propia imagen quema credibilidad.
 `tags`: 6-8, especificos."""
 
     print(f"[script] escribiendo ~{words} palabras para {seconds}s...")
