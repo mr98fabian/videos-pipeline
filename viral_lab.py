@@ -41,6 +41,11 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT = Path(__file__).resolve().parent
 DEFAULT_DIR = ROOT / "viral"
 
+# Calidad minima aceptable del clip fuente. Por debajo de esto el short se ve
+# pixelado a pantalla completa y no hay nada que hacer: la fuente es la fuente.
+MIN_HEIGHT = 1000
+MIN_BITRATE = 900_000
+
 # Modelo de comprension de video. Flash sobra para esto (muestrea a 1 fps) y es
 # barato; subir a un pro solo si el analisis sale pobre. Override por entorno.
 VIDEO_MODEL = os.environ.get("GEMINI_VIDEO_MODEL", "gemini-3.6-flash")
@@ -131,6 +136,19 @@ def cmd_get(a) -> int:
     # del fichero, y las vistas hay que traerlas del radar (vidiq xoutliers)
     if not src["duration"] and video.exists():
         src["duration"] = round(_duration(video), 1)
+
+    # PUERTA DE CALIDAD. Muchos "virales" de Instagram son reposts degradados: el
+    # mejor formato disponible ya viene a 876x720 y 580 kbps, y eso en pantalla
+    # completa se ve a 240p. No hay procesado que lo arregle, asi que el clip se
+    # descarta AQUI, antes de gastar analisis, guion y render en el.
+    w, h, br = _video_quality(video)
+    src["quality"] = {"width": w, "height": h, "bitrate": br}
+    if not a.force and (h < MIN_HEIGHT or br < MIN_BITRATE):
+        print(f"[get] DESCARTADO por calidad: {w}x{h} a {br // 1000} kbps "
+              f"(minimo {MIN_HEIGHT}px y {MIN_BITRATE // 1000} kbps)")
+        import shutil as _sh
+        _sh.rmtree(out, ignore_errors=True)
+        return 1
     _write_json(out / "source.json", src)
     mb = video.stat().st_size / 1e6 if video.exists() else 0
     print(f"[get] {out}  ({mb:.1f} MB, {src['duration']}s, {src['view_count']} vistas)")
@@ -250,6 +268,21 @@ def _gemini_read(video: Path, model: str) -> dict:
     if txt.startswith("```"):
         txt = txt.split("```")[1].lstrip("json").strip()
     return json.loads(txt)
+
+
+def _video_quality(video: Path) -> tuple[int, int, int]:
+    """(ancho, alto, bitrate) del clip. El bitrate del stream a veces viene vacio
+    en los mp4 de Instagram, asi que se cae al del contenedor."""
+    r = _run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+              "stream=width,height,bit_rate:format=bit_rate", "-of",
+              "default=nw=1:nk=1", str(video)], timeout=60)
+    vals = [x.strip() for x in (r.stdout or "").splitlines() if x.strip()]
+    nums = [int(v) for v in vals if v.isdigit()]
+    if len(nums) < 2:
+        return 0, 0, 0
+    w, h = nums[0], nums[1]
+    br = max(nums[2:]) if len(nums) > 2 else 0
+    return w, h, br
 
 
 def _duration(video: Path) -> float:
