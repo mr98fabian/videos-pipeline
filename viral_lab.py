@@ -749,6 +749,76 @@ trivial (asi el video sigue corriendo mientras escriben). Ni insultante ni falso
     return 0
 
 
+# -------------------------------------------------------------------- VOICES
+
+# Chatterbox no tiene "voces" con nombre: su timbre se elige con un AUDIO DE
+# REFERENCIA. Para tener una paleta sin grabar nada ni bajar voces de terceros,
+# se generan referencias con Kokoro (varias voces, licencia limpia) y Chatterbox
+# las re-interpreta con su naturalidad. Sale lo mejor de los dos.
+_REF_VOICES = ["am_michael", "am_adam", "af_bella", "bm_george"]
+DEMO_EN = "He tried three times. Nobody thought the last attempt would work."
+DEMO_ES = "Lo intento tres veces. Nadie penso que la ultima saldria bien."
+
+
+def cmd_voices(a) -> int:
+    sys.path.insert(0, str(ROOT))
+    import pipeline as pl
+
+    out = Path(a.out).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    demo = a.text or (DEMO_ES if a.lang != "en" else DEMO_EN)
+    (out / "_demo.txt").write_text(demo, encoding="utf-8")
+
+    variants = []  # (id, ref_wav, exaggeration, comando)
+    for ex in (0.3, 0.45, 0.7):
+        variants.append((f"default-ex{ex}", "", ex, f"--exaggeration {ex}"))
+    if not a.no_refs:
+        for v in _REF_VOICES:
+            ref = out / f"_ref_{v}.wav"
+            if not ref.exists():
+                try:
+                    pl._kokoro_tts(demo, v, ref)
+                except Exception as e:
+                    print(f"[voices] referencia {v} fallo: {e}")
+                    continue
+            variants.append((f"ref-{v}", str(ref), 0.45, f"--ref {ref} --exaggeration 0.45"))
+
+    made = []
+    for vid, ref, ex, cmd in variants:
+        wav = out / f"voz_{vid}.wav"
+        try:
+            _chatterbox(demo, wav, ref=ref, exaggeration=ex, lang=a.lang)
+            made.append((vid, wav, cmd))
+            print(f"[voices] {vid}")
+        except Exception as e:
+            print(f"[voices] {vid} fallo: {str(e)[:120]}")
+
+    if not made:
+        print("ERROR: no se genero ninguna variante")
+        return 2
+
+    # una sola pista con todas seguidas, separadas por medio segundo de silencio:
+    # comparar es mucho mas facil escuchando una detras de otra que abriendo 7
+    lst = out / "_concat.txt"
+    sil = out / "_sil.wav"
+    _run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
+          "anullsrc=r=24000:cl=mono", "-t", "0.6", str(sil)], timeout=60)
+    lines = []
+    for _, wav, _c in made:
+        lines += [f"file '{wav.as_posix()}'", f"file '{sil.as_posix()}'"]
+    lst.write_text("\n".join(lines), encoding="utf-8")
+    comp = out / "comparativa.mp3"
+    _run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0",
+          "-i", str(lst), "-ar", "44100", str(comp)], timeout=300)
+    for f in (lst, sil, out / "_demo.txt"):
+        f.unlink(missing_ok=True)
+
+    print(f"\n[voices] {comp}  ({len(made)} variantes, en orden):")
+    for i, (vid, _w, cmd) in enumerate(made, 1):
+        print(f"  {i}. {vid:22} -> py viral_lab.py edit <carpeta> {cmd}")
+    return 0
+
+
 # ---------------------------------------------------------------------- EDIT
 
 # cajas de desenfoque por posicion declarada de la marca de agua, en el lienzo
@@ -1306,6 +1376,14 @@ def main() -> int:
                     help="mete un error factual pequeno a proposito para provocar "
                          "correcciones en comentarios (sube interaccion, baja credibilidad)")
     s.set_defaults(func=cmd_script)
+
+    vv = sub.add_parser("voices", help="genera una comparativa de voces para elegir")
+    vv.add_argument("--out", default=str(ROOT / "assets" / "voice_tests"))
+    vv.add_argument("--lang", default="en")
+    vv.add_argument("--text", default="", help="frase de prueba propia")
+    vv.add_argument("--no-refs", action="store_true",
+                     help="solo la voz por defecto, sin generar referencias")
+    vv.set_defaults(func=cmd_voices)
 
     e = sub.add_parser("edit", help="monta el short final (voz + clip + subs + musica)")
     e.add_argument("target", help="carpeta de viral/ con script.json")
