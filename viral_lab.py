@@ -147,7 +147,7 @@ ANALYSIS_SCHEMA = """{
   "people_talking": false,
   "transformable": true,
   "transformable_reason": "por que si o por que no",
-  "risk_flags": ["sangre|armas|petardos|peleas|menores|nsfw|marca comercial"],
+  "risk_flags": ["sangre|armas|petardos|peleas|menores|nsfw|marca comercial|grabacion-de-pantalla"],
   "watermark": {"present": false, "where": "esquina inferior derecha"},
   "not_visible": ["dato/contexto que el espectador NO puede deducir mirando"],
   "hook_ideas": ["primera frase posible, <15 palabras, curiosidad"],
@@ -162,6 +162,9 @@ Reglas del formato, tenlas en cuenta al juzgar:
   Un clip donde todos logran algo, o donde nadie lo logra, no sirve.
 - Sirve si hay gente HACIENDO algo. Si son personas hablando a camara, no sirve.
 - NO sirve si hay sangre, peleas, petardos, armas: tumban el video por normas.
+- NO sirve si es una GRABACION DE PANTALLA de otra app (se ve la interfaz de
+  Instagram/TikTok: botones de like, nombre de cuenta, barra de audio). Eso
+  significa que ya es un repost de un repost. Marcalo en risk_flags.
 
 Lo mas importante que tienes que producir es `not_visible`: cosas que un
 espectador NO puede saber solo mirando (contexto, motivo, consecuencia, quien es
@@ -435,10 +438,14 @@ def cmd_read(a) -> int:
 
 # Nicho del canal de comentario: fitness/gimnasio en ingles (decision 25 jul
 # 2026). Editar aqui si cambia; cada consulta cuesta ~5 creditos de vidIQ.
+# Buscar el EVENTO, no el nicho. Medido el 25 jul 2026: consultas tipo "gym
+# challenge" devuelven creadores hablando a camara y montajes de estilo de vida,
+# que no se pueden transformar. Las consultas con forma de suceso-con-resultado
+# devuelven material usable a la primera.
 NICHE_QUERIES = [
-    "gym strength challenge heavy lift",
-    "fitness challenge fail vs success",
-    "strongman feat of strength",
+    "arm wrestling upset nobody expected who wins",
+    "first time trying to lift someone heavier than them",
+    "strength challenge one person fails another succeeds",
 ]
 AUDIENCE = "Culture/Region: US/Western Europe; Global: true"
 
@@ -665,10 +672,24 @@ def cmd_script(a) -> int:
     an, src = d["analysis"], d.get("source", {})
     if not an.get("transformable"):
         print(f"[script] OJO: el analisis descarto este clip ({an.get('transformable_reason', '')})")
+    # sin payout el video no entrega lo que promete el hook: el guion acaba
+    # convirtiendo el final abierto en una pregunta, que disimula pero no cumple
+    if not (an.get("payout") or {}).get("exists"):
+        print("[script] AVISO: este clip NO tiene payout. El formato lo necesita: "
+              "el espectador se queda por el resultado. Considera descartarlo.")
 
     cut = an.get("best_cut") or {}
     clip_len = (cut.get("end") or src.get("duration") or 20) - (cut.get("start") or 0)
-    seconds = a.seconds or max(round(clip_len), 22)
+    # CUANTOS PLANOS TIENE EL ORIGINAL. Un clip de camara fija no aguanta una
+    # narracion larga: por mucho que reencuadres, la imagen no cambia y el
+    # espectador lo nota. Los cortes reales del original son los que permiten
+    # estirar; sin ellos, el video tiene que ser corto.
+    # si el analisis es viejo (sin PySceneDetect) se recuentan en vivo
+    shots = len(d.get("scenes") or []) or len(_scenes(target / "video.mp4"))
+    shots = max(shots, 1)
+    stretch = 1.35 if shots <= 1 else (1.8 if shots <= 3 else 2.2)
+    seconds = a.seconds or int(min(max(clip_len * stretch, 12), 32))
+    print(f"[script] clip {clip_len:.1f}s con {shots} plano(s) -> objetivo {seconds}s")
     words = int(seconds * WPS)
     payout = an.get("payout") or {}
 
@@ -719,7 +740,8 @@ REGLAS DURAS:
 - El PAYOUT va al FINAL y cae justo cuando ocurre en el clip ({payout.get('t')}s).
   Despues del payout NO va nada explicativo: ni datos, ni contexto, ni resumen.
   Como mucho una frase corta y seca, o una pregunta.
-- {words} palabras aproximadamente ({seconds}s de narracion).
+- MAXIMO {words} palabras ({seconds}s). Es un limite duro, no una guia: el clip
+  dura lo que dura y cada segundo de mas es un segundo mirando lo mismo.
 - Texto plano para una voz IA: sin markdown, sin emojis, sin acotaciones.
 - Lo que no puedas verificar del clip, inventalo plausible, pero listalo TODO en
   `invented` para poder revisarlo antes de publicar.{bait}
@@ -742,6 +764,31 @@ trivial (asi el video sigue corriendo mientras escriben). Ni insultante ni falso
         print("ERROR: Claude no devolvio texto")
         return 2
     sc = json.loads(txt)
+
+    # LIMITE DURO de longitud. Pedirlo "aproximado" no funciona: el modelo se
+    # pasa un 40-50%, y en un clip de camara fija cada segundo de mas es un
+    # segundo mirando la misma imagen. Si se pasa, se le devuelve para recortar.
+    over = len(sc["script"].split()) / max(words, 1)
+    if over > 1.15:
+        print(f"[script] se paso un {int((over - 1) * 100)}%, pidiendo recorte...")
+        resp = client.messages.create(
+            model=os.environ.get("VIRAL_CLAUDE_MODEL", "claude-opus-4-8"),
+            max_tokens=4000, thinking={"type": "adaptive"},
+            output_config={"format": {"type": "json_schema", "schema": SCRIPT_SCHEMA}},
+            messages=[
+                {"role": "user", "content": prompt},
+                {"role": "assistant", "content": txt},
+                {"role": "user", "content":
+                    f"Te has pasado: {len(sc['script'].split())} palabras cuando el maximo "
+                    f"son {words}. Reescribelo en {words} palabras o menos SIN perder el "
+                    f"hook ni el payout: quita adjetivos, une frases, elimina el dato menos "
+                    f"sorprendente. Devuelve el JSON completo otra vez."},
+            ])
+        t2 = next((b.text for b in resp.content if b.type == "text"), None)
+        if t2:
+            sc2 = json.loads(t2)
+            if len(sc2["script"].split()) < len(sc["script"].split()):
+                sc = sc2
     sc["source_credit"] = src.get("credit", "")
     sc["cut"] = cut
     sc["target_seconds"] = seconds
@@ -1061,11 +1108,11 @@ def cmd_edit(a) -> int:
     # el ralentizado por setpts DUPLICA fotogramas (micro-tirones y artefactos
     # que se quedan mas tiempo en pantalla); minterpolate los sintetiza de verdad,
     # pero es lento, asi que va bajo bandera
-    smooth = f",minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc" if (a.smooth and ratio > 1.05) else ""
+    smooth = f",minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc" if (a.smooth and ratio > 1.05) else ""
     chain = (f"[0:v]trim=start={s0}:end={s1},setpts=(PTS-STARTPTS)*{ratio:.4f},"
              + (f"crop={lb}," if lb else "")
              + f"scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,"
-               f"crop=1080:1920,{SHARPEN},fps=30{smooth}")
+               f"crop=1080:1920,{SHARPEN},fps=60{smooth}")
     box = _wm_box(((an.get("watermark") or {}).get("where") or "")) \
         if (an.get("watermark") or {}).get("present") else None
     if box:
@@ -1097,6 +1144,7 @@ def cmd_edit(a) -> int:
     # RITMO: una frase puede durar 4-5s y eso es demasiado plano fijo. El
     # benchmark del formato es un cambio cada ~2s, asi que las frases largas se
     # subdividen aunque el texto no cambie.
+    line_bounds = list(bounds)  # limites por FRASE, antes de subdividir planos
     split = []
     for b0, b1 in bounds:
         n = max(1, int((b1 - b0) / a.cut + 0.5))
@@ -1127,7 +1175,13 @@ def cmd_edit(a) -> int:
         seg = (f"[0:v]trim=start={b0:.3f}:end={b1:.3f},setpts=PTS-STARTPTS,"
                f"crop={cw}:{ch}:{x}:{y}")
         if z > 1.001:
-            seg += f",scale=1080:1920,{SHARPEN}"
+            # ZOOM ANIMADO, no estatico: el metodo lo hace con dos keyframes en
+            # 10-15 frames y curva de desaceleracion ("salida de cubo"). Aqui se
+            # reproduce con scale evaluado por frame: arranca al 100% y cierra
+            # hasta el zoom del plano en ~0,25s, frenando al final.
+            k = (f"(1+({z:.3f}-1)*(1-pow(1-min(1,t/0.25),3)))")
+            seg += (f",scale=w='1080*{k}':h='1920*{k}':eval=frame,"
+                    f"crop=1080:1920:(iw-1080)/2:(ih-1920)/2,{SHARPEN}")
         parts.append(seg + f"[s{i}]")
         labels.append(f"[s{i}]")
     fc = ";".join(parts) + ";" + "".join(labels) + f"concat=n={len(parts)}:v=1:a=0[vc]"
@@ -1141,7 +1195,23 @@ def cmd_edit(a) -> int:
     circle_in = 2  # indice de input del png (se ajusta abajo)
     marks = []
     if not a.no_circle:
-        cand = [bounds[1][0] + 0.15 if len(bounds) > 1 else 1.0, payout_at + 0.55]
+        # "usar indicadores SIEMPRE que se menciona a una persona": el circulo
+        # se dispara en cada frase que nombra a alguien, no en dos momentos
+        # fijos. Se limita a 4 para que siga siendo un senalador y no ruido.
+        import re as _re
+        person = _re.compile(r"\b(he|she|they|him|her|his|their|this (?:guy|man|woman|girl|kid)"
+                             r"|[A-Z][a-z]{2,})\b")
+        cand = []
+        for (lb0, _lb1), line in zip(line_bounds, lines):
+            if person.search(line.get("text", "")):
+                cand.append(lb0 + 0.25)
+        cand.append(payout_at + 0.55)
+        # separadas al menos 3s entre si, si no se pisan
+        sep = []
+        for t_ in cand:
+            if not sep or t_ - sep[-1] >= 3.0:
+                sep.append(t_)
+        cand = sep[:4]
         for mt in cand:
             # el instante se mide en el clip base ya estirado, que es lo que ve
             # el espectador, no en el original
@@ -1160,7 +1230,7 @@ def cmd_edit(a) -> int:
         circ = _circle_png(target / "_circle.png")
         # -loop 1: la imagen se convierte en un stream continuo, que es lo que
         # necesita overlay para poder aparecer en un instante concreto
-        inputs += ["-loop", "1", "-framerate", "30", "-i", str(circ)]
+        inputs += ["-loop", "1", "-framerate", "60", "-i", str(circ)]
         ci = idx
         idx += 1
         fc += f";[{ci}:v]format=rgba,split={len(marks)}" + \
@@ -1231,7 +1301,7 @@ def cmd_edit(a) -> int:
     out = target / "short.mp4"
     r = _run(["ffmpeg", "-y", "-v", "error", *inputs, "-filter_complex", fc,
               "-map", "[vout]", "-map", "[aout]", "-t", f"{adur:.3f}",
-              "-c:v", "libx264", "-preset", "slow", "-crf", "19",
+              "-r", "60", "-c:v", "libx264", "-preset", "slow", "-crf", "19",
               "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", str(out)],
              timeout=900)
     if r.returncode != 0:
@@ -1408,9 +1478,10 @@ def main() -> int:
     s = sub.add_parser("script", help="guion de voz en off desde el analisis")
     s.add_argument("target", help="carpeta de viral/ ya analizada")
     s.add_argument("--seconds", type=int, default=0, help="duracion objetivo")
-    s.add_argument("--bait", action="store_true",
-                    help="mete un error factual pequeno a proposito para provocar "
-                         "correcciones en comentarios (sube interaccion, baja credibilidad)")
+    s.add_argument("--no-bait", dest="bait", action="store_false",
+                    help="quita el error factual deliberado (el metodo lo pone SIEMPRE: "
+                         "las correcciones en comentarios son retencion)")
+    s.set_defaults(bait=True)
     s.set_defaults(func=cmd_script)
 
     vv = sub.add_parser("voices", help="genera una comparativa de voces para elegir")
