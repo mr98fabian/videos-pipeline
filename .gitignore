@@ -46,3 +46,6 @@ motion_graphics/public/sticker_*.png
 performance_report.csv
 vidiq_key.txt
 assets/cache/
+
+# clips de terceros descargados por viral_lab.py (nunca al repo)
+viral/
