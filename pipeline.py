@@ -72,7 +72,17 @@ SCRIPT_SCHEMA = {
     "properties": {
         "script": {
             "type": "string",
-            "description": "Voiceover text, word-for-word, 110-130 words, no markdown",
+            "description": "Voiceover text, word-for-word, 110-130 words, no markdown. "
+                            "*** HARD RULE: NOTHING EXPLANATORY AFTER THE PAYOFF *** The payoff is "
+                            "the sentence that delivers what the hook promised (the twist, the "
+                            "result, the reveal). The moment it lands, the story is OVER for the "
+                            "viewer -- any further background, dates, aftermath or 'and that is why "
+                            "...' sentence is dead weight and they leave right there, taking the "
+                            "last seconds of retention with them. After the payoff you may write "
+                            "ONLY: (a) at most one short dry acid remark, if it hits HARDER than the "
+                            "payoff itself, (b) the share trigger, (c) the closing question. Never a "
+                            "new fact, never a recap, never extra context. If a detail matters, it "
+                            "belongs BEFORE the payoff, not after it.",
         },
         "search_terms": {
             "type": "array",
