@@ -767,8 +767,12 @@ _WM_BOXES = {
 # Por eso el zoom se mantiene bajo y constante, y la variacion se consigue
 # PANEANDO la ventana (z, dx, dy con dx/dy en -1..1) -- mismo efecto de cambio,
 # upscale minimo y estable.
-_MOVES = [(1.00, 0, 0), (1.07, -0.6, -0.3), (1.04, 0.5, 0.2), (1.08, 0.2, -0.6),
-          (1.03, -0.4, 0.5), (1.07, 0.6, 0.1), (1.05, -0.2, -0.5), (1.02, 0.3, 0.4)]
+# Lo que se lee como "zoom agresivo" no es el zoom absoluto sino el CONTRASTE
+# entre planos: alternar abierto (1.0, sin escalado) con cerrado (1.2+) golpea
+# mucho mas que subir todos un poco, y ademas deja la mitad de los planos a
+# resolucion nativa, sin ablandar.
+_MOVES = [(1.00, 0, 0), (1.22, -0.7, -0.4), (1.04, 0.4, 0.2), (1.26, 0.3, -0.7),
+          (1.00, 0, 0.3), (1.20, 0.7, 0.1), (1.06, -0.3, -0.4), (1.30, -0.2, 0.5)]
 MAX_SLOWDOWN = 2.2  # mas alla se ve a camara lenta obvia
 # el escalado (letterbox + zoom) ablanda el detalle; un unsharp suave al final
 # lo recupera sin que se note el filtro
@@ -798,6 +802,56 @@ def _wm_box(where: str):
         if all(t in w for t in k.split()):
             return box
     return None
+
+
+def _motion_centroid(video: Path, t: float) -> tuple[float, float] | None:
+    """Donde esta pasando la accion en el instante t, por diferencia entre dos
+    fotogramas. Es la version barata del 'tracking' que hace todo el mundo a
+    mano en CapCut: no identifica personas, pero en estos clips lo que se mueve
+    ES el sujeto, y basta para colocar el circulo encima. Devuelve (x, y) en
+    fraccion 0..1 del encuadre."""
+    from PIL import Image
+    tmp = video.parent / "_mc"
+    tmp.mkdir(exist_ok=True)
+    fs = []
+    for k, dt in enumerate((0.0, 0.18)):
+        f = tmp / f"m{k}.jpg"
+        _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{max(t + dt, 0):.2f}", "-i", str(video),
+              "-frames:v", "1", "-vf", "scale=192:-1", "-q:v", "5", str(f)], timeout=60)
+        if f.exists():
+            fs.append(f)
+    if len(fs) < 2:
+        return None
+    a_, b_ = (Image.open(p).convert("L") for p in fs)
+    if a_.size != b_.size:
+        return None
+    W, H = a_.size
+    pa, pb = a_.tobytes(), b_.tobytes()
+    diffs = [(abs(pa[i] - pb[i]), i) for i in range(0, len(pa))]
+    diffs.sort(reverse=True)
+    top = diffs[:max(len(diffs) // 60, 40)]  # el 1.6% de pixeles que mas cambian
+    if not top or top[0][0] < 12:
+        return None  # nada se movio: mejor no poner el circulo que ponerlo mal
+    sx = sum(i % W for _, i in top) / len(top) / W
+    sy = sum(i // W for _, i in top) / len(top) / H
+    for p in fs:
+        p.unlink(missing_ok=True)
+    try:
+        tmp.rmdir()
+    except OSError:
+        pass
+    return round(sx, 3), round(sy, 3)
+
+
+def _circle_png(path: Path, size: int = 360) -> Path:
+    """Anillo rojo troquelado, el senalador clasico del formato."""
+    from PIL import Image, ImageDraw
+    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.ellipse([10, 10, size - 10, size - 10], outline=(255, 255, 255, 210), width=20)
+    d.ellipse([10, 10, size - 10, size - 10], outline=(228, 30, 45, 255), width=12)
+    im.save(path)
+    return path
 
 
 def _align_words(audio: Path) -> list[tuple[float, float, str]]:
@@ -932,19 +986,57 @@ def cmd_edit(a) -> int:
         parts.append(seg + f"[s{i}]")
         labels.append(f"[s{i}]")
     fc = ";".join(parts) + ";" + "".join(labels) + f"concat=n={len(parts)}:v=1:a=0[vc]"
-    # flash blanco de 3 frames en el payout (timeline editing de eq)
-    fc += (f";[vc]eq=brightness=0.45:saturation=1.35:"
+    # flash blanco de 3 frames en el payout + punch de color global
+    fc += (f";[vc]eq=saturation=1.14,eq=brightness=0.45:saturation=1.35:"
            f"enable='between(t,{payout_at:.2f},{payout_at + 0.10:.2f})'[vz]")
 
-    # subtitulos palabra a palabra del pipeline (mismo estilo que el canal madre)
-    ass = pl.generate_subtitles(words, target)
-    ass_esc = str(ass.resolve()).replace("\\", "/").replace(":", "\\:")
-    fc += f";[vz]subtitles='{ass_esc}'[vout]"
+    # CIRCULO CON SEGUIMIENTO: aparece 1,4s en dos momentos (tras el gancho y en
+    # el payout) sobre lo que se esta moviendo. No va todo el rato a proposito:
+    # el senalador funciona porque llega justo cuando la voz nombra al sujeto.
+    circle_in = 2  # indice de input del png (se ajusta abajo)
+    marks = []
+    if not a.no_circle:
+        cand = [bounds[1][0] + 0.15 if len(bounds) > 1 else 1.0, payout_at + 0.55]
+        for mt in cand:
+            # el instante se mide en el clip base ya estirado, que es lo que ve
+            # el espectador, no en el original
+            c = _motion_centroid(base, mt)
+            if c:
+                marks.append((mt, c))
+        if marks:
+            print(f"[edit] circulo de seguimiento en {', '.join(f'{m:.1f}s' for m, _ in marks)}")
 
     # ---- 4. AUDIO: voz + musica con ducking (mismos parametros probados)
     music = pl._pick_music() if not a.no_music else None
     inputs = ["-stream_loop", "-1", "-i", str(base), "-i", str(voice)]
     idx = 2
+    vlab = "[vz]"
+    if marks:
+        circ = _circle_png(target / "_circle.png")
+        # -loop 1: la imagen se convierte en un stream continuo, que es lo que
+        # necesita overlay para poder aparecer en un instante concreto
+        inputs += ["-loop", "1", "-framerate", "30", "-i", str(circ)]
+        ci = idx
+        idx += 1
+        fc += f";[{ci}:v]format=rgba,split={len(marks)}" + \
+              "".join(f"[c{k}]" for k in range(len(marks)))
+        for k, (mt, (cx, cy)) in enumerate(marks):
+            # el limite inferior deja libre el carril de subtitulos: un circulo
+            # encima del texto tapa lo unico que se lee en mute
+            px = min(max(int(cx * 1080 - 180), 20), 1080 - 380)
+            py = min(max(int(cy * 1920 - 180), 130), 980)
+            fc += (f";[c{k}]fade=in:st={mt:.2f}:d=0.12:alpha=1,"
+                   f"fade=out:st={mt + 1.15:.2f}:d=0.25:alpha=1[cf{k}]")
+            nxt = f"[vm{k}]"
+            fc += (f";{vlab}[cf{k}]overlay={px}:{py}:"
+                   f"enable='between(t,{mt:.2f},{mt + 1.4:.2f})'{nxt}")
+            vlab = nxt
+
+    # subtitulos al final de la cadena de video (mismo estilo que el canal madre)
+    ass = pl.generate_subtitles(words, target)
+    ass_esc = str(ass.resolve()).replace("\\", "/").replace(":", "\\:")
+    fc += f";{vlab}subtitles='{ass_esc}'[vout]"
+
     mus_i = None
     if music:
         inputs += ["-i", str(music)]
@@ -1180,6 +1272,7 @@ def main() -> int:
     e.add_argument("--rate", default="+8%", help="solo edge-tts")
     e.add_argument("--speed", type=float, default=1.05, help="solo Kokoro")
     e.add_argument("--no-sfx", action="store_true")
+    e.add_argument("--no-circle", action="store_true")
     e.add_argument("--cut", type=float, default=1.9,
                     help="segundos maximos por plano antes de forzar un cambio")
     e.add_argument("--music-vol", type=float, default=0.07)
