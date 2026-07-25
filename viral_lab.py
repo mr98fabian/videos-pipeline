@@ -925,6 +925,10 @@ def _circle_png(path: Path, size: int = 360) -> Path:
 
 
 CHATTERBOX_DIR = ROOT / "tools" / "chatterbox_tts"
+# Voz FIJA del canal (elegida 25 jul 2026 de la comparativa de `voices`). En un
+# canal faceless la voz ES la marca: cambiarla cada pocos videos rompe el
+# reconocimiento, asi que se fija aqui y no se toca sin decision explicita.
+VOICE_REF = ROOT / "assets" / "voice" / "comentario_michael.wav"
 
 
 def _chatterbox(script: str, wav: Path, ref: str = "", exaggeration: float = 0.45,
@@ -1392,8 +1396,9 @@ def main() -> int:
                          "(am_/af_/bm_/bf_) o una de edge-tts")
     e.add_argument("--lang", default="en",
                     help="idioma de Chatterbox: en, es, pt, fr... (25 idiomas)")
-    e.add_argument("--ref", default="",
-                    help="wav de tu voz para clonarla con Chatterbox")
+    e.add_argument("--ref", default=str(VOICE_REF) if VOICE_REF.exists() else "",
+                    help="wav de referencia de timbre (por defecto la voz elegida "
+                         "del canal); pasa el tuyo para clonar tu voz")
     e.add_argument("--exaggeration", type=float, default=0.45,
                     help="0.3 sobrio / 0.7+ enfatico (solo Chatterbox)")
     e.add_argument("--rate", default="+8%", help="solo edge-tts")
