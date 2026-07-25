@@ -690,12 +690,30 @@ LO QUE SE VE — PROHIBIDO NARRAR ESTO:
 MATERIA PRIMA — de aqui sale el guion (lo que el espectador NO puede saber mirando):
 {raw}
 
+FORMULA DEL CANAL (esto es lo que mas importa, no la informacion):
+Esto NO es un documental. Es alguien contandote algo raro que vio. La estructura
+que funciona en este nicho es PERSONA + RAREZA + POR QUE + RESULTADO:
+  "Este es <nombre>, y tiene un problema bastante raro: cada vez que <hace algo>,
+   <pasa algo inesperado>. Resulta que <explicacion>. Y por eso <resultado>."
+- Empieza presentando a UNA persona concreta, con nombre propio plausible. Si no
+  sabes como se llama, invéntalo (y listalo en `invented`). Un nombre convierte
+  un video de gente anonima en una historia de alguien.
+- Tono COLOQUIAL, de conversacion: frases cortas, conectores hablados ("resulta
+  que", "lo raro es que", "y aqui viene lo bueno"). Nada de prosa informativa
+  tipo "sostiene cuatrocientos kilogramos distribuidos en siete cuerpos".
+- Las cifras solo si sorprenden, y dichas como las diria una persona ("casi media
+  tonelada"), nunca en fila una detras de otra.
+
 REGLAS DURAS:
 - Nunca describas lo que la imagen ya muestra. Si el espectador puede verlo, no
   se dice. El valor de la voz es aportar lo que la imagen NO cuenta.
-- HOOK en la primera frase (menos de 15 palabras): curiosidad que obligue a
-  quedarse. No reveles el payout en el hook.
-- Cuerpo: contexto, cifras, motivo, consecuencia — informacion que no se ve.
+- HOOK: MAXIMO 8 PALABRAS, y preferiblemente una PREGUNTA o una provocacion, no
+  una afirmacion de datos. Medido en los outliers del nicho (25 jul 2026): los
+  ganchos que mas se disparan son ultracortos y abren un interrogante -- "You
+  know him?" (484x la mediana de su creador), "Aura." (138x), "is bro doing 10
+  sets of rotating??" (41x). Los que enuncian un dato ("sostiene media tonelada")
+  no aparecen arriba. No reveles el payout en el hook.
+- Cuerpo: el POR QUE de la rareza — motivo, consecuencia, contexto que no se ve.
 - Si el guion pasa de 28s, mete UN rehook a mitad con un conector ("but",
   "though", "here is the thing") que reencuadre lo anterior.
 - El PAYOUT va al FINAL y cae justo cuando ocurre en el clip ({payout.get('t')}s).
@@ -1160,7 +1178,10 @@ def cmd_edit(a) -> int:
             vlab = nxt
 
     # subtitulos al final de la cadena de video (mismo estilo que el canal madre)
-    ass = pl.generate_subtitles(words, target)
+    # minusculas: el estandar visual de este nicho (HiddenFacts usa mayusculas,
+    # pero alli la voz es un archivista y aqui es alguien contandote algo)
+    sub_words = words if a.subs_upper else [(s_, e_, w.lower()) for s_, e_, w in words]
+    ass = pl.generate_subtitles(sub_words, target)
     ass_esc = str(ass.resolve()).replace("\\", "/").replace(":", "\\:")
     fc += f";{vlab}subtitles='{ass_esc}'[vout]"
 
@@ -1410,7 +1431,9 @@ def main() -> int:
     e.add_argument("--ref", default=str(VOICE_REF) if VOICE_REF.exists() else "",
                     help="wav de referencia de timbre (por defecto la voz elegida "
                          "del canal); pasa el tuyo para clonar tu voz")
-    e.add_argument("--exaggeration", type=float, default=0.45,
+    e.add_argument("--subs-upper", action="store_true",
+                    help="subtitulos en mayusculas (por defecto minusculas)")
+    e.add_argument("--exaggeration", type=float, default=0.6,
                     help="0.3 sobrio / 0.7+ enfatico (solo Chatterbox)")
     e.add_argument("--rate", default="+8%", help="solo edge-tts")
     e.add_argument("--speed", type=float, default=1.05, help="solo Kokoro")
