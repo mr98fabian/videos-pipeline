@@ -46,12 +46,17 @@ DEFAULT_DIR = ROOT / "viral"
 VIDEO_MODEL = os.environ.get("GEMINI_VIDEO_MODEL", "gemini-3.6-flash")
 
 
-def _key() -> str:
+def _load_env() -> None:
+    """Carga .env una vez al arrancar. Sin esto el SDK de Anthropic no encuentra
+    la clave y revienta con un TypeError poco claro."""
     try:
         from dotenv import load_dotenv
         load_dotenv(ROOT / ".env")
     except Exception:
         pass
+
+
+def _key() -> str:
     k = os.getenv("GEMINI_API_KEY", "").strip()
     if not k:
         print("ERROR: falta GEMINI_API_KEY (.env o variable de entorno)")
@@ -232,26 +237,47 @@ def _gemini_read(video: Path, model: str) -> dict:
     return json.loads(txt)
 
 
+def _duration(video: Path) -> float:
+    r = _run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+              "-of", "csv=p=0", str(video)], timeout=60)
+    try:
+        return float((r.stdout or "0").strip() or 0)
+    except ValueError:
+        return 0.0
+
+
+def _frames_at(video: Path, times: list[float], width: int = 512) -> list[tuple[float, Path]]:
+    """Extrae un fotograma en cada instante pedido."""
+    out = []
+    tmp = video.parent / "_frames"
+    tmp.mkdir(exist_ok=True)
+    for i, t in enumerate(times):
+        f = tmp / f"f{i:02d}.jpg"
+        _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", str(video),
+              "-frames:v", "1", "-vf", f"scale={width}:-1", "-q:v", "4", str(f)], timeout=90)
+        if f.exists():
+            out.append((round(t, 2), f))
+    return out
+
+
+def _drop_frames(frames: list[tuple[float, Path]]) -> None:
+    for _, f in frames:
+        f.unlink(missing_ok=True)
+    if frames:
+        try:
+            frames[0][1].parent.rmdir()
+        except OSError:
+            pass
+
+
 def _frames(video: Path, n: int = 12) -> list[tuple[float, Path]]:
     """Muestrea n fotogramas repartidos por el clip. Es el plan B cuando Gemini
     no esta disponible: Claude no ingiere video, pero con una tira de fotogramas
     + la transcripcion + los cortes reconstruye lo esencial."""
-    r = _run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-              "-of", "csv=p=0", str(video)], timeout=60)
-    dur = float((r.stdout or "0").strip() or 0)
+    dur = _duration(video)
     if dur <= 0:
         return []
-    out = []
-    tmp = video.parent / "_frames"
-    tmp.mkdir(exist_ok=True)
-    for i in range(n):
-        t = dur * (i + 0.5) / n
-        f = tmp / f"f{i:02d}.jpg"
-        _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", str(video),
-              "-frames:v", "1", "-vf", "scale=512:-1", "-q:v", "4", str(f)], timeout=90)
-        if f.exists():
-            out.append((round(t, 2), f))
-    return out
+    return _frames_at(video, [dur * (i + 0.5) / n for i in range(n)])
 
 
 def _claude_read(video: Path, tr: dict, scenes: list[float]) -> dict:
@@ -287,9 +313,7 @@ def _claude_read(video: Path, tr: dict, scenes: list[float]) -> dict:
         max_tokens=4000, thinking={"type": "adaptive"},
         messages=[{"role": "user", "content": content}])
     txt = next((b.text for b in resp.content if b.type == "text"), None)
-    for _, f in frames:
-        f.unlink(missing_ok=True)
-    (video.parent / "_frames").rmdir()
+    _drop_frames(frames)
     if not txt:
         raise RuntimeError("Claude no devolvio texto")
     txt = txt.strip()
@@ -395,6 +419,139 @@ def cmd_read(a) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------- QA
+
+QA_PROMPT = """Eres el control de calidad de un canal de Shorts de historia. Te paso un
+fotograma por escena de un video ya renderizado, en orden, con su timestamp, y
+debajo el guion narrado completo.
+
+Revisa CADA fotograma y marca SOLO problemas reales, sin inventar ninguno:
+
+1. `humanoid_animal`: aparece un animal antropomorfo (animal con ropa, de pie,
+   con manos, actuando como persona). Es una violacion DURA del estilo del canal:
+   solo personajes humanos. Un animal real y normal (un caballo, un perro a cuatro
+   patas) NO cuenta.
+2. `mismatch`: la imagen no corresponde a nada de lo que narra el guion en ese
+   momento (el generador de imagenes a veces devuelve algo ajeno sin dar error).
+3. `text_problem`: hay texto renderizado cortado, ilegible, superpuesto o mal
+   escrito (ignora los subtitulos grandes en el centro-abajo, esos son correctos).
+4. `broken_cutout`: un recorte roto — cabeza flotante sin cuerpo, miembro cortado,
+   figura con halo o borde sucio.
+5. `other`: cualquier otra cosa que impediria publicarlo.
+
+Responde SOLO JSON:
+{"frames": [{"t": 0.0, "sees": "una frase de que se ve",
+             "problems": ["humanoid_animal"], "detail": "explicacion corta"}],
+ "verdict": "publicable" | "revisar" | "bloqueado",
+ "summary": "una frase"}
+Si un fotograma esta bien, deja `problems` vacio."""
+
+
+def _dhash(path: Path) -> int:
+    """Hash perceptual 8x8 para detectar escenas repetidas (el error de 'repetir
+    el mismo clip', que en nuestro motor aparece como el eco de apertura)."""
+    from PIL import Image
+    im = Image.open(path).convert("L").resize((9, 8), Image.LANCZOS)
+    px = im.tobytes()
+    bits = 0
+    for y in range(8):
+        for x in range(8):
+            bits = (bits << 1) | int(px[y * 9 + x] > px[y * 9 + x + 1])
+    return bits
+
+
+def cmd_qa(a) -> int:
+    """Revision automatica ANTES de publicar. Nace de un bug real y no resuelto:
+    el generador de imagenes devuelve a veces contenido incorrecto sin marcar
+    error, y se detectaba a ojo (o no se detectaba: un mapache con gabardina
+    llego a publicarse en la ultima escena de un video)."""
+    target = Path(a.target)
+    video = target if target.suffix == ".mp4" else target / "video.mp4"
+    if not video.exists():
+        print(f"ERROR: no encuentro {video}")
+        return 2
+
+    # guion + limites de escena reales si es una carpeta de output del pipeline
+    script, times = "", []
+    sj = video.parent / "script.json"
+    if sj.exists():
+        d = json.loads(sj.read_text(encoding="utf-8"))
+        script = d.get("script", "")
+    mf = video.parent / "clips" / "archivo_manifest.json"
+    if mf.exists():
+        m = json.loads(mf.read_text(encoding="utf-8"))["manifest"]
+        # centro de cada escena: el fotograma mas representativo de esa imagen
+        times = [round((s["from"] + s["dur"] / 2) / 30, 2) for s in m["scenes"]]
+    if not times:
+        dur = _duration(video)
+        n = a.frames or 12
+        times = [round(dur * (i + 0.5) / n, 2) for i in range(n)]
+
+    frames = _frames_at(video, times, width=640)
+    if not frames:
+        print("ERROR: no pude extraer fotogramas")
+        return 2
+
+    # 1) repeticiones: gratis y local, no gasta tokens
+    hashes = [(t, _dhash(f)) for t, f in frames]
+    dupes = []
+    for i in range(len(hashes)):
+        for j in range(i + 1, len(hashes)):
+            dist = bin(hashes[i][1] ^ hashes[j][1]).count("1")
+            if dist <= 6:  # <=6 bits de 64 = practicamente la misma imagen
+                dupes.append((hashes[i][0], hashes[j][0], dist))
+
+    # 2) contenido: un fotograma por escena a Claude
+    import base64
+    import anthropic
+
+    content = []
+    for t, f in frames:
+        content.append({"type": "text", "text": f"--- t={t}s"})
+        content.append({"type": "image", "source": {
+            "type": "base64", "media_type": "image/jpeg",
+            "data": base64.b64encode(f.read_bytes()).decode()}})
+    content.append({"type": "text", "text": QA_PROMPT +
+                    (f"\n\nGUION NARRADO:\n{script}" if script else "")})
+    print(f"[qa] revisando {len(frames)} escenas...")
+    client = anthropic.Anthropic()
+    resp = client.messages.create(
+        model=os.environ.get("VIRAL_CLAUDE_MODEL", "claude-opus-4-8"),
+        max_tokens=4000, thinking={"type": "adaptive"},
+        messages=[{"role": "user", "content": content}])
+    txt = next((b.text for b in resp.content if b.type == "text"), "")
+    _drop_frames(frames)
+    if txt.strip().startswith("```"):
+        txt = txt.split("```")[1].lstrip("json")
+    try:
+        rep = json.loads(txt[txt.find("{"):txt.rfind("}") + 1])
+    except Exception as e:
+        print(f"ERROR: no pude leer el informe ({e})")
+        return 2
+
+    bad = [f for f in rep.get("frames", []) if f.get("problems")]
+    lines = [f"# QA — {video.parent.name}", "", f"**{rep.get('summary', '')}**", ""]
+    if dupes:
+        lines.append("## Escenas repetidas")
+        for t1, t2, d in dupes:
+            lines.append(f"- `{t1}s` y `{t2}s` son casi la misma imagen (distancia {d})")
+        lines.append("")
+    lines.append("## Problemas de contenido" if bad else "## Sin problemas de contenido")
+    for f in bad:
+        lines.append(f"- `{f.get('t')}s` **{', '.join(f.get('problems', []))}** — "
+                     f"{f.get('detail', '')} (se ve: {f.get('sees', '')})")
+    (video.parent / "qa.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    hard = [f for f in bad if "humanoid_animal" in f.get("problems", [])
+            or "mismatch" in f.get("problems", [])]
+    for t1, t2, d in dupes:
+        print(f"[qa] REPETIDA: {t1}s ~ {t2}s")
+    for f in bad:
+        print(f"[qa] {f.get('t')}s {','.join(f.get('problems', []))}: {f.get('detail', '')[:80]}")
+    print(f"[qa] veredicto: {rep.get('verdict')} — {video.parent / 'qa.md'}")
+    return 1 if hard else 0  # codigo 1 = no publicar sin mirarlo
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Laboratorio de clips virales de terceros")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -416,7 +573,14 @@ def main() -> int:
     r.add_argument("--force", action="store_true")
     r.set_defaults(func=cmd_read)
 
+    q = sub.add_parser("qa", help="revision automatica de un video antes de publicar")
+    q.add_argument("target", help="carpeta output/<video> o un .mp4")
+    q.add_argument("--frames", type=int, default=0,
+                    help="fotogramas si no hay manifest (por defecto 12)")
+    q.set_defaults(func=cmd_qa)
+
     a = ap.parse_args()
+    _load_env()
     return a.func(a)
 
 
