@@ -508,11 +508,46 @@ def _url_of(it: dict) -> str:
     return f"https://www.instagram.com/reel/{it['vid']}/"
 
 
-def _judge(it: dict) -> tuple[float, list[str]]:
-    """Puntua y marca descartes. El multiplicador sobre la mediana DEL PROPIO
-    creador es la mejor senal: significa que el video se disparo solo, no que el
-    creador tenga audiencia. Un 200x de una cuenta de 7K vale mas que 1M vistas
-    de una cuenta de 2M."""
+# EJE 2: NARRABILIDAD. La viralidad mide demanda probada; esto mide cuanto
+# margen hay para que la voz en off APORTE algo. Un clip viral por puro
+# espectaculo puntua altisimo en el eje 1 y casi cero aqui: el original ya
+# satura ese feed, la voz no anade nada que el espectador quiera, y otros
+# cincuenta canales van a subir el mismo clip esa semana. Lo que se puede narrar
+# es la TENSION: alguien intenta algo y puede fallar.
+_CONTRAST = ("fail", "fails", "failed", "attempt", "tries", "trying", "struggle",
+             "couldn't", "could not", "versus", " vs ", "comparison", "compare",
+             "before and after", "one of them", "some ", "others")
+_STAKES = ("challenge", "test", "bet", "dare", "competition", "contest", "record",
+           "who can", "first time", "experiment")
+_TWIST = ("reveal", "twist", "unexpected", "surprise", "shock", "turns out",
+          "nobody expected", "result")
+
+
+def _tension(blob: str) -> tuple[float, list[str]]:
+    t, tags = 0.15, []
+    if any(w in blob for w in _CONTRAST):
+        t += 0.40
+        tags.append("contraste")
+    if any(w in blob for w in _STAKES):
+        t += 0.25
+        tags.append("reto")
+    if any(w in blob for w in _TWIST):
+        t += 0.20
+        tags.append("giro")
+    return min(t, 1.0), tags
+
+
+def _judge(it: dict) -> tuple[float, float, list[str], list[str]]:
+    """Puntua en los DOS ejes.
+
+    Eje 1, viralidad: el multiplicador sobre la mediana DEL PROPIO creador. Un
+    200x en una cuenta de 7K significa que el video se disparo solo (replicable);
+    1M de vistas en una cuenta de 2M solo significa que el creador tiene publico.
+
+    Eje 2, narrabilidad: cuanta tension hay que narrar. Sin esto el ranking
+    manda arriba clips espectaculares pero mudos, donde el guion acaba siendo
+    relleno inventado (aprendido a la mala con un clip de ballet: 432x y nada
+    que contar)."""
     blob = " ".join([it.get("caption", ""), *it.get("fields", {}).values()]).lower()
     flags = []
     if any(w in blob for w in _TALKING):
@@ -521,12 +556,17 @@ def _judge(it: dict) -> tuple[float, list[str]]:
         flags.append("riesgo-normas")
     if "music only" not in blob and "audio_mix" in it.get("fields", {}):
         flags.append("audio-con-voz")
-    score = it.get("multiplier", 0)
+    tension, tags = _tension(blob)
+    # peso 0.2/0.8: la narrabilidad manda. Con pesos parejos un outlier enorme y
+    # mudo (432x de ballet) seguia ganando a uno con contraste real (218x del
+    # reto de levantar al companero), que es justo el error que produjo un video
+    # aburrido en la primera prueba.
+    score = it.get("multiplier", 0) * (0.2 + 0.8 * tension)
     if it.get("views", 0) >= 1e6:
         score *= 1.15  # volumen ya probado, no solo anomalia estadistica
     if flags:
         score *= 0.25
-    return round(score, 1), flags
+    return round(score, 1), round(tension, 2), tags, flags
 
 
 def cmd_find(a) -> int:
@@ -549,7 +589,7 @@ def cmd_find(a) -> int:
             seen.add(it["vid"])
             it["url"] = _url_of(it)
             it["query"] = q
-            it["score"], it["flags"] = _judge(it)
+            it["score"], it["tension"], it["tags"], it["flags"] = _judge(it)
             # ya descargado en una corrida anterior -> no volver a proponerlo
             it["done"] = (Path(a.dir) / f"{it['platform'].split()[0]}-{it['vid']}").exists()
             rows.append(it)
@@ -558,13 +598,15 @@ def cmd_find(a) -> int:
     Path(a.dir).mkdir(parents=True, exist_ok=True)
     _write_json(Path(a.dir) / "queue.json", rows)
 
-    print(f"\n{'score':>6} {'xmed':>6} {'vistas':>9}  {'plataforma':10} candidato")
+    print(f"\n{'score':>6} {'viral':>7} {'narr':>5} {'vistas':>9}  candidato")
     for r in rows[:a.top]:
         mark = "·" if r["done"] else " "
-        note = (" [" + ",".join(r["flags"]) + "]") if r["flags"] else ""
+        note = " ".join(r.get("tags", []))
+        if r["flags"]:
+            note += " [" + ",".join(r["flags"]) + "]"
         concept = (r["fields"].get("reel_concept") or r["caption"])[:64].replace("\n", " ")
-        print(f"{r['score']:>6} {r.get('multiplier', 0):>5}x {int(r.get('views', 0)):>9} "
-              f"{r['platform'][:10]:10}{mark} @{r['handle'][:18]}{note}\n"
+        print(f"{r['score']:>6} {r.get('multiplier', 0):>6}x {r.get('tension', 0):>5} "
+              f"{int(r.get('views', 0)):>9}{mark} @{r['handle'][:20]} {note}\n"
               f"        {concept}\n        {r['url']}")
     good = [r for r in rows if not r["flags"] and not r["done"]]
     print(f"\n[find] {len(rows)} candidatos, {len(good)} limpios sin procesar "
@@ -719,10 +761,18 @@ _WM_BOXES = {
     "superior": (240, 60, 600, 190),
     "inferior": (240, 1660, 600, 200),
 }
-# zooms por frase: "cada frase = un cambio de perspectiva" es la regla del
-# formato; sin esto el espectador ve el mismo plano 20s y se va
-_ZOOMS = [1.0, 1.10, 1.04, 1.13, 1.06, 1.16, 1.02, 1.09]
+# Movimiento por frase: "cada frase = un cambio de perspectiva". Ojo, el clip
+# fuente ya viene a 1080x1920, asi que CUALQUIER zoom es un escalado hacia
+# arriba: un 1.16 recorta a 931x1655 y lo estira, y eso es lo que se veia blando.
+# Por eso el zoom se mantiene bajo y constante, y la variacion se consigue
+# PANEANDO la ventana (z, dx, dy con dx/dy en -1..1) -- mismo efecto de cambio,
+# upscale minimo y estable.
+_MOVES = [(1.00, 0, 0), (1.07, -0.6, -0.3), (1.04, 0.5, 0.2), (1.08, 0.2, -0.6),
+          (1.03, -0.4, 0.5), (1.07, 0.6, 0.1), (1.05, -0.2, -0.5), (1.02, 0.3, 0.4)]
 MAX_SLOWDOWN = 2.2  # mas alla se ve a camara lenta obvia
+# el escalado (letterbox + zoom) ablanda el detalle; un unsharp suave al final
+# lo recupera sin que se note el filtro
+SHARPEN = "unsharp=5:5:0.8:3:3:0.4"
 
 
 def _letterbox(clip: Path, start: float, dur: float) -> str | None:
@@ -784,10 +834,14 @@ def cmd_edit(a) -> int:
     lb = None if a.no_crop else _letterbox(clip, s0, cut_len)
     if lb:
         print(f"[edit] franjas negras recortadas: crop={lb}")
+    # el ralentizado por setpts DUPLICA fotogramas (micro-tirones y artefactos
+    # que se quedan mas tiempo en pantalla); minterpolate los sintetiza de verdad,
+    # pero es lento, asi que va bajo bandera
+    smooth = f",minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc" if (a.smooth and ratio > 1.05) else ""
     chain = (f"[0:v]trim=start={s0}:end={s1},setpts=(PTS-STARTPTS)*{ratio:.4f},"
              + (f"crop={lb}," if lb else "")
-             + f"scale=1080:1920:force_original_aspect_ratio=increase,"
-               f"crop=1080:1920,fps=30")
+             + f"scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,"
+               f"crop=1080:1920,{SHARPEN},fps=30{smooth}")
     box = _wm_box(((an.get("watermark") or {}).get("where") or "")) \
         if (an.get("watermark") or {}).get("present") else None
     if box:
@@ -800,7 +854,7 @@ def cmd_edit(a) -> int:
     base = target / "base.mp4"
     r = _run(["ffmpeg", "-y", "-v", "error", "-i", str(clip), "-filter_complex", chain,
               "-map", "[v]", "-an", "-c:v", "libx264", "-preset", "veryfast",
-              "-crf", "20", "-pix_fmt", "yuv420p", str(base)], timeout=600)
+              "-crf", "17", "-pix_fmt", "yuv420p", str(base)], timeout=600)
     if r.returncode != 0:
         print(f"ERROR base: {r.stderr[-500:]}")
         return 2
@@ -818,11 +872,15 @@ def cmd_edit(a) -> int:
         acc += d
     parts, labels = [], []
     for i, (b0, b1) in enumerate(bounds):
-        z = _ZOOMS[i % len(_ZOOMS)]
+        z, dx, dy = _MOVES[i % len(_MOVES)]
         cw, ch = int(1080 / z) // 2 * 2, int(1920 / z) // 2 * 2
-        parts.append(f"[0:v]trim=start={b0:.3f}:end={b1:.3f},setpts=PTS-STARTPTS,"
-                     f"crop={cw}:{ch}:{(1080 - cw) // 2}:{(1920 - ch) // 2},"
-                     f"scale=1080:1920[s{i}]")
+        mx, my = (1080 - cw) // 2, (1920 - ch) // 2
+        x, y = int(mx + dx * mx), int(my + dy * my)
+        seg = (f"[0:v]trim=start={b0:.3f}:end={b1:.3f},setpts=PTS-STARTPTS,"
+               f"crop={cw}:{ch}:{x}:{y}")
+        if z > 1.001:
+            seg += f",scale=1080:1920,{SHARPEN}"
+        parts.append(seg + f"[s{i}]")
         labels.append(f"[s{i}]")
     fc = ";".join(parts) + ";" + "".join(labels) + f"concat=n={len(parts)}:v=1:a=0[vz]"
 
@@ -846,7 +904,7 @@ def cmd_edit(a) -> int:
     out = target / "short.mp4"
     r = _run(["ffmpeg", "-y", "-v", "error", *inputs, "-filter_complex", fc,
               "-map", "[vout]", "-map", "[aout]", "-t", f"{adur:.3f}",
-              "-c:v", "libx264", "-preset", "medium", "-crf", "21",
+              "-c:v", "libx264", "-preset", "slow", "-crf", "19",
               "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", str(out)],
              timeout=900)
     if r.returncode != 0:
@@ -1033,6 +1091,8 @@ def main() -> int:
     e.add_argument("--voice", default="en-US-AndrewNeural")
     e.add_argument("--rate", default="+8%")
     e.add_argument("--no-music", action="store_true")
+    e.add_argument("--smooth", action="store_true",
+                    help="interpola fotogramas al ralentizar (mas fluido, lento)")
     e.add_argument("--no-crop", action="store_true",
                     help="no recortar las franjas negras del clip original")
     e.set_defaults(func=cmd_edit)
