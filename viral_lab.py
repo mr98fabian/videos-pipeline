@@ -895,6 +895,18 @@ def cmd_edit(a) -> int:
         d = adur * c / total
         bounds.append((acc, acc + d))
         acc += d
+    # RITMO: una frase puede durar 4-5s y eso es demasiado plano fijo. El
+    # benchmark del formato es un cambio cada ~2s, asi que las frases largas se
+    # subdividen aunque el texto no cambie.
+    split = []
+    for b0, b1 in bounds:
+        n = max(1, int((b1 - b0) / a.cut + 0.5))
+        step = (b1 - b0) / n
+        split += [(b0 + k * step, b0 + (k + 1) * step) for k in range(n)]
+    print(f"[edit] {len(bounds)} frases -> {len(split)} planos "
+          f"(1 cada {adur / max(len(split), 1):.1f}s)")
+    bounds = split
+
     # el payout manda: es donde va el golpe, el flash y el punch de camara
     payout_at = bounds[-1][0] if len(bounds) > 1 else adur * 0.75
     segs = []
@@ -950,7 +962,8 @@ def cmd_edit(a) -> int:
     if music:
         # la musica SUBE a partir del payout: el oido lo lee como recompensa
         fc += (f";[{mus_i}:a]aloop=loop=-1:size=2e9,"
-               f"volume='if(gte(t,{payout_at:.2f}),0.30,0.13)':eval=frame[bg0];"
+               f"volume='if(gte(t,{payout_at:.2f}),{a.music_vol * 2.3:.3f},{a.music_vol:.3f})'"
+               f":eval=frame[bg0];"
                f"[1:a]asplit=2[vmix][vtrig];"
                f"[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[bg]")
         mix += ["[vmix]", "[bg]"]
@@ -965,11 +978,11 @@ def cmd_edit(a) -> int:
         cuts = [s[0] for s in segs[1:]]
         fc += f";[{wh_i}:a]asplit={max(len(cuts), 1)}" + "".join(f"[w{k}]" for k in range(len(cuts)))
         for k, t in enumerate(cuts):
-            fc += f";[w{k}]adelay={int(t * 1000)}|{int(t * 1000)},volume=0.42[wd{k}]"
+            fc += f";[w{k}]adelay={int(t * 1000)}|{int(t * 1000)},volume=0.34[wd{k}]"
             mix.append(f"[wd{k}]")
         rise = max(int((payout_at - 1.1) * 1000), 0)
-        fc += f";[{st_i}:a]adelay={rise}|{rise},volume=0.35[rise]"
-        fc += f";[{im_i}:a]adelay={int(payout_at * 1000)}|{int(payout_at * 1000)},volume=0.55[hit]"
+        fc += f";[{st_i}:a]adelay={rise}|{rise},volume=0.28[rise]"
+        fc += f";[{im_i}:a]adelay={int(payout_at * 1000)}|{int(payout_at * 1000)},volume=0.45[hit]"
         mix += ["[rise]", "[hit]"]
 
     fc += (";" + "".join(mix) +
@@ -1167,6 +1180,9 @@ def main() -> int:
     e.add_argument("--rate", default="+8%", help="solo edge-tts")
     e.add_argument("--speed", type=float, default=1.05, help="solo Kokoro")
     e.add_argument("--no-sfx", action="store_true")
+    e.add_argument("--cut", type=float, default=1.9,
+                    help="segundos maximos por plano antes de forzar un cambio")
+    e.add_argument("--music-vol", type=float, default=0.07)
     e.add_argument("--no-music", action="store_true")
     e.add_argument("--smooth", action="store_true",
                     help="interpola fotogramas al ralentizar (mas fluido, lento)")
