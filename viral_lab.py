@@ -800,15 +800,34 @@ def _wm_box(where: str):
     return None
 
 
+def _align_words(audio: Path) -> list[tuple[float, float, str]]:
+    """Timestamps REALES de cada palabra sobre el audio ya sintetizado.
+    Kokoro suena mucho mas humano que edge-tts pero devuelve los tiempos
+    ESTIMADOS por longitud de caracter (ver synth.py), y con eso los subtitulos
+    karaoke y los efectos caen fuera de sitio. Reconocer el propio audio con
+    whisper da el timing acustico de verdad."""
+    from faster_whisper import WhisperModel
+    m = WhisperModel("base", device="cpu", compute_type="int8")
+    segs, _ = m.transcribe(str(audio), word_timestamps=True)
+    out = []
+    for s in segs:
+        for w in (s.words or []):
+            out.append((float(w.start), float(w.end), w.word.strip()))
+    return out
+
+
 def cmd_edit(a) -> int:
     """Ensambla el short final: voz + clip estirado al largo de la narracion +
-    zoom por frase + subtitulos quemados + musica con ducking."""
+    movimiento por frase + subtitulos quemados + musica con ducking + la capa de
+    impacto (whoosh en cada cambio, riser y golpe en el payout, flash y punch)."""
     import asyncio
 
     sys.path.insert(0, str(ROOT))
     import pipeline as pl
 
-    target = Path(a.target)
+    # absoluto: Kokoro corre con cwd en su propio venv y una ruta relativa se
+    # resuelve contra esa carpeta, no contra el repo
+    target = Path(a.target).resolve()
     sj, aj = target / "script.json", target / "analysis.json"
     if not sj.exists():
         print(f"ERROR: falta {sj} — corre antes: py viral_lab.py script {target}")
@@ -820,8 +839,14 @@ def cmd_edit(a) -> int:
     # ---- 1. VOZ. Se sintetiza de una pieza: edge-tts no deja huecos entre
     # frases, asi que no hay silencios que cortar despues (el error #1 del
     # formato se evita de origen en vez de arreglarlo en la edicion).
-    voice = target / "voice.mp3"
-    words = asyncio.run(pl._tts(sc["script"], a.voice, a.rate, voice))
+    if a.voice.startswith(pl.KOKORO_VOICE_PREFIXES):
+        voice = target / "voice.wav"
+        pl._kokoro_tts(sc["script"], a.voice, voice, speed=a.speed)
+        words = _align_words(voice)  # timing real, no la estimacion de Kokoro
+        print(f"[edit] voz Kokoro '{a.voice}' realineada con whisper")
+    else:
+        voice = target / "voice.mp3"
+        words = asyncio.run(pl._tts(sc["script"], a.voice, a.rate, voice))
     adur = _duration(voice)
     print(f"[edit] voz: {adur:.1f}s, {len(words)} palabras")
 
@@ -870,9 +895,21 @@ def cmd_edit(a) -> int:
         d = adur * c / total
         bounds.append((acc, acc + d))
         acc += d
-    parts, labels = [], []
+    # el payout manda: es donde va el golpe, el flash y el punch de camara
+    payout_at = bounds[-1][0] if len(bounds) > 1 else adur * 0.75
+    segs = []
     for i, (b0, b1) in enumerate(bounds):
         z, dx, dy = _MOVES[i % len(_MOVES)]
+        if i == len(bounds) - 1 and b1 - b0 > 0.7:
+            # PUNCH del payout: medio segundo abierto y de golpe cerrado encima.
+            # El corte seco justo en el momento del resultado es lo que lo hace
+            # sentirse "premiado" en vez de simplemente terminar.
+            segs.append((b0, b0 + 0.5, 1.0, 0, 0))
+            segs.append((b0 + 0.5, b1, 1.13, dx * 0.5, dy * 0.5))
+        else:
+            segs.append((b0, b1, z, dx, dy))
+    parts, labels = [], []
+    for i, (b0, b1, z, dx, dy) in enumerate(segs):
         cw, ch = int(1080 / z) // 2 * 2, int(1920 / z) // 2 * 2
         mx, my = (1080 - cw) // 2, (1920 - ch) // 2
         x, y = int(mx + dx * mx), int(my + dy * my)
@@ -882,7 +919,10 @@ def cmd_edit(a) -> int:
             seg += f",scale=1080:1920,{SHARPEN}"
         parts.append(seg + f"[s{i}]")
         labels.append(f"[s{i}]")
-    fc = ";".join(parts) + ";" + "".join(labels) + f"concat=n={len(parts)}:v=1:a=0[vz]"
+    fc = ";".join(parts) + ";" + "".join(labels) + f"concat=n={len(parts)}:v=1:a=0[vc]"
+    # flash blanco de 3 frames en el payout (timeline editing de eq)
+    fc += (f";[vc]eq=brightness=0.45:saturation=1.35:"
+           f"enable='between(t,{payout_at:.2f},{payout_at + 0.10:.2f})'[vz]")
 
     # subtitulos palabra a palabra del pipeline (mismo estilo que el canal madre)
     ass = pl.generate_subtitles(words, target)
@@ -892,14 +932,48 @@ def cmd_edit(a) -> int:
     # ---- 4. AUDIO: voz + musica con ducking (mismos parametros probados)
     music = pl._pick_music() if not a.no_music else None
     inputs = ["-stream_loop", "-1", "-i", str(base), "-i", str(voice)]
+    idx = 2
+    mus_i = None
     if music:
         inputs += ["-i", str(music)]
-        fc += (";[1:a]asplit=2[vmix][vtrig];"
-               "[2:a]aloop=loop=-1:size=2e9,volume=0.14[bg0];"
-               "[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[bg];"
-               "[vmix][bg]amix=inputs=2:normalize=0:duration=first[aout]")
+        mus_i = idx
+        idx += 1
+    sfx_dir = ROOT / "motion_graphics" / "public" / "proof"
+    whoosh, impact, sting = sfx_dir / "whoosh.mp3", sfx_dir / "impact.mp3", sfx_dir / "sting.wav"
+    use_sfx = not a.no_sfx and whoosh.exists() and impact.exists()
+    if use_sfx:
+        inputs += ["-i", str(whoosh), "-i", str(impact), "-i", str(sting)]
+        wh_i, im_i, st_i = idx, idx + 1, idx + 2
+        idx += 3
+
+    mix = []
+    if music:
+        # la musica SUBE a partir del payout: el oido lo lee como recompensa
+        fc += (f";[{mus_i}:a]aloop=loop=-1:size=2e9,"
+               f"volume='if(gte(t,{payout_at:.2f}),0.30,0.13)':eval=frame[bg0];"
+               f"[1:a]asplit=2[vmix][vtrig];"
+               f"[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[bg]")
+        mix += ["[vmix]", "[bg]"]
     else:
-        fc += ";[1:a]anull[aout]"
+        fc += ";[1:a]anull[vmix]"
+        mix += ["[vmix]"]
+
+    if use_sfx:
+        # whoosh en cada cambio de plano (menos el primero) + riser antes del
+        # payout + golpe justo encima: el "algo pasa cada 2s" que sostiene la
+        # atencion en este formato
+        cuts = [s[0] for s in segs[1:]]
+        fc += f";[{wh_i}:a]asplit={max(len(cuts), 1)}" + "".join(f"[w{k}]" for k in range(len(cuts)))
+        for k, t in enumerate(cuts):
+            fc += f";[w{k}]adelay={int(t * 1000)}|{int(t * 1000)},volume=0.42[wd{k}]"
+            mix.append(f"[wd{k}]")
+        rise = max(int((payout_at - 1.1) * 1000), 0)
+        fc += f";[{st_i}:a]adelay={rise}|{rise},volume=0.35[rise]"
+        fc += f";[{im_i}:a]adelay={int(payout_at * 1000)}|{int(payout_at * 1000)},volume=0.55[hit]"
+        mix += ["[rise]", "[hit]"]
+
+    fc += (";" + "".join(mix) +
+           f"amix=inputs={len(mix)}:normalize=0:duration=first[aout]")
 
     out = target / "short.mp4"
     r = _run(["ffmpeg", "-y", "-v", "error", *inputs, "-filter_complex", fc,
@@ -1088,8 +1162,11 @@ def main() -> int:
 
     e = sub.add_parser("edit", help="monta el short final (voz + clip + subs + musica)")
     e.add_argument("target", help="carpeta de viral/ con script.json")
-    e.add_argument("--voice", default="en-US-AndrewNeural")
-    e.add_argument("--rate", default="+8%")
+    e.add_argument("--voice", default="am_michael",
+                    help="voz Kokoro (am_/af_/bm_/bf_, local y mas humana) o de edge-tts")
+    e.add_argument("--rate", default="+8%", help="solo edge-tts")
+    e.add_argument("--speed", type=float, default=1.05, help="solo Kokoro")
+    e.add_argument("--no-sfx", action="store_true")
     e.add_argument("--no-music", action="store_true")
     e.add_argument("--smooth", action="store_true",
                     help="interpola fotogramas al ralentizar (mas fluido, lento)")
