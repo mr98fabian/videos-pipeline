@@ -1025,6 +1025,17 @@ def cmd_edit(a) -> int:
     s0 = float(cut.get("start") or 0)
     s1 = float(cut.get("end") or _duration(clip))
     cut_len = max(s1 - s0, 0.5)
+    # Si el recorte elegido es demasiado corto para cubrir la narracion, PRIMERO
+    # se amplia hacia el resto del clip y solo despues se recurre al bucle:
+    # repetir el mismo trozo es el error que mas retencion cuesta en este formato.
+    full = _duration(clip)
+    need = adur / MAX_SLOWDOWN
+    if cut_len < need and full > cut_len + 0.2:
+        extra = min(need, full) - cut_len
+        s0 = max(0.0, s0 - extra * 0.5)
+        s1 = min(full, max(s1 + extra * 0.5, s0 + min(need, full)))
+        cut_len = max(s1 - s0, 0.5)
+        print(f"[edit] recorte ampliado a {s0:.1f}-{s1:.1f}s para no repetir metraje")
     ratio = min(max(adur / cut_len, 1.0), MAX_SLOWDOWN)
     lb = None if a.no_crop else _letterbox(clip, s0, cut_len)
     if lb:
