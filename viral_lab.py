@@ -574,6 +574,139 @@ def cmd_find(a) -> int:
     return 0
 
 
+# -------------------------------------------------------------------- SCRIPT
+
+WPS = 2.8  # palabras por segundo de una voz IA en ingles a ritmo natural
+
+SCRIPT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "hook": {"type": "string", "description": "primera frase, <15 palabras, 0-3s"},
+        "script": {"type": "string", "description": "guion completo para TTS, sin markdown"},
+        "lines": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"t": {"type": "number"}, "text": {"type": "string"}},
+                "required": ["t", "text"], "additionalProperties": False,
+            },
+            "description": "cada frase con el segundo del CLIP en que debe sonar",
+        },
+        "invented": {"type": "array", "items": {"type": "string"},
+                      "description": "todo lo que no se puede verificar del clip"},
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "tags": {"type": "array", "items": {"type": "string"}},
+        "pinned_comment": {"type": "string"},
+    },
+    "required": ["hook", "script", "lines", "invented", "title", "description",
+                  "tags", "pinned_comment"],
+    "additionalProperties": False,
+}
+
+
+def cmd_script(a) -> int:
+    """Guion de voz en off a partir del analisis del clip.
+
+    La regla que manda: NO narrar lo que se ve. El analisis ya separo las dos
+    cosas -- `beats` es lo visible (prohibido) y `not_visible` es la materia
+    prima (obligatorio). Sin esa separacion el guion sale describiendo la imagen,
+    que es el error #1 del formato y lo que hunde la retencion."""
+    import anthropic
+
+    target = Path(a.target)
+    aj = target / "analysis.json"
+    if not aj.exists():
+        print(f"ERROR: falta {aj} — corre primero: py viral_lab.py read {target}")
+        return 2
+    d = json.loads(aj.read_text(encoding="utf-8"))
+    an, src = d["analysis"], d.get("source", {})
+    if not an.get("transformable"):
+        print(f"[script] OJO: el analisis descarto este clip ({an.get('transformable_reason', '')})")
+
+    cut = an.get("best_cut") or {}
+    clip_len = (cut.get("end") or src.get("duration") or 20) - (cut.get("start") or 0)
+    seconds = a.seconds or max(round(clip_len), 22)
+    words = int(seconds * WPS)
+    payout = an.get("payout") or {}
+
+    visible = "\n".join(f"- {b.get('t')}s: {b.get('visible')}" for b in an.get("beats", []))
+    raw = "\n".join(f"- {x}" for x in an.get("not_visible", []))
+    bait = ("\n- Mete UN error factual pequeno y facil de detectar (un numero, un lugar) "
+            "para provocar correcciones en comentarios; listalo en `invented`."
+            if a.bait else "")
+
+    prompt = f"""Escribe la voz en off de un YouTube Short en INGLES sobre este clip.
+
+CLIP: {an.get('summary', '')}
+Duracion util: {clip_len:.1f}s (recorte {cut.get('start')}s a {cut.get('end')}s)
+Payout (el momento de resultado) en {payout.get('t')}s: {payout.get('what')}
+
+LO QUE SE VE — PROHIBIDO NARRAR ESTO:
+{visible}
+
+MATERIA PRIMA — de aqui sale el guion (lo que el espectador NO puede saber mirando):
+{raw}
+
+REGLAS DURAS:
+- Nunca describas lo que la imagen ya muestra. Si el espectador puede verlo, no
+  se dice. El valor de la voz es aportar lo que la imagen NO cuenta.
+- HOOK en la primera frase (menos de 15 palabras): curiosidad que obligue a
+  quedarse. No reveles el payout en el hook.
+- Cuerpo: contexto, cifras, motivo, consecuencia — informacion que no se ve.
+- Si el guion pasa de 28s, mete UN rehook a mitad con un conector ("but",
+  "though", "here is the thing") que reencuadre lo anterior.
+- El PAYOUT va al FINAL y cae justo cuando ocurre en el clip ({payout.get('t')}s).
+  Despues del payout NO va nada explicativo: ni datos, ni contexto, ni resumen.
+  Como mucho una frase corta y seca, o una pregunta.
+- {words} palabras aproximadamente ({seconds}s de narracion).
+- Texto plano para una voz IA: sin markdown, sin emojis, sin acotaciones.
+- Lo que no puedas verificar del clip, inventalo plausible, pero listalo TODO en
+  `invented` para poder revisarlo antes de publicar.{bait}
+
+`lines`: reparte las frases con el segundo del CLIP en que deben sonar.
+`pinned_comment`: un comentario del canal para fijar, que invite a responder algo
+trivial (asi el video sigue corriendo mientras escriben). Ni insultante ni falso.
+`title`: menos de 90 caracteres, curiosidad, sin clickbait mentiroso.
+`tags`: 6-8, especificos."""
+
+    print(f"[script] escribiendo ~{words} palabras para {seconds}s...")
+    client = anthropic.Anthropic()
+    resp = client.messages.create(
+        model=os.environ.get("VIRAL_CLAUDE_MODEL", "claude-opus-4-8"),
+        max_tokens=4000, thinking={"type": "adaptive"},
+        output_config={"format": {"type": "json_schema", "schema": SCRIPT_SCHEMA}},
+        messages=[{"role": "user", "content": prompt}])
+    txt = next((b.text for b in resp.content if b.type == "text"), None)
+    if not txt:
+        print("ERROR: Claude no devolvio texto")
+        return 2
+    sc = json.loads(txt)
+    sc["source_credit"] = src.get("credit", "")
+    sc["cut"] = cut
+    sc["target_seconds"] = seconds
+    _write_json(target / "script.json", sc)
+
+    n = len(sc["script"].split())
+    md = [f"# Guion — {sc['title']}", "", f"**{n} palabras ≈ {n / WPS:.1f}s**  ·  "
+          f"recorte {cut.get('start')}s → {cut.get('end')}s", "",
+          "## Narracion", ""]
+    for ln in sc["lines"]:
+        md.append(f"- `{ln['t']}s` {ln['text']}")
+    md += ["", "## Texto seguido (TTS)", "", sc["script"], "",
+           "## Comentario para fijar", "", sc["pinned_comment"], "",
+           "## Inventado (revisar antes de publicar)", ""]
+    md += [f"- {x}" for x in sc.get("invented", [])]
+    md += ["", "## Publicacion", "", f"**Titulo**: {sc['title']}", "",
+           sc["description"], "", f"`{', '.join(sc['tags'])}`", "",
+           f"**Credito**: {sc['source_credit']}"]
+    (target / "script.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+    print(f"[script] {n} palabras ({n / WPS:.1f}s) — {target / 'script.md'}")
+    if sc.get("invented"):
+        print(f"[script] {len(sc['invented'])} datos inventados: revisalos antes de publicar")
+    return 0
+
+
 # ----------------------------------------------------------------------- QA
 
 QA_PROMPT = """Eres el control de calidad de un canal de Shorts de historia. Te paso un
@@ -734,6 +867,14 @@ def main() -> int:
     r.add_argument("--whisper", default="base", help="tamano del modelo faster-whisper")
     r.add_argument("--force", action="store_true")
     r.set_defaults(func=cmd_read)
+
+    s = sub.add_parser("script", help="guion de voz en off desde el analisis")
+    s.add_argument("target", help="carpeta de viral/ ya analizada")
+    s.add_argument("--seconds", type=int, default=0, help="duracion objetivo")
+    s.add_argument("--bait", action="store_true",
+                    help="mete un error factual pequeno a proposito para provocar "
+                         "correcciones en comentarios (sube interaccion, baja credibilidad)")
+    s.set_defaults(func=cmd_script)
 
     q = sub.add_parser("qa", help="revision automatica de un video antes de publicar")
     q.add_argument("target", help="carpeta output/<video> o un .mp4")
