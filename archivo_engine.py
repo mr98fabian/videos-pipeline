@@ -442,6 +442,30 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
         cut = text[:limit].rsplit(" ", 1)[0]
         return cut.rstrip(".,;: ")
 
+    # OPENER (26 jul 2026): cuantas palabras iniciales se muestran COMPLETAS
+    # desde el frame 0 en vez de aparecer una a una. Los benchmarks 2026 piden
+    # 4-8 palabras legibles de entrada: la decision de quedarse se toma antes
+    # del segundo 1 y una palabra suelta no alcanza para leer una promesa.
+    # Corta en puntuacion: fin de frase (.!?) ya desde la 3a palabra -- un hook
+    # in-media-res tipo "A single touch." es promesa completa y funciona mejor
+    # que un fragmento mas largo cortado a la mitad. Puntuacion debil (,;:) solo
+    # desde la 4a. Sin puntuacion, 6 palabras. Nunca termina en palabra vacia
+    # (of/the/and...), que dejaria la frase colgando: en ese caso estira una mas.
+    _DANGLING = {"of", "the", "a", "an", "and", "or", "with", "to", "in", "for",
+                 "on", "at", "by", "from", "his", "her", "their", "its", "that"}
+    opener_words = 0
+    if len(words) > 8:
+        opener_words = 6
+        for k, (_t, w) in enumerate(words[:8], start=1):
+            clean = w.rstrip("\"')")
+            if (k >= 3 and clean.endswith((".", "!", "?"))) or \
+               (k >= 4 and clean.endswith((":", ";", ","))):
+                opener_words = k
+                break
+        while (opener_words < 8
+               and re.sub(r"[^a-z]", "", words[opener_words - 1][1].lower()) in _DANGLING):
+            opener_words += 1
+
     return {
         "durationInFrames": close_from + CLOSE_TAIL,
         "coldOpen": ({"src": f"archivo/{slug}/bg_{n - 1}.png", "label": "CLASSIFIED",
@@ -449,6 +473,7 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                      if COLD_FRAMES else None),
         "scenes": scenes,
         "words": wframes,
+        "openerWords": opener_words,
         "caseBase": case_no,
         "close": {
             "from": close_from, "series": series,

@@ -159,9 +159,16 @@ export const Board = ({ children, camera, tilt3d = true }) => {
 };
 
 // --- Fondo "impresion lavada" (nitido, multiply) — plano LEJANO del parallax --
-export const Backdrop = ({ src, sceneDur = 150, camera, depth = 0.12 }) => {
+export const Backdrop = ({ src, sceneDur = 150, camera, depth = 0.12, opening = false }) => {
   const frame = useCurrentFrame();
-  const s = interpolate(frame, [0, sceneDur], [1.16, 1.24]); // base amplia: al moverse poco nunca revela bordes
+  // APERTURA (26 jul 2026): en la escena 0 el fondo entra con un push corto y
+  // rapido (1.34 -> 1.18 en 12 frames) en vez del zoom lentisimo de siempre
+  // (0.08 repartido en TODA la escena, imperceptible). La velocidad maxima cae
+  // exactamente en el frame 0: un frame estatico es objetivo de scroll y la
+  // decision de quedarse se toma antes del segundo 1 (benchmarks 2026).
+  const s = opening
+    ? interpolate(frame, [0, 12, sceneDur], [1.34, 1.18, 1.24], { extrapolateRight: "clamp" })
+    : interpolate(frame, [0, sceneDur], [1.16, 1.24]); // base amplia: al moverse poco nunca revela bordes
   const px = Math.sin(frame / 41) * 14; // deriva propia
   const py = Math.cos(frame / 57) * 9;
   const par = parallaxDepth(camera, frame, depth); // se mueve MENOS que el sujeto
@@ -256,14 +263,19 @@ const actionMotion = (action, local) => {
   return z;
 };
 
-export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, driftAmp = 5, action = null, camera = null, depth = 1.0 }) => {
+export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, driftAmp = 5, action = null, camera = null, depth = 1.0, opening = false }) => {
   const frame = useCurrentFrame();
   const local = frame - from;
   if (local < 0) return null;
   const p = pop(local, 9);
-  const offX = fromDir === "right" ? 700 * (1 - p) : fromDir === "left" ? -700 * (1 - p) : 0;
-  const offY = fromDir === "bottom" ? 800 * (1 - p) : fromDir === "top" ? -800 * (1 - p) : 0;
-  const flip = (fromDir === "right" ? -55 : 55) * (1 - p); // 3D: gira al aterrizar
+  // APERTURA (26 jul 2026): en la escena 0 el sujeto NO puede entrar desde
+  // fuera de cuadro. Medido: a frame 0 quedaba offY=800 (fuera), scale 0.85 y
+  // flip 55deg, con el fondo al 17% de opacidad -> el primer frame del Short
+  // era practicamente un lienzo vacio. Ahora arranca YA en cuadro y lo que se
+  // anima es un push corto: hay movimiento inmediato y algo que mirar.
+  const offX = opening ? 0 : fromDir === "right" ? 700 * (1 - p) : fromDir === "left" ? -700 * (1 - p) : 0;
+  const offY = opening ? 0 : fromDir === "bottom" ? 800 * (1 - p) : fromDir === "top" ? -800 * (1 - p) : 0;
+  const flip = opening ? 0 : (fromDir === "right" ? -55 : 55) * (1 - p); // 3D: gira al aterrizar
   const drift = Math.sin(local / 13) * driftAmp;
   // VIDA SECUNDARIA (opción 1): respiración + balanceo, pivotando desde los pies.
   // Ilusión de "estar vivo" sin articular; se compone sobre parallax y acción.
@@ -274,7 +286,9 @@ export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, dr
   const tilt = rot + sway;
   const a = actionMotion(action, local); // actua el verbo de la escena
   const par = parallaxDepth(camera, frame, depth); // plano CERCANO: se mueve/crece mas
-  const baseS = (0.85 + 0.15 * p) * a.scale;
+  // en apertura: ya visible a tamano casi final, con un push de 1.10 -> 1.00
+  // (velocidad maxima en el frame 0) en vez del 0.85 -> 1.00 del pop normal.
+  const baseS = (opening ? 1.10 - 0.10 * pop(local, 14) : 0.85 + 0.15 * p) * a.scale;
   return (
     <div style={{ position: "absolute", left: x, top: y + drift, width: w, height: h, perspective: 1200,
       translate: `${par.tx}px ${par.ty}px`, scale: `${par.sc}` }}>
@@ -343,13 +357,15 @@ export const ActionFX = ({ action, cx = 540, cy = 640, from = 0 }) => {
   );
 };
 
-export const PhotoScrap = ({ src, from, x, y, w, h, fromDir = "right", rot = 2, children, camera = null, depth = 0.85 }) => {
+export const PhotoScrap = ({ src, from, x, y, w, h, fromDir = "right", rot = 2, children, camera = null, depth = 0.85, opening = false }) => {
   const frame = useCurrentFrame();
   const local = frame - from;
   if (local < 0) return null;
   const p = pop(local, 9);
-  const offX = fromDir === "right" ? 800 * (1 - p) : fromDir === "left" ? -800 * (1 - p) : 0;
-  const flip = (fromDir === "right" ? -60 : 60) * (1 - p);
+  // apertura: misma regla que Cutout -- ya en cuadro desde el frame 0, el
+  // movimiento lo da el push, no una entrada desde fuera del lienzo.
+  const offX = opening ? 0 : fromDir === "right" ? 800 * (1 - p) : fromDir === "left" ? -800 * (1 - p) : 0;
+  const flip = opening ? 0 : (fromDir === "right" ? -60 : 60) * (1 - p);
   const drift = Math.sin(local / 15) * 4;
   const tilt = rot + Math.sin(local / 19) * 1.2;
   const par = parallaxDepth(camera, frame, depth);
@@ -362,7 +378,7 @@ export const PhotoScrap = ({ src, from, x, y, w, h, fromDir = "right", rot = 2, 
           height: "100%",
           translate: `${offX}px 0px`,
           rotate: `${tilt}deg`,
-          scale: `${0.9 + 0.1 * p}`,
+          scale: `${opening ? 1.10 - 0.10 * pop(local, 14) : 0.9 + 0.1 * p}`,
           transform: `rotateY(${flip}deg)`,
           background: PAPER_LIGHT,
           padding: 18,
@@ -1090,13 +1106,22 @@ export const CTAStamp = ({ from, caseNo = 1, dur = 46, label = "NEW FILE TOMORRO
 //   Agrupa en bloques de hasta 3 palabras / 18 chars (misma regla del pipeline),
 //   activa en dorado + pop de escala, siempre dentro del carril de captions.
 // ============================================================================
-export const KineticTimed = ({ words, endFrame = Infinity, sizeActive = 92, sizeRest = 76 }) => {
+export const KineticTimed = ({ words, endFrame = Infinity, sizeActive = 92, sizeRest = 76, openerCount = 0 }) => {
   const frame = useCurrentFrame();
   if (frame >= endFrame) return null;
-  // agrupar en bloques estilo pipeline (3 palabras / 18 chars)
+  // OPENER (26 jul 2026): las primeras 4-8 palabras (la promesa) se muestran
+  // COMPLETAS desde el frame 0, no construidas palabra a palabra. Benchmark
+  // 2026: la decision de quedarse se toma antes del segundo 1, y para decidir
+  // hace falta algo entero que leer -- una sola palabra suelta no es promesa.
+  // Despues del opener vuelve el karaoke normal de 3 palabras / 18 chars.
   const chunks = [];
+  let rest = words;
+  if (openerCount > 0 && words.length > openerCount) {
+    chunks.push(words.slice(0, openerCount));
+    rest = words.slice(openerCount);
+  }
   let buf = [];
-  for (const wd of words) {
+  for (const wd of rest) {
     buf.push(wd);
     const joined = buf.map((b) => b.w).join(" ");
     if (buf.length >= 3 || joined.length >= 18) {
@@ -1106,11 +1131,16 @@ export const KineticTimed = ({ words, endFrame = Infinity, sizeActive = 92, size
   }
   if (buf.length) chunks.push(buf);
 
-  // bloque visible: el ultimo cuyo primer word ya arranco
+  // bloque visible: el ultimo cuyo primer word ya arranco. EXCEPCION: el
+  // opener arranca en el frame 0 aunque la voz entre unos frames despues --
+  // si esperara al primer word, el frame 0 seguiria sin texto que leer, que
+  // es justo lo que hay que evitar.
+  const hasOpener = openerCount > 0 && words.length > openerCount;
   let chunk = null;
   let next = null;
   for (let i = 0; i < chunks.length; i++) {
-    if (frame >= chunks[i][0].t) {
+    const startsAt = hasOpener && i === 0 ? 0 : chunks[i][0].t;
+    if (frame >= startsAt) {
       chunk = chunks[i];
       next = chunks[i + 1] || null;
     }
@@ -1119,19 +1149,28 @@ export const KineticTimed = ({ words, endFrame = Infinity, sizeActive = 92, size
   if (next && frame >= next[0].t) return null; // ya paso al siguiente
 
   const activeIdx = chunk.reduce((acc, wd, i) => (frame >= wd.t ? i : acc), 0);
+  const isOpener = hasOpener && chunk === chunks[0];
+  // el opener lleva mas palabras en pantalla: bajar el cuerpo para que entren
+  // sin desbordar los 940px de ancho util.
+  const szActive = isOpener ? 74 : sizeActive;
+  const szRest = isOpener ? 64 : sizeRest;
   return (
     <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 1920 - LANES.captionBottom, pointerEvents: "none" }}>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px 16px", maxWidth: 940 }}>
         {chunk.map((wd, i) => {
-          if (frame < wd.t) return null;
-          const p = pop(frame - wd.t, 5);
+          // opener: TODAS visibles desde el primer frame del bloque; el resaltado
+          // dorado sigue igual a la voz, asi se lee entero y ademas guia el ritmo.
+          if (!isOpener && frame < wd.t) return null;
+          // el opener NO hace pop: a escala 0 en el frame 0 el texto seria
+          // invisible justo en el frame que tiene que vender la promesa.
+          const p = isOpener ? 1 : pop(frame - wd.t, 5);
           const isActive = i === activeIdx;
           return (
             <span
               key={i}
               style={{
                 fontFamily: "Arial Black, sans-serif", fontWeight: 900,
-                fontSize: isActive ? sizeActive : sizeRest,
+                fontSize: isActive ? szActive : szRest,
                 color: isActive ? GOLD : "#FFF",
                 scale: `${p}`,
                 display: "inline-block",

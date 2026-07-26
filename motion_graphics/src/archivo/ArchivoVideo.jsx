@@ -62,7 +62,7 @@ const BurnFlash = ({ at }) => {
   );
 };
 
-const SceneBlock = ({ scene, index, caseBase = 1 }) => {
+const SceneBlock = ({ scene, index, caseBase = 1, opening = false }) => {
   const b = scene.beats || {};
   const shakes = [{ frame: 2, amp: 6 }];
   if (b.stamp) shakes.push({ frame: b.stamp.at, amp: 8 });
@@ -85,7 +85,7 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
     : { x: 540, y: 640 };
   return (
     <Board camera={cam}>
-      <Backdrop src={staticFile(scene.bg)} sceneDur={scene.dur} camera={cam} depth={0.12} />
+      <Backdrop src={staticFile(scene.bg)} sceneDur={scene.dur} camera={cam} depth={0.12} opening={opening} />
       {scene.treatment === "sticker" && scene.fg ? (
         <>
         <GroundCard index={index} caseBase={caseBase} camera={cam} />
@@ -104,7 +104,8 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
               <Cutout
                 key={k}
                 src={staticFile(pt.src)}
-                from={pt.from ?? 0}
+                from={opening ? 0 : pt.from ?? 0}
+                opening={opening}
                 x={clamp(STAGE.x + pt.nx * STAGE.w - gw / 2, 62, 1018 - gw)}
                 y={clamp(STAGE.y + pt.ny * STAGE.h - gh / 2, LANES.safeTop, LANES.captionTop - gh * 0.62)}
                 w={gw}
@@ -131,6 +132,7 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
           action={b.action || null}
           camera={cam}
           depth={1.0}
+          opening={opening}
         />
         )}
         </>
@@ -146,6 +148,7 @@ const SceneBlock = ({ scene, index, caseBase = 1 }) => {
           rot={alt ? 1.8 : -1.8}
           camera={cam}
           depth={0.82}
+          opening={opening}
         />
       )}
       <Atmosphere camera={cam} />
@@ -183,7 +186,7 @@ export const ArchivoVideo = ({ manifest }) => {
       {/* escenas */}
       {m.scenes.map((s, i) => (
         <Sequence key={i} from={s.from} durationInFrames={s.dur}>
-          <SceneBlock scene={s} index={i} caseBase={m.caseBase ?? 1} />
+          <SceneBlock scene={s} index={i} caseBase={m.caseBase ?? 1} opening={i === 0 && !m.coldOpen} />
         </Sequence>
       ))}
 
@@ -205,7 +208,7 @@ export const ArchivoVideo = ({ manifest }) => {
       ) : null}
 
       {/* captions con timestamps reales del TTS (por encima de las escenas) */}
-      <KineticTimed words={m.words} endFrame={m.close.from} />
+      <KineticTimed words={m.words} endFrame={m.close.from} openerCount={m.coldOpen ? 0 : m.openerWords ?? 0} />
 
       {/* flashes + burn del cierre */}
       <ImpactFlash frames={flashes} />
