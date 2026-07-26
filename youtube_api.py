@@ -125,6 +125,10 @@ MIN_PUBLISH_GAP_MINUTES = 3 * 60  # 3h. Historial de cambios (19 jul 2026):
 # Y "dentro de la franja" al mismo tiempo, sin que hubieramos separado las dos variables.
 GOOD_WINDOW_START_HOUR = 1   # UTC -- franja donde HiddenFacts arranca fuerte (~1000+ vistas)
 GOOD_WINDOW_END_HOUR = 13    # UTC -- fuera de este rango, arranque lento (recuperable en 24-48h)
+# Mejor hora MEDIDA con los propios datos del canal (26 jul 2026, periodo sano
+# previo al derrumbe): mediana de vistas por hora de publicacion. 05:00-07:00 es
+# el unico bloque de tres horas seguidas por encima de 1.190; 20:00 da 158.
+BEST_HOUR = 6
 
 
 def _effective_publish_times(youtube) -> list[datetime]:
@@ -179,11 +183,49 @@ def _check_publish_window(target_time: datetime) -> None:
     (algunos videos fuera de franja igual arrancan bien) -- ver memoria
     espaciado-publicacion-shorts."""
     hour = target_time.hour
+    if hour != BEST_HOUR:
+        print(f"[aviso] la mejor hora medida del canal es {BEST_HOUR:02d}:00 UTC "
+              f"(mediana ~1.234 vistas); 20:00 UTC da ~158. Estas publicando a las "
+              f"{hour:02d}:00.")
     if not (GOOD_WINDOW_START_HOUR <= hour < GOOD_WINDOW_END_HOUR):
         print(f"[aviso] {target_time.isoformat()} cae fuera de la franja buena "
               f"({GOOD_WINDOW_START_HOUR:02d}:00-{GOOD_WINDOW_END_HOUR:02d}:00 UTC) -- "
               "arranque probablemente mas lento (ver memoria espaciado-publicacion-shorts). "
               "No es un bloqueo, solo una advertencia.")
+
+
+def _check_duplicate_title(youtube, title: str) -> None:
+    """Bloquea subir un video cuyo titulo YA existe en el canal.
+
+    Nace de un caso real (jul 2026): el mismo short acabo subido CUATRO veces y
+    otros tres por duplicado, repartiendo entre copias las vistas de lo que mas
+    traccion tenia. Es un error silencioso -- YouTube deja subirlo sin avisar --
+    asi que el control tiene que estar aqui."""
+    norm = " ".join(title.lower().split())
+    try:
+        ch = _yt_execute(youtube.channels().list(part="contentDetails", mine=True))
+        up = ch["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
+        ids, tok = [], None
+        while True:
+            r = _yt_execute(youtube.playlistItems().list(
+                part="contentDetails", playlistId=up, maxResults=50, pageToken=tok))
+            ids += [i["contentDetails"]["videoId"] for i in r["items"]]
+            tok = r.get("nextPageToken")
+            if not tok:
+                break
+        ids = list(dict.fromkeys(ids))
+        for i in range(0, len(ids), 50):
+            d = _yt_execute(youtube.videos().list(part="snippet", id=",".join(ids[i:i + 50])))
+            for v in d["items"]:
+                if " ".join(v["snippet"]["title"].lower().split()) == norm:
+                    raise SystemExit(
+                        f"ERROR: ya existe un video con ese titulo en el canal "
+                        f"(https://youtu.be/{v['id']}). Subirlo otra vez parte las "
+                        f"vistas entre copias. Cambia el titulo o borra/oculta el otro.")
+    except SystemExit:
+        raise
+    except Exception as e:  # una comprobacion no debe impedir una subida legitima
+        print(f"[aviso] no pude comprobar duplicados ({e})")
 
 
 def next_available_slot(youtube, after: datetime | None = None) -> datetime:
@@ -258,6 +300,7 @@ def upload_video(video_path: str | Path, title: str, description: str,
     if default_language is None:
         default_language = "es" if account == "impixxel" else "en"
     youtube = get_youtube_client(account)
+    _check_duplicate_title(youtube, title)
     if publish_at or privacy_status == "public":
         target = (datetime.fromisoformat(publish_at.replace("Z", "+00:00"))
                   if publish_at else datetime.now(timezone.utc))
