@@ -82,7 +82,8 @@ SCRIPT_SCHEMA = {
                             "ONLY: (a) at most one short dry acid remark, if it hits HARDER than the "
                             "payoff itself, (b) the share trigger, (c) the closing question. Never a "
                             "new fact, never a recap, never extra context. If a detail matters, it "
-                            "belongs BEFORE the payoff, not after it.",
+                            "belongs BEFORE the payoff, not after it. "
+                            "*** HARD RULE: THE SCRIPT MUST LOOP *** The last sentence has to close using the SAME KEY WORDS as the hook, so that when the Short restarts the viewer does not perceive a cut and watches it again. Measured on this channel (26 jul 2026): the only video with a real loop holds a 3.76 -> 2.89 audience ratio (watched ~3 times through, -23% across the whole video), while videos closing with a summary sentence ('and so...', 'that is how...') fall to 0.95 and 0.08. A summary tells the viewer it is over; a loop hides the seam. Example that works: hook 'almost nobody today remembers why' -> close 'then quietly vanished from the pages of history'. NEVER close with a recap or a moral.",
         },
         "search_terms": {
             "type": "array",
@@ -99,6 +100,7 @@ SCRIPT_SCHEMA = {
                             "the last) term: a single intense face close-up there is encouraged for "
                             "the thumbnail scroll-stop -- the engine renders those as a clean taped "
                             "photo, not a cut-out. "
+                            "*** THE LAST TERM MUST CHAIN INTO THE FIRST *** Not merely resemble it: the closing image has to be a frame the first image could cut back to without a visible seam (same place, same light, same framing, later moment). That visual loop is half of the re-watch effect measured on this channel. Example: opens on a night explosion in the harbor, closes on the same harbor still smoldering. "
                             "MULTI-SUBJECT: in 3-4 of the middle terms, ask for TWO or THREE figures "
                             "(or a figure plus a key object) STANDING CLEARLY APART, not touching and "
                             "not overlapping -- e.g. 'two officers standing apart facing each other "
