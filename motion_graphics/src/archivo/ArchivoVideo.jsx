@@ -12,6 +12,7 @@ import {
   Typewriter,
   CaseAnnotations,
   CTAStamp,
+  HookText,
   ActionFX,
   EvidencePhoto,
   ColdOpen,
@@ -75,6 +76,11 @@ const SceneBlock = ({ scene, index, caseBase = 1, opening = false }) => {
     beats.push({ frame: b.zoom.at, scale: b.zoom.scale ?? 1.35, x: b.zoom.x ?? 0, y: b.zoom.y ?? 0, dur: 7 });
     beats.push({ frame: b.zoom.at + 36, scale: 1.04, x: 0, y: 0, dur: 10 });
   }
+  // PRIMER FRAME EN MOVIMIENTO: un frame estatico es objetivo de scroll. La
+  // escena 1 arranca cerrada y se abre de golpe en ~0,5s, asi que ya hay
+  // movimiento en el frame 0 sin depender de que la imagen tenga accion.
+  if (index === 0) beats.unshift({ frame: 0, scale: 1.34, x: 0, y: 0, dur: 1 },
+                                 { frame: 1, scale: 1.0, x: 0, y: 0, dur: 15 });
   const cam = makeCamera(beats, shakes);
   const alt = index % 2 === 0;
   const dir = scene.enterDir || (alt ? "bottom" : "right");
@@ -209,6 +215,8 @@ export const ArchivoVideo = ({ manifest }) => {
 
       {/* captions con timestamps reales del TTS (por encima de las escenas) */}
       <KineticTimed words={m.words} endFrame={m.close.from} openerCount={m.coldOpen ? 0 : m.openerWords ?? 0} />
+      {/* promesa legible desde el frame 0 */}
+      <HookText text={m.hook} />
 
       {/* flashes + burn del cierre */}
       <ImpactFlash frames={flashes} />

@@ -1100,6 +1100,43 @@ export const CTAStamp = ({ from, caseNo = 1, dur = 46, label = "NEW FILE TOMORRO
   );
 };
 
+
+// ============================================================================
+// HOOK EN EL FRAME 0 (26 jul 2026) — la promesa ENTERA desde el primer frame.
+// Medido: "se quedaron para mirar" 43,9% (colapso por debajo de 60%). Los
+// benchmarks 2026 piden 4-8 palabras legibles en el primer frame, porque la
+// decision se toma antes del segundo 1 y el caption karaoke, que se construye
+// palabra a palabra, todavia no ha dicho nada cuando el espectador ya decidio.
+// ============================================================================
+export const HookText = ({ text, dur = 46 }) => {
+  const frame = useCurrentFrame();
+  if (!text || frame > dur) return null;
+  // SIN pop de entrada: tiene que estar legible en el FRAME 0. Un pop de escala
+  // lo hace invisible justo en el unico frame que decide si se quedan.
+  const o = interpolate(frame, [dur - 8, dur], [1, 0], {
+    extrapolateLeft: "clamp", extrapolateRight: "clamp",
+  });
+  // PRIMERA FRASE COMPLETA, no las primeras N palabras: un hook cortado a
+  // mitad ("...on a spy") promete y no entrega, que es peor que no poner nada.
+  const first = String(text).split(/(?<=[.?!])\s+/)[0].trim();
+  const words = first.split(/\s+/).length > 12
+    ? first.split(/\s+/).slice(0, 12).join(" ") + "…" : first;
+  return (
+    <div style={{
+      position: "absolute", left: 55, right: 55, top: LANES.safeTop + 10,
+      textAlign: "center", opacity: o,
+    }}>
+      <span style={{
+        fontFamily: "Arial Black, sans-serif", fontWeight: 900, fontSize: 76,
+        lineHeight: 1.06, color: "#FFFFFF", letterSpacing: 0.5,
+        textShadow: "0 5px 0 rgba(26,18,8,0.9), 0 0 22px rgba(0,0,0,0.7)",
+        background: "rgba(26,18,8,0.62)", padding: "8px 16px", borderRadius: 8,
+        boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone",
+      }}>{words}</span>
+    </div>
+  );
+};
+
 // ============================================================================
 // CAPTIONS CON TIMESTAMPS REALES DE TTS (reemplaza el ASS quemado)
 //   words: [{t: frameInicio, w: "palabra"}] en frames GLOBALES del video.

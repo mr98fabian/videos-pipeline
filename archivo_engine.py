@@ -472,6 +472,10 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                       "tag": "IN 60 SECONDS...", "frames": COLD_FRAMES}
                      if COLD_FRAMES else None),
         "scenes": scenes,
+        # promesa legible desde el frame 0: hook_card del guion, o las primeras
+        # 8 palabras del guion como respaldo (los benchmarks piden 4-8)
+        "hook": (data.get("hook_card")
+                 or " ".join(data.get("script", "").split()[:8])).strip(),
         "words": wframes,
         "openerWords": opener_words,
         "caseBase": case_no,
