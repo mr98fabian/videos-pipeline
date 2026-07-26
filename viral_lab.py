@@ -660,6 +660,25 @@ def cmd_find(a) -> int:
 
 WPS = 2.8  # palabras por segundo de una voz IA en ingles a ritmo natural
 
+# ============================ METRICAS QUE MANDAN ============================
+# Benchmarks de YouTube Shorts 2026 (investigado 26 jul 2026). NO son opiniones
+# ni preferencias de estilo: son los umbrales con los que el algoritmo decide si
+# reparte o no. Estan aqui hardcodeados a proposito para no volver a salirnos.
+#
+#   - En 2026 el WATCH TIME sustituyo al swipe rate como factor principal, asi
+#     que el tiempo ABSOLUTO visto importa mas que el porcentaje.
+#   - Los Shorts de MENOS DE 15s se hundieron en alcance: no superan el umbral
+#     de tiempo absoluto ni con 100% de retencion. Un video corto perfecto pierde
+#     contra uno largo mediocre.
+#   - Punto dulce: 30-45s. El tramo 15-30s da la retencion mas alta (>80%) pero
+#     menos alcance absoluto.
+#   - Retencion: >70% dispara reparto amplio; >75% triplica la probabilidad de
+#     salir a audiencias nuevas. En 30-60s el rango normal es 40-55%.
+#   - Swipe-away en los 3 primeros segundos: <25% sano, >40% gancho roto.
+MIN_SECONDS = 20        # bloqueo duro: por debajo no se produce, se descarta el clip
+TARGET_SECONDS = 34     # centro del punto dulce 30-45s
+MAX_SECONDS = 45
+
 SCRIPT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -740,7 +759,13 @@ def cmd_script(a) -> int:
     shots = len(d.get("scenes") or []) or len(_scenes(target / "video.mp4"))
     shots = max(shots, 1)
     stretch = 1.35 if shots <= 1 else (1.8 if shots <= 3 else 2.2)
-    seconds = a.seconds or int(min(max(clip_len * stretch, 12), 32))
+    seconds = a.seconds or int(min(max(clip_len * stretch, TARGET_SECONDS * 0.8), MAX_SECONDS))
+    if seconds < MIN_SECONDS:
+        print(f"[script] DESCARTADO: este clip solo da para {seconds}s y por debajo de "
+              f"{MIN_SECONDS}s los Shorts no reparten en 2026 (no superan el umbral de "
+              f"tiempo absoluto ni con retencion perfecta). Busca un clip mas largo o "
+              f"con mas planos.")
+        return 2
     print(f"[script] clip {clip_len:.1f}s con {shots} plano(s) -> objetivo {seconds}s")
     words = int(seconds * WPS)
     payout = an.get("payout") or {}

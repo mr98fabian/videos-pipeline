@@ -130,6 +130,22 @@ GOOD_WINDOW_END_HOUR = 13    # UTC -- fuera de este rango, arranque lento (recup
 # el unico bloque de tres horas seguidas por encima de 1.190; 20:00 da 158.
 BEST_HOUR = 6
 
+# ===================== METRICAS QUE MANDAN (Shorts 2026) =====================
+# Investigado 26 jul 2026. Hardcodeado para no volver a salirnos de lo que el
+# algoritmo premia de verdad:
+#   - El WATCH TIME sustituyo al swipe rate como factor principal: pesa el tiempo
+#     ABSOLUTO visto, no solo el porcentaje.
+#   - Los Shorts de MENOS DE 15s se hundieron en alcance en 2026: no superan el
+#     umbral de tiempo absoluto ni con 100% de retencion. Por eso los ultracortos
+#     de este canal daban vistas pero CERO suscriptores.
+#   - Punto dulce 30-45s. Retencion >70% dispara reparto amplio, >75% triplica la
+#     probabilidad de llegar a audiencias nuevas.
+#   - Swipe-away en los 3 primeros segundos: <25% sano, >40% gancho roto.
+SHORTS_HARD_MIN = 15.0    # por debajo, YouTube directamente no reparte
+SHORTS_SWEET_MIN = 30.0   # por debajo del punto dulce: aviso
+SHORTS_SWEET_MAX = 45.0
+RETENTION_WIDE_DISTRIBUTION = 0.70  # el umbral que dispara reparto amplio
+
 
 def _effective_publish_times(youtube) -> list[datetime]:
     """publishedAt de videos ya publicos + publishAt de videos programados
@@ -297,6 +313,21 @@ def upload_video(video_path: str | Path, title: str, description: str,
                 f"Si este video es un formato corto INTENCIONAL (ultrashort/silent_card/"
                 f"readcard), volve a llamar con min_duration=None."
             )
+    # SUELO ABSOLUTO, sin escape posible ni con min_duration=None ni --allow-short.
+    # En 2026 los Shorts por debajo de 15s dejaron de repartirse: no superan el
+    # umbral de tiempo absoluto ni con retencion del 100%. Los ultracortos de este
+    # canal lo confirman -- 1.400 vistas y CERO suscriptores cada uno.
+    _dur = _video_duration_seconds(video_path)
+    if _dur is not None and _dur < SHORTS_HARD_MIN:
+        raise ValueError(
+            f"Video de {_dur:.1f}s: por debajo de {SHORTS_HARD_MIN:.0f}s YouTube ya no "
+            f"reparte Shorts (2026). Subirlo es quemar el hueco del dia. Alarga el guion "
+            f"o descarta el clip."
+        )
+    if _dur is not None and _dur < SHORTS_SWEET_MIN:
+        print(f"[aviso] {_dur:.1f}s esta por debajo del punto dulce "
+              f"({SHORTS_SWEET_MIN:.0f}-{SHORTS_SWEET_MAX:.0f}s). Reparte, pero con menos "
+              f"alcance que un video del doble de largo con la misma retencion.")
     if default_language is None:
         default_language = "es" if account == "impixxel" else "en"
     youtube = get_youtube_client(account)
