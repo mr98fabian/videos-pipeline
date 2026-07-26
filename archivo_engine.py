@@ -34,7 +34,12 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT = Path(__file__).resolve().parent
 MOTION = ROOT / "motion_graphics"
 FPS = 30
-COLD_FRAMES = 22  # duracion del cold-open censurado
+# COLD-OPEN DESACTIVADO (26 jul 2026). Medido: "se quedaron para mirar" 43,9%,
+# muy por debajo del 60% donde el reparto colapsa. Los benchmarks 2026 son
+# explicitos: nada de intros, logos ni musica antes de la voz -- la decision de
+# quedarse se toma ANTES del segundo 1 y un frame estatico es objetivo de scroll.
+# La tarjeta CLASSIFIED + sting ocupaba 0,73s justo ahi. Poner >0 para volver.
+COLD_FRAMES = 0
 CLOSE_TAIL = 112  # frames de cierre tras terminar la voz (~3.7s)
 
 
@@ -439,8 +444,9 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
 
     return {
         "durationInFrames": close_from + CLOSE_TAIL,
-        "coldOpen": {"src": f"archivo/{slug}/bg_{n - 1}.png", "label": "CLASSIFIED",
-                      "tag": "IN 60 SECONDS...", "frames": COLD_FRAMES},
+        "coldOpen": ({"src": f"archivo/{slug}/bg_{n - 1}.png", "label": "CLASSIFIED",
+                      "tag": "IN 60 SECONDS...", "frames": COLD_FRAMES}
+                     if COLD_FRAMES else None),
         "scenes": scenes,
         "words": wframes,
         "caseBase": case_no,
