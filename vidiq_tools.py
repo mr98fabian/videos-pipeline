@@ -28,6 +28,12 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent / ".env")
+except Exception:
+    pass
+
 ROOT = Path(__file__).resolve().parent
 URL = "https://mcp.vidiq.com/mcp"
 
@@ -124,6 +130,62 @@ def cmd_xoutliers(a) -> int:
     return 0
 
 
+def cmd_title_patterns(a) -> int:
+    """Busca Shorts con outlier score cercano a 100x en el nicho, junta sus
+    titulos, y le pide a Claude que extraiga el PATRON (estructura, promesa,
+    palabras que se repiten) -- no para copiar el titulo, para replicar la
+    formula. Ver memoria titulo-antagonista-famoso / criterio-guiones-post-analisis-28d
+    para lo ya validado; esto es la version automatizada de ese analisis."""
+    import anthropic
+
+    queries = a.query or NICHE_QUERIES
+    seen, hits = set(), []
+    for q in queries:
+        try:
+            d = call_json("vidiq_outliers", {"keyword": q, "contentType": "short",
+                                              "publishedWithin": "threeMonths", "limit": 15})
+        except Exception as e:
+            print(f"[title-patterns] fallo '{q}': {e}", file=sys.stderr)
+            continue
+        for v in d.get("videos", d.get("results", [])):
+            if not isinstance(v, dict):
+                continue
+            t = (v.get("videoTitle") or "").strip()
+            score = v.get("breakoutScore") or 0
+            if t and t.lower() not in seen and score >= a.min_score:
+                seen.add(t.lower())
+                hits.append((score, t))
+    hits.sort(reverse=True)
+    top = hits[:a.top]
+    if not top:
+        print(f"[title-patterns] nada por encima de x{a.min_score}. Baja --min-score o prueba otras queries.")
+        return 1
+
+    print(f"[title-patterns] {len(top)} titulos (x{top[-1][0]}-x{top[0][0]}):")
+    for score, t in top:
+        print(f"  x{score:>4} | {t}")
+
+    titles_block = "\n".join(f"- ({s}x) {t}" for s, t in top)
+    prompt = (
+        "Estos son titulos de YouTube Shorts con outlier score cercano a 100x "
+        "(muy por encima de la mediana de su propio canal) en el nicho de "
+        f"'{a.niche}'.\n\n{titles_block}\n\n"
+        "Analiza SOLO la estructura, no el contenido especifico: que patrones de "
+        "titulo se repiten, que tipo de promesa usan (resultado, curiosidad, "
+        "antagonista nombrado, cifra, pregunta), que estructura gramatical "
+        "domina, y que palabras de gancho aparecen mas. Termina con 3 formulas "
+        "de titulo reutilizables (con placeholders tipo [ANTAGONISTA], [CIFRA], "
+        "[CONSECUENCIA]) que se puedan aplicar a un titulo NUEVO de este nicho, "
+        "sin copiar ningun titulo de la lista."
+    )
+    client = anthropic.Anthropic()
+    resp = client.messages.create(model="claude-opus-4-8", max_tokens=1200,
+                                   messages=[{"role": "user", "content": prompt}])
+    txt = next((b.text for b in resp.content if b.type == "text"), "")
+    print("\n" + txt)
+    return 0
+
+
 def cmd_watch(a) -> int:
     print(call("vidiq_watch_shortform_content", {"url": a.url}))
     return 0
@@ -207,10 +269,18 @@ def main() -> int:
     p = sub.add_parser("similar"); p.add_argument("video_id"); p.add_argument("--limit", type=int, default=12)
     p = sub.add_parser("comments"); p.add_argument("target"); p.add_argument("--limit", type=int, default=25)
     p = sub.add_parser("radar-terms"); p.add_argument("--cross-platform", action="store_true")
+    p = sub.add_parser("title-patterns",
+                        help="titulos x100 del nicho -> Claude extrae la formula reutilizable")
+    p.add_argument("query", nargs="*", help="keywords (por defecto NICHE_QUERIES)")
+    p.add_argument("--niche", default="historia oculta / WWII / espionaje")
+    p.add_argument("--min-score", type=float, default=40.0,
+                    help="outlier score minimo para entrar al analisis")
+    p.add_argument("--top", type=int, default=20)
     a = ap.parse_args()
     return {"balance": cmd_balance, "outliers": cmd_outliers, "xoutliers": cmd_xoutliers,
             "watch": cmd_watch, "transcript": cmd_transcript, "similar": cmd_similar,
-            "comments": cmd_comments, "radar-terms": cmd_radar_terms}[a.cmd](a)
+            "comments": cmd_comments, "radar-terms": cmd_radar_terms,
+            "title-patterns": cmd_title_patterns}[a.cmd](a)
 
 
 if __name__ == "__main__":
