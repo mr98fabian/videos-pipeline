@@ -89,9 +89,12 @@ def fetch_effect(category: str, count: int = 3) -> list[Path]:
         return existing[:count]
 
     key = _pixabay_key()
-    q = urllib.parse.quote(EFFECTS[category]["query"])
+    import urllib.parse as _uparse
+    q = _uparse.quote(EFFECTS[category]["query"])
     url = f"https://pixabay.com/api/videos/?key={key}&q={q}&per_page={count * 2}"
-    with urllib.request.urlopen(url, timeout=30) as r:
+    # Pixabay bloquea el User-Agent por defecto de urllib con 403
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30) as r:
         data = json.loads(r.read())
     hits = data.get("hits", [])[:count]
     got = []
@@ -102,7 +105,9 @@ def fetch_effect(category: str, count: int = 3) -> list[Path]:
         if not vid:
             continue
         dest = out_dir / f"raw_{i}.mp4"
-        urllib.request.urlretrieve(vid["url"], dest)
+        vreq = urllib.request.Request(vid["url"], headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(vreq, timeout=60) as resp, open(dest, "wb") as f:
+            f.write(resp.read())
         got.append(dest)
     return got
 
