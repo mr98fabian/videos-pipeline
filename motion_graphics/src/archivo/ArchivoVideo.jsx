@@ -48,15 +48,18 @@ import {
 const STAGE = { x: 50, y: LANES.safeTop + 90, w: 980, h: 1080 };
 const PART_GROW = 1.15; // las piezas sueltas se leen chicas: se agrandan un poco
 
-// LIGHT LEAK EN CORTES DE ESCENA (27 jul 2026, v2 tras comprobar que no se
-// veia): el "screen" blend de la v1 desaparecia porque las tarjetas del motor
-// son de PAPEL CASI BLANCO -- blanco screen sobre blanco no cambia nada. Un
-// leak tiene que verse SIEMPRE, sin importar cuan clara sea la escena debajo.
-// Solucion: se OSCURECE el cuadro primero (blend normal, no screen) para tener
-// contraste, y encima se pone el nucleo caliente. Contra cualquier fondo, claro
-// u oscuro, esto SI se lee. Sigue siendo corto (18f = 0,6s), un barrido que
-// cruza de lado a lado, no un fundido lento.
-const LightLeakCut = ({ at, dur = 18 }) => {
+// TRANSICIONES DE CORTE (27 jul 2026) — CATALOGO ROTATIVO.
+// Antes todos los cortes usaban el mismo barrido de luz, y con 10 escenas el
+// ojo lo detecta como un tic mecanico. Ahora rota entre 6 variantes distintas
+// segun el indice de escena, todas cortas (12-18f) y todas con la misma regla
+// del canal: corte DURO, nunca fundido lento.
+//
+// Nota de implementacion: nada de "screen" blend. Las tarjetas del motor son de
+// papel casi blanco y un blanco en screen sobre blanco no cambia nada (bug de
+// la v1). Todas las variantes velan primero el cuadro con blend normal.
+const TRANSITIONS = ["leakL", "burn", "leakR", "wipeDown", "flashShake", "wipeSide"];
+
+const CutTransition = ({ at, variant = "leakL", dur = 16 }) => {
   const frame = useCurrentFrame();
   const local = frame - at;
   if (local < 0 || local > dur) return null;
@@ -64,23 +67,85 @@ const LightLeakCut = ({ at, dur = 18 }) => {
   const p = local < half
     ? interpolate(local, [0, half], [0, 1], { easing: Easing.out(Easing.cubic) })
     : interpolate(local, [half, dur], [1, 0], { easing: Easing.in(Easing.cubic) });
-  // el nucleo cruza de -20% a 120% del ancho: entra y sale de cuadro
-  const pos = interpolate(local, [0, dur], [-20, 120]);
-  return (
-    <AbsoluteFill style={{ pointerEvents: "none" }}>
-      {/* vela el cuadro un poco (normal blend, funciona sobre cualquier fondo) */}
-      <AbsoluteFill style={{ background: `rgba(40,22,8,${0.30 * p})` }} />
-      {/* nucleo caliente: naranja-blanco solido, normal blend -> visible aun sobre papel blanco */}
-      <AbsoluteFill
-        style={{
-          background: `linear-gradient(100deg,
+  const t = interpolate(local, [0, dur], [0, 1]);
+
+  // 1. barrido de luz calido, izquierda -> derecha
+  if (variant === "leakL" || variant === "leakR") {
+    const pos = variant === "leakL"
+      ? interpolate(t, [0, 1], [-20, 120])
+      : interpolate(t, [0, 1], [120, -20]);
+    const ang = variant === "leakL" ? 100 : 260;
+    return (
+      <AbsoluteFill style={{ pointerEvents: "none" }}>
+        <AbsoluteFill style={{ background: `rgba(40,22,8,${0.28 * p})` }} />
+        <AbsoluteFill style={{
+          background: `linear-gradient(${ang}deg,
             transparent ${pos - 26}%,
             rgba(255,140,40,${0.55 * p}) ${pos - 12}%,
             rgba(255,246,225,${0.92 * p}) ${pos}%,
             rgba(255,140,40,${0.55 * p}) ${pos + 12}%,
             transparent ${pos + 26}%)`,
-        }}
-      />
+        }} />
+      </AbsoluteFill>
+    );
+  }
+
+  // 2. quemado de pelicula: mancha calida que se abre desde un lado
+  if (variant === "burn") {
+    return (
+      <AbsoluteFill style={{ pointerEvents: "none" }}>
+        <AbsoluteFill style={{ background: `rgba(30,16,6,${0.22 * p})` }} />
+        <AbsoluteFill style={{
+          background: `radial-gradient(circle at ${15 + t * 70}% ${40 + t * 20}%,
+            rgba(255,250,230,${0.95 * p}) 0%,
+            rgba(255,150,50,${0.7 * p}) ${8 + t * 22}%,
+            rgba(120,50,10,${0.35 * p}) ${25 + t * 30}%,
+            transparent 70%)`,
+        }} />
+      </AbsoluteFill>
+    );
+  }
+
+  // 3. barrido de papel de arriba a abajo (borde duro, como pasar una hoja)
+  if (variant === "wipeDown") {
+    const y = interpolate(t, [0, 1], [-15, 115]);
+    return (
+      <AbsoluteFill style={{ pointerEvents: "none" }}>
+        <AbsoluteFill style={{ background: `rgba(40,22,8,${0.25 * p})` }} />
+        <AbsoluteFill style={{
+          background: `linear-gradient(180deg,
+            transparent ${y - 14}%,
+            rgba(255,238,205,${0.88 * p}) ${y - 4}%,
+            rgba(214,140,60,${0.6 * p}) ${y}%,
+            transparent ${y + 12}%)`,
+        }} />
+      </AbsoluteFill>
+    );
+  }
+
+  // 4. destello seco de impacto: sin barrido, solo un golpe de luz muy corto
+  if (variant === "flashShake") {
+    const punch = interpolate(local, [0, 2, 7], [0, 1, 0],
+      { extrapolateRight: "clamp" });
+    return (
+      <AbsoluteFill style={{
+        pointerEvents: "none",
+        background: `rgba(255,244,222,${0.62 * punch})`,
+      }} />
+    );
+  }
+
+  // 5. barrido lateral oscuro (tinta), derecha -> izquierda
+  const x = interpolate(t, [0, 1], [115, -15]);
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      <AbsoluteFill style={{
+        background: `linear-gradient(90deg,
+          transparent ${x - 18}%,
+          rgba(38,22,10,${0.75 * p}) ${x - 6}%,
+          rgba(26,18,8,${0.85 * p}) ${x}%,
+          transparent ${x + 14}%)`,
+      }} />
     </AbsoluteFill>
   );
 };
@@ -266,7 +331,10 @@ export const ArchivoVideo = ({ manifest }) => {
 
       {/* flashes + burn del cierre */}
       <ImpactFlash frames={flashes} />
-      {sceneCuts.map((t, i) => <LightLeakCut key={`ll-${i}`} at={t} />)}
+      {/* cada corte con una transicion distinta del catalogo (rota por indice) */}
+      {sceneCuts.map((t, i) => (
+        <CutTransition key={`ct-${i}`} at={t} variant={TRANSITIONS[i % TRANSITIONS.length]} />
+      ))}
             <BurnFlash at={m.close.from} />
 
       {/* ============ SFX del motor (frame-exactos) ============ */}
