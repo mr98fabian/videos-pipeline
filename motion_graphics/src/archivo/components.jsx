@@ -2,6 +2,7 @@ import React from "react";
 import {
   AbsoluteFill,
   Img,
+  OffthreadVideo,
   interpolate,
   useCurrentFrame,
   Easing,
@@ -1100,6 +1101,31 @@ export const CTAStamp = ({ from, caseNo = 1, dur = 46, label = "NEW FILE TOMORRO
   );
 };
 
+
+// ============================================================================
+// EFECTO STOCK EN GREENSCREEN (26 jul 2026) — footage REAL (fuego/agua/humo/
+// etc, con alpha ya extraido por chromakey en stock_effects.py) compuesto sobre
+// la escena. Referencia: explainers estilo Vox que hacen esto en vez de generar
+// el efecto -- se ve mucho mas real porque ES real. blend "screen" para fuego/
+// chispas (aclara sin tapar), "lighten" para agua/humo/niebla.
+// ============================================================================
+const _FX_BLEND = { fire: "screen", sparks: "screen", explosion: "screen",
+  lightning: "screen", water: "lighten", smoke: "lighten", fog: "lighten",
+  rain: "lighten", snow: "lighten", dust: "lighten" };
+
+export const EffectOverlay = ({ src, category, from = 0, dur = 70, opacity = 0.85 }) => {
+  const frame = useCurrentFrame();
+  const local = frame - from;
+  if (local < 0 || local > dur) return null;
+  const fade = Math.min(interpolate(local, [0, 8], [0, 1], { extrapolateRight: "clamp" }),
+                         interpolate(local, [dur - 12, dur], [1, 0], { extrapolateLeft: "clamp" }));
+  return (
+    <AbsoluteFill style={{ opacity: opacity * fade, mixBlendMode: _FX_BLEND[category] || "screen",
+      pointerEvents: "none" }}>
+      <OffthreadVideo src={src} loop muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    </AbsoluteFill>
+  );
+};
 
 // ============================================================================
 // HOOK EN EL FRAME 0 (26 jul 2026) — la promesa ENTERA desde el primer frame.

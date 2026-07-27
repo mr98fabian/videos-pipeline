@@ -363,6 +363,25 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
         if at is None:
             at = max(int(s_["dur"] * 0.4), 6)
         s_["beats"]["action"] = {"type": atype, "at": at, "dur": 16}
+
+        # STOCK EFFECT (26 jul 2026): si la misma narracion mapea a una
+        # categoria de la biblioteca de greenscreen (fuego/agua/humo/etc.) y hay
+        # un clip cacheado, se compone footage REAL en vez de solo el FX
+        # dibujado -- referencia: explainers estilo Vox que hacen exactamente
+        # esto. Cae en silencio si no hay PIXABAY_API_KEY o la categoria esta
+        # vacia: nunca bloquea el render por falta de biblioteca.
+        try:
+            import stock_effects as _fx
+            cat = _fx.detect_effect(narr)
+            clip = _fx.pick_effect_clip(cat) if cat else None
+            if clip:
+                dest = pub / f"fx_{si}.webm"
+                shutil.copyfile(clip, dest)
+                s_["beats"]["effect"] = {"src": f"archivo/{slug}/fx_{si}.webm",
+                                          "at": max(at - 3, 0), "category": cat}
+        except Exception as e:
+            print(f"[archivo] efecto stock omitido escena {si}: {e}")
+
         # INTERACCION entre piezas: la mas grande ACTUA el verbo, las demas
         # REACCIONAN unos frames despues (causa -> efecto legible en pantalla).
         for k, p in enumerate(s_.get("parts") or []):
