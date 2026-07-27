@@ -16,6 +16,30 @@ Formato por entrada:
 
 ---
 
+## 2026-07-27 — Diagnóstico del derrumbe + guardas de publicación
+**Investigación/fuente:** YouTube Analytics día a día y por fuente de tráfico, tras notar que las vistas se habían desplomado
+**Cambio aplicado:** medido: el feed de Shorts pasó de 31.441 vistas (14-20 jul) a 2.123 (21-23 jul), −93%, con SEIS vídeos cayendo el mismo día — señal de canal, no de contenido. Única variable que cambió: publicación manual desde Studio (el mismo vídeo subido 4 veces + 10 vídeos publicados el 23 jul, cinco en hora y media). Acciones: 6 duplicados a privado (no borrados), calendario rehecho a 1/día 06:00 UTC, `_check_duplicate_title` en `youtube_api.py` que bloquea subir un título ya existente, y `BEST_HOUR = 6` medido con los datos del propio canal (mediana 1.234 vistas a las 05-07h vs 158 a las 20h)
+**Dónde se publicó:** 27-31 jul, uno diario a las 06:00 UTC
+**Qué esperamos ver:** recuperación progresiva de la distribución del feed a partir del día 3-7 si la causa era el patrón de publicación; si no se mueve en una semana, la causa era otra y hay que buscar en contenido
+
+## 2026-07-27 — Métricas de Shorts 2026 hardcodeadas + arreglo de duración
+**Investigación/fuente:** investigación de benchmarks 2026 (watch time desplazó al swipe rate como factor principal)
+**Cambio aplicado:** fijado en código porque son umbrales de reparto, no preferencias: suelo duro de 15s en `upload_video` sin escape posible (los Shorts por debajo dejaron de repartirse en 2026 aunque tengan 100% de retención — explica los ultracortos del canal con ~1.400 vistas y CERO subs), punto dulce 30-45s, retención >70% dispara reparto amplio. Además se corrigió el prompt, que pedía 110-130 palabras / 40-50s y producía vídeos de 40s contradiciendo el mínimo de 60s del canal → ahora 190-200 palabras
+**Dónde se publicó:** aplica desde el próximo vídeo generado
+**Qué esperamos ver:** vídeos de 60s reales; los ultracortos quedan bloqueados de raíz
+
+## 2026-07-27 — Loop obligatorio + plantilla Black Tom (la regla con mejor evidencia)
+**Investigación/fuente:** retención avanzada de los 4 últimos vídeos, comparando el que hace 156% de reproducción contra los que no
+**Cambio aplicado:** el vídeo de Black Tom sostiene 3,76 → 2,89 de ratio de audiencia (se ve ~3 veces entero); Orden 227 cae a 0,95 y Auschwitz a 0,08. La estructura de los tres era casi idéntica, así que la diferencia son tres cosas, ahora reglas duras en el prompt y en la skill: (1) ancla en un ICONO famoso reconocible al instante, (2) consecuencia SIGUE VISIBLE HOY, (3) loop léxico y visual — última frase con las mismas palabras del gancho y último `search_term` encadenando con el primero. Corolario: retirado el cierre de franquicia (`CLOSE_TAIL = 0`), que ocupaba 3,7s tras la última palabra anunciando el final justo donde el bucle debe ser invisible
+**Dónde se publicó:** aplica desde el próximo guion; validado en el vídeo de la Torre Eiffel (primera y última frase idénticas)
+**Qué esperamos ver:** más vídeos con reproducción >100%, que es la señal de retención más fuerte que premia Shorts
+
+## 2026-07-27 — Los 2 primeros segundos + capa visual del motor
+**Investigación/fuente:** "se quedaron para mirar" 43,9% en Studio (por debajo del 60% donde colapsa el reparto) + benchmarks de gancho 2026 + análisis de tres canales de motion graphics con Remotion
+**Cambio aplicado:** sin cold-open (`COLD_FRAMES = 0`) porque los benchmarks son explícitos en que no debe haber intro/logo/música antes de la voz; frame 0 en movimiento (escena 1 abre en ×1.34 y se abre en 0,5s, un frame estático es objetivo de scroll); promesa escrita completa desde el frame 0 vía `HookText` (el caption karaoke aún no ha dicho nada cuando el espectador ya decidió). Capa visual: 6 transiciones de corte rotativas en vez de una sola repetida, boil de fondo (jitter de 1-2px que simula animación a mano), y biblioteca de efectos greenscreen reales (fuego/agua/humo/etc, 10 categorías desde Pixabay, chromakey a alpha, cacheadas de por vida) que se insertan solas según lo que narre cada escena. Se probó y se retiró la sombra proyectada: sobre el papel claro salía como un borrón
+**Dónde se publicó:** aplica desde el próximo vídeo generado
+**Qué esperamos ver:** "se quedaron para mirar" subiendo del 43,9% hacia el 60-70%; es la métrica que decide si el vídeo se reparte
+
 ## 2026-07-23 — MOTOR "ARCHIVO VIVO": giro visual 180° completo (Remotion)
 **Investigación/fuente:** rechazo del usuario al look slideshow + entrevista de gustos (collage documental + vector animado + cartoon vivo, sepia evolucionado, ritmo punchy) + análisis video-vox/Extra History/repos Remotion oficiales
 **Cambio aplicado:** motor completo en `motion_graphics/src/archivo/` + `archivo_engine.py` + `visual_cache.py`: tablero pergamino sin blur, sticker troquelado vs foto clavada (regla por cobertura rembg 0.08), censura CLASSIFIED que se rasga, hilo rojo de conspiración, zoom-evidencia, impact frames, flips 3D, fichas de personaje, globo 2.5D, latido ambiente, mapa antiguo vivo (arrugándose), cold-open censurado, typewriter, SUBSCRIBE stamp, cierre CASE #N + share-card, captions cinéticos con timestamps reales del TTS. Skills oficiales de Remotion instaladas. Test: Dollfuss regenerado completo (63s) con costo API cero
