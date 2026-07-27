@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Audio, Sequence, staticFile, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, Sequence, staticFile, interpolate, useCurrentFrame, Easing } from "remotion";
 import {
   Board,
   Backdrop,
@@ -48,25 +48,40 @@ import {
 const STAGE = { x: 50, y: LANES.safeTop + 90, w: 980, h: 1080 };
 const PART_GROW = 1.15; // las piezas sueltas se leen chicas: se agrandan un poco
 
-// LIGHT LEAK EN CORTES DE ESCENA (27 jul 2026, ref. tecnica de reels virales):
-// barrido diagonal calido que revela en la primera mitad y se retrae en la
-// segunda, colocado justo en el corte -- suaviza el salto entre escenas sin
-// acortar el timeline ni meter una transicion lenta (regla del canal: cortes
-// duros, nunca fundidos). Se ve, pero dura poco (14 frames = ~0,46s).
-const LightLeakCut = ({ at, dur = 14 }) => {
+// LIGHT LEAK EN CORTES DE ESCENA (27 jul 2026, v2 tras comprobar que no se
+// veia): el "screen" blend de la v1 desaparecia porque las tarjetas del motor
+// son de PAPEL CASI BLANCO -- blanco screen sobre blanco no cambia nada. Un
+// leak tiene que verse SIEMPRE, sin importar cuan clara sea la escena debajo.
+// Solucion: se OSCURECE el cuadro primero (blend normal, no screen) para tener
+// contraste, y encima se pone el nucleo caliente. Contra cualquier fondo, claro
+// u oscuro, esto SI se lee. Sigue siendo corto (18f = 0,6s), un barrido que
+// cruza de lado a lado, no un fundido lento.
+const LightLeakCut = ({ at, dur = 18 }) => {
   const frame = useCurrentFrame();
   const local = frame - at;
   if (local < 0 || local > dur) return null;
   const half = dur / 2;
-  const p = local < half ? local / half : 1 - (local - half) / half;
+  const p = local < half
+    ? interpolate(local, [0, half], [0, 1], { easing: Easing.out(Easing.cubic) })
+    : interpolate(local, [half, dur], [1, 0], { easing: Easing.in(Easing.cubic) });
+  // el nucleo cruza de -20% a 120% del ancho: entra y sale de cuadro
+  const pos = interpolate(local, [0, dur], [-20, 120]);
   return (
-    <AbsoluteFill
-      style={{
-        background: `linear-gradient(115deg, transparent 20%, rgba(255,214,150,${0.55 * p}) 48%, rgba(255,255,255,${0.75 * p}) 52%, rgba(255,214,150,${0.55 * p}) 56%, transparent 80%)`,
-        mixBlendMode: "screen",
-        pointerEvents: "none",
-      }}
-    />
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      {/* vela el cuadro un poco (normal blend, funciona sobre cualquier fondo) */}
+      <AbsoluteFill style={{ background: `rgba(40,22,8,${0.30 * p})` }} />
+      {/* nucleo caliente: naranja-blanco solido, normal blend -> visible aun sobre papel blanco */}
+      <AbsoluteFill
+        style={{
+          background: `linear-gradient(100deg,
+            transparent ${pos - 26}%,
+            rgba(255,140,40,${0.55 * p}) ${pos - 12}%,
+            rgba(255,246,225,${0.92 * p}) ${pos}%,
+            rgba(255,140,40,${0.55 * p}) ${pos + 12}%,
+            transparent ${pos + 26}%)`,
+        }}
+      />
+    </AbsoluteFill>
   );
 };
 
@@ -248,7 +263,7 @@ export const ArchivoVideo = ({ manifest }) => {
       {/* flashes + burn del cierre */}
       <ImpactFlash frames={flashes} />
       {sceneCuts.map((t, i) => <LightLeakCut key={`ll-${i}`} at={t} />)}
-      <BurnFlash at={m.close.from} />
+            <BurnFlash at={m.close.from} />
 
       {/* ============ SFX del motor (frame-exactos) ============ */}
       {m.coldOpen ? (
