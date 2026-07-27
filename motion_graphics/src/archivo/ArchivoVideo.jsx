@@ -48,6 +48,28 @@ import {
 const STAGE = { x: 50, y: LANES.safeTop + 90, w: 980, h: 1080 };
 const PART_GROW = 1.15; // las piezas sueltas se leen chicas: se agrandan un poco
 
+// LIGHT LEAK EN CORTES DE ESCENA (27 jul 2026, ref. tecnica de reels virales):
+// barrido diagonal calido que revela en la primera mitad y se retrae en la
+// segunda, colocado justo en el corte -- suaviza el salto entre escenas sin
+// acortar el timeline ni meter una transicion lenta (regla del canal: cortes
+// duros, nunca fundidos). Se ve, pero dura poco (14 frames = ~0,46s).
+const LightLeakCut = ({ at, dur = 14 }) => {
+  const frame = useCurrentFrame();
+  const local = frame - at;
+  if (local < 0 || local > dur) return null;
+  const half = dur / 2;
+  const p = local < half ? local / half : 1 - (local - half) / half;
+  return (
+    <AbsoluteFill
+      style={{
+        background: `linear-gradient(115deg, transparent 20%, rgba(255,214,150,${0.55 * p}) 48%, rgba(255,255,255,${0.75 * p}) 52%, rgba(255,214,150,${0.55 * p}) 56%, transparent 80%)`,
+        mixBlendMode: "screen",
+        pointerEvents: "none",
+      }}
+    />
+  );
+};
+
 const BurnFlash = ({ at }) => {
   // aproximacion de film-burn: barrido calido 8 frames en el corte al cierre
   const frame = useCurrentFrame();
@@ -189,6 +211,9 @@ export const ArchivoVideo = ({ manifest }) => {
   }
   flashes.push(m.close.from);
 
+  // corte de escena (no el primero: ahi no hay nada de que venir)
+  const sceneCuts = m.scenes.slice(1).map((s) => s.from);
+
   return (
     <AbsoluteFill style={{ background: "#1a1208" }}>
       {/* escenas */}
@@ -222,6 +247,7 @@ export const ArchivoVideo = ({ manifest }) => {
 
       {/* flashes + burn del cierre */}
       <ImpactFlash frames={flashes} />
+      {sceneCuts.map((t, i) => <LightLeakCut key={`ll-${i}`} at={t} />)}
       <BurnFlash at={m.close.from} />
 
       {/* ============ SFX del motor (frame-exactos) ============ */}
