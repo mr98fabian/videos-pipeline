@@ -397,7 +397,10 @@ def _claude_json_call(max_tokens: int, schema: dict, prompt: str) -> dict:
 
 def generate_script(topic: str) -> dict:
     log("script", f"Generando guion con {MODEL}...")
-    data = with_retries(_claude_json_call, 2000, SCRIPT_SCHEMA, SCRIPT_PROMPT.format(topic=topic))
+    # 2000 se quedaba corto (27 jul 2026): el prompt crecio mucho hoy (loop,
+    # plantilla Black Tom, reglas de hook) y el presupuesto de thinking
+    # adaptativo se comia todo el budget antes de escribir el bloque de texto
+    data = with_retries(_claude_json_call, 4000, SCRIPT_SCHEMA, SCRIPT_PROMPT.format(topic=topic))
     log("script", f"{len(data['script'].split())} palabras, {len(data['search_terms'])} search terms")
     return data
 
