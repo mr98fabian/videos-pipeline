@@ -60,6 +60,21 @@ USED_TOPICS_FILE = ROOT / "used_topics.json"
 
 MODEL = "claude-opus-4-8"
 DEFAULT_VOICE = "en-US-AndrewNeural"
+# Estilo visual FIJO del canal (27 jul 2026). Bug real: SCRIPT_SCHEMA nunca
+# tuvo un campo "style", asi que data.get("style") dependia de que Claude lo
+# inventara por su cuenta -- salio vacio en un video real y las imagenes
+# perdieron el sepia Nickelodeon. Segun CLAUDE.md esto NUNCA debe variar por
+# video, asi que ahora es una constante de codigo, no algo que el modelo decide.
+HIDDENFACTS_STYLE = (
+    "1990s Nickelodeon rubber-hose cartoon style, exaggerated comic-book "
+    "expressions with big unsettling eyes, thick wobbly hand-drawn black "
+    "outlines, snappy low-frame animation feel. Color palette: sepia, dusty "
+    "burnt yellow, aged parchment, dark brown shadows instead of pure black. "
+    "Heavy vintage film grain and scratched-film texture overlaid, retro "
+    "documentary aesthetic, slightly distorted, high contrast, hand-drawn "
+    "sketch look. No bright saturated colors. Only human characters, never "
+    "humanoid animals."
+)
 DEFAULT_RATE = "+8%"
 DEFAULT_CLIPS = 10  # ~4-5s/escena en un Short de 45s. Antes 5 (~9s/escena) -- muy
                     # por debajo del benchmark de retencion de 2-4s por corte
@@ -2882,7 +2897,7 @@ def main() -> int:
 
         clips = acquire_media(data["search_terms"], n_clips, durations,
                               out_dir, media_source=media_source, veo_hero_index=args.veo_hero,
-                              punch_index=args.punch_index, style=data.get("style"),
+                              punch_index=args.punch_index, style=data.get("style") or HIDDENFACTS_STYLE,
                               static=bool(data.get("caption_text")) or silent_card_mode,
                               hook_strong=hook_strong,
                               wan_hero_path=args.wan_hero)
