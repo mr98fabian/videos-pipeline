@@ -40,7 +40,12 @@ FPS = 30
 # quedarse se toma ANTES del segundo 1 y un frame estatico es objetivo de scroll.
 # La tarjeta CLASSIFIED + sting ocupaba 0,73s justo ahi. Poner >0 para volver.
 COLD_FRAMES = 0
-CLOSE_TAIL = 112  # frames de cierre tras terminar la voz (~3.7s)
+# CIERRE DE FRANQUICIA DESACTIVADO (27 jul 2026, pedido del usuario). La
+# tarjeta CASE #N / share-card / SUBSCRIBE ocupaba ~3,7s DESPUES de la ultima
+# palabra: le anuncia al espectador que el video termino justo donde queremos
+# que el bucle sea invisible. Ahora el video corta en seco con la ultima
+# palabra, para que el reinicio empalme con el frame 0. Poner >0 para volver.
+CLOSE_TAIL = 0
 
 
 def _run(cmd: list[str], cwd: Path | None = None, timeout: float = 900.0) -> None:

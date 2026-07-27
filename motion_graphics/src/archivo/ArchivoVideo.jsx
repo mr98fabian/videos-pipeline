@@ -238,7 +238,10 @@ export const ArchivoVideo = ({ manifest }) => {
         </Sequence>
       ))}
 
-      {/* cierre: mapa vivo + share card + case closed + subscribe */}
+      {/* CIERRE DESACTIVADO (27 jul 2026): la tarjeta CASE #N / share-card /
+          SUBSCRIBE anunciaba el final justo donde el bucle tiene que ser
+          invisible. Se renderiza solo si el manifest trae cola de cierre. */}
+      {m.durationInFrames > m.close.from ? (
       <Sequence from={m.close.from}>
         <Board camera={makeCamera([], [{ frame: 10, amp: 8 }, { frame: 34, amp: 7 }])}>
           <WrinkledMap src={staticFile("proof/europe_map.jpg")} opacity={0.55} />
@@ -247,6 +250,7 @@ export const ArchivoVideo = ({ manifest }) => {
           <SubscribeStamp from={44} x={60} y={1560} />
         </Board>
       </Sequence>
+      ) : null}
 
       {/* cold open al frente de todo */}
       {m.coldOpen ? (

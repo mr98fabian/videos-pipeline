@@ -296,29 +296,14 @@ export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, dr
   // en apertura: ya visible a tamano casi final, con un push de 1.10 -> 1.00
   // (velocidad maxima en el frame 0) en vez del 0.85 -> 1.00 del pop normal.
   const baseS = (opening ? 1.10 - 0.10 * pop(local, 14) : 0.85 + 0.15 * p) * a.scale;
-  // SOMBRA PROYECTADA (27 jul 2026, ref. tecnica de parallax en reels virales):
-  // el mismo recorte, oscurecido, aplastado y sesgado, clavado en el "suelo"
-  // justo bajo los pies. Es lo que vende que el sticker PISA la escena en vez
-  // de flotar pegado encima. Se mueve con el mismo swing/breath para que nunca
-  // se desalinee del cuerpo que la proyecta.
-  const shadowOpacity = 0.30 * (1 - Math.min(local / 6, 1) * 0 + 0); // visible desde que aterriza
+  // SOMBRA PROYECTADA RETIRADA (27 jul 2026): la version duplicaba el recorte,
+  // lo oscurecia y lo sesgaba bajo los pies, pero sobre el papel claro de la
+  // GroundCard salia como un borron sucio, no como una sombra ("se ve horrible").
+  // El troquelado (DIE_CUT) ya trae su propia sombra dura, que es el lenguaje
+  // visual correcto del canal: sticker recortado sobre papel, no figura 3D.
   return (
     <div style={{ position: "absolute", left: x, top: y + drift, width: w, height: h, perspective: 1200,
       translate: `${par.tx}px ${par.ty}px`, scale: `${par.sc}` }}>
-      <div
-        aria-hidden
-        style={{
-          position: "absolute", left: 0, top: "62%", width: "100%", height: "38%",
-          translate: `${offX + a.dx}px ${(offY + a.dy) * 0.15}px`,
-          transform: `skewX(-18deg) scaleY(0.42) rotate(${(tilt + a.rot) * 0.4}deg)`,
-          transformOrigin: "bottom center",
-          opacity: shadowOpacity,
-          filter: "brightness(0) blur(6px)",
-          pointerEvents: "none",
-        }}
-      >
-        <Img src={src} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-      </div>
       <div
         style={{
           width: "100%",

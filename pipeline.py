@@ -87,7 +87,7 @@ SCRIPT_SCHEMA = {
     "properties": {
         "script": {
             "type": "string",
-            "description": "Voiceover text, word-for-word, 110-130 words, no markdown. "
+            "description": "Voiceover text, word-for-word, 190-200 words, no markdown. "
                             "*** HARD RULE: NOTHING EXPLANATORY AFTER THE PAYOFF *** The payoff is "
                             "the sentence that delivers what the hook promised (the twist, the "
                             "result, the reveal). The moment it lands, the story is OVER for the "
@@ -150,7 +150,10 @@ SCRIPT_PROMPT = """\
 Create a viral YouTube Short script about: {topic}
 
 Context: personal-finance channel for a US/English-speaking audience. Assume 50% of
-viewers watch on mute (subtitles are burned in). Target 40-50 seconds of spoken content.
+viewers watch on mute (subtitles are burned in). Target 60-65 seconds of spoken content.
+DURACION MINIMA 60s: medido en este canal, edge-tts a +8% habla a ~3,15 wps, asi que
+190-200 palabras = 60-65s reales. Por debajo de 60s el video NO reparte igual y el
+guardrail de subida lo bloquea. 130 palabras NO alcanzan: dan 40s.
 
 Role: you are a scriptwriter whose Shorts consistently retain viewers past the 3-second mark.
 
@@ -228,7 +231,8 @@ Pick ONE of these proven angle templates to frame the topic (whichever fits best
 - "What if your ___ is ___?" — a provocative reframe grounded in a concrete number or rule
 
 Constraints:
-- 110-130 words. Conversational, spoken English. Fragments are fine.
+- 190-200 words (NO menos: 130 palabras dan 40s y el minimo del canal son 60s).
+  Conversational, spoken English. Fragments are fine.
 - Actionable and specific: real numbers, real rules, real examples.
 - NO markdown, NO emojis, NO "in this video", NO headers. Ready to voice as-is.
 - search_terms must be things a stock-footage site can match visually:
