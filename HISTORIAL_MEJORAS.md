@@ -16,6 +16,12 @@ Formato por entrada:
 
 ---
 
+## 2026-07-28 — Investigación: el largo faceless y la línea "dinero"
+**Investigación/fuente:** vídeo de automatización de YouTube (`a1zBbJ1A22k`, funnel de venta de una academia — la tesis es válida, las cifras de ingresos están infladas ~5x) + verificación de cada canal con vidIQ
+**Cambio aplicado:** ninguno en código todavía; es research validado con datos. Tres hallazgos: (1) los dos canales de referencia — `@behindthethroneofficial` (13,1k subs, 13 vídeos, 40-45 min, pico de 290k vistas, +182% vistas y +42% subs en 30d) y `@thedarkhorizonyt` (35,6k subs, 24 vídeos, 16 min, 265k de media) — usan EXACTAMENTE la plantilla Black Tom en largo: icono famoso + consecuencia brutal concreta ("Lincoln's First Lady — Locked in an Asylum by Her Own Son"), imágenes de stock, sin cara, cero Shorts. (2) El nicho de economía tiene el RPM más alto pero saturado como explicación pura: `@theforgottenfortunes` 33 vídeos → 915 vistas TOTALES, `@wheninhistorycreations` 32 vídeos → 1.300 de media. Lo que sí crece es el mismo material contado como relato: `@truthfinance0.1` 18 vídeos → 261k de media, +31% en 30d. (3) De ahí la línea "dinero" para HiddenFacts (Enron, crack del 29, Madoff, Weimar, Bre-X): misma fórmula, mismo motor, pero cae en el pool de anunciantes de finanzas
+**Dónde se publicó:** pendiente — decisión de formato largo sin tomar; la línea "dinero" se puede probar ya en Shorts con la fórmula actual
+**Qué esperamos ver:** si se hace largo, RPM de 4-10 USD frente al de Shorts y una vía de ingresos que no depende del feed; en la línea "dinero" dentro de Shorts, si los temas financieros retienen igual que los bélicos/espionaje
+
 ## 2026-07-27 — Diagnóstico del derrumbe + guardas de publicación
 **Investigación/fuente:** YouTube Analytics día a día y por fuente de tráfico, tras notar que las vistas se habían desplomado
 **Cambio aplicado:** medido: el feed de Shorts pasó de 31.441 vistas (14-20 jul) a 2.123 (21-23 jul), −93%, con SEIS vídeos cayendo el mismo día — señal de canal, no de contenido. Única variable que cambió: publicación manual desde Studio (el mismo vídeo subido 4 veces + 10 vídeos publicados el 23 jul, cinco en hora y media). Acciones: 6 duplicados a privado (no borrados), calendario rehecho a 1/día 06:00 UTC, `_check_duplicate_title` en `youtube_api.py` que bloquea subir un título ya existente, y `BEST_HOUR = 6` medido con los datos del propio canal (mediana 1.234 vistas a las 05-07h vs 158 a las 20h)
