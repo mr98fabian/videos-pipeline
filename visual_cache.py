@@ -91,6 +91,80 @@ def cached_cutout(src: Path, model: str | None = None) -> Path:
     return out
 
 
+# ============================================================================
+# RECORTE DE PLACA (28 jul 2026) — para las imagenes ch_<i>.png, que vienen con
+# el personaje solo sobre fondo plano.
+#
+# rembg/BiRefNet devuelve una SILUETA MACIZA: el contorno exterior sale limpio
+# pero los huecos interiores no se vacian. En la placa del general, el espacio
+# entre las piernas y bajo los faldones quedaba relleno con un pegote de fondo.
+# Eso es lo que se leia como "raro", no el borde.
+#
+# Contra fondo plano no hace falta una red: el fondo es la region conectada a
+# los BORDES del lienzo. Se rellena desde el borde y se corta ahi. Y esa es la
+# razon exacta de la pose en A: con brazos y piernas separados, el hueco toca
+# el borde y se vacia solo. Con los brazos pegados al cuerpo queda encerrado y
+# ni esto lo salva.
+#
+# OJO, medido y NO teorico (28 jul 2026): con las botas casi juntas el hueco
+# ENTRE LAS PIERNAS queda encerrado por el abrigo arriba y las botas abajo, no
+# toca ningun borde, y se quedaba relleno de blanco. Por eso la placa pide
+# postura abierta con hueco visible entre los pies. Vaciar cualquier region
+# interior del color de fondo NO es una alternativa: el pelo cano y los ojos
+# son blancos y saldrian agujereados.
+# ============================================================================
+PLATE_TOL = 34          # distancia al color de fondo que sigue contando como fondo
+PLATE_MIN_BG = 0.20     # menos fondo que esto = la imagen no es una placa
+PLATE_MAX_BG = 0.96     # mas que esto = se comio al personaje
+
+
+def plate_cutout(src: Path, tol: int = PLATE_TOL) -> Path | None:
+    """Recorta una placa de personaje vaciando el fondo conectado al borde.
+    Devuelve None si el resultado no es creible (la imagen no era una placa, o
+    el color del personaje se fundio con el fondo y el relleno se lo comio),
+    para que el llamante caiga a rembg."""
+    import numpy as np
+    from PIL import Image
+    from scipy import ndimage
+
+    src = Path(src)
+    out = CUTOUTS_DIR / f"{_sha1(src)}.plate{tol}.png"
+    if out.exists():
+        return out
+
+    im = Image.open(src).convert("RGB")
+    a = np.asarray(im).astype(np.int16)
+    # color de fondo = mediana de las cuatro esquinas (robusto a una esquina sucia)
+    corners = np.array([a[0, 0], a[0, -1], a[-1, 0], a[-1, -1]], dtype=np.int16)
+    bg = np.median(corners, axis=0)
+    near = (np.abs(a - bg).max(axis=2) <= tol)
+
+    lab, n = ndimage.label(near)
+    if n == 0:
+        return None
+    # etiquetas presentes en cualquier borde -> fondo real; una region interior
+    # del mismo color (el pelo blanco del general) NO toca el borde y se queda
+    edge = np.concatenate([lab[0, :], lab[-1, :], lab[:, 0], lab[:, -1]])
+    keep = np.unique(edge[edge > 0])
+    if keep.size == 0:
+        return None
+    bg_mask = np.isin(lab, keep)
+
+    frac = float(bg_mask.mean())
+    if not (PLATE_MIN_BG <= frac <= PLATE_MAX_BG):
+        return None
+
+    alpha = np.where(bg_mask, 0, 255).astype(np.uint8)
+    # 1px de erosion + suavizado: deja el borde del trazo sin halo del fondo
+    alpha = ndimage.grey_erosion(alpha, size=(3, 3))
+    alpha = ndimage.gaussian_filter(alpha, sigma=0.6)
+
+    rgba = np.dstack([np.asarray(im), alpha])
+    out.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(rgba, "RGBA").save(out)
+    return out
+
+
 COVERAGE_THRESHOLD = 0.08  # medido 23 jul 2026: cara valida=0.16, grupo roto=0.02
 
 

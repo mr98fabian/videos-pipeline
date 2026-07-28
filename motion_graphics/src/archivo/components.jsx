@@ -244,8 +244,14 @@ const actionMotion = (action, local) => {
     case "topple":
     case "fall":
     case "collapse":
-      z.rot = s * amp * interpolate(al, [0, dur], [0, 82], { extrapolateRight: "clamp", easing: Easing.bezier(0.6, 0, 0.9, 0.35) });
-      z.dy = amp * interpolate(al, [0, dur], [0, 70], { extrapolateRight: "clamp" });
+      // 82 grados dejaba la figura HORIZONTAL y clavada ahi el resto de la
+      // escena (extrapolateRight clamp): se leia como render roto, no como
+      // caida, y ademas tapaba la marginalia de la esquina inferior. Ahora
+      // vuelca con rebote y se queda inclinada 34 grados: se entiende que la
+      // tumbaron y el sujeto sigue siendo legible. 27 jul 2026.
+      z.rot = s * amp * interpolate(al, [0, dur * 0.55, dur], [0, 46, 34],
+        { extrapolateRight: "clamp", easing: Easing.bezier(0.6, 0, 0.9, 0.35) });
+      z.dy = amp * interpolate(al, [0, dur * 0.55, dur], [0, 34, 26], { extrapolateRight: "clamp" });
       z.origin = "bottom center";
       break;
     case "flee":
@@ -270,7 +276,7 @@ const actionMotion = (action, local) => {
   return z;
 };
 
-export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, driftAmp = 5, action = null, camera = null, depth = 1.0, opening = false }) => {
+export const Cutout = ({ src, video = null, from, x, y, w, h, fromDir = "bottom", rot = -2, driftAmp = 5, action = null, camera = null, depth = 1.0, opening = false }) => {
   const frame = useCurrentFrame();
   const local = frame - from;
   if (local < 0) return null;
@@ -315,7 +321,18 @@ export const Cutout = ({ src, from, x, y, w, h, fromDir = "bottom", rot = -2, dr
           transformOrigin: a.origin === "center" ? "bottom center" : a.origin,
         }}
       >
-        <Img src={src} style={{ width: "100%", height: "100%", objectFit: "contain", filter: DIE_CUT }} />
+        {/* PERSONAJE ANIMADO (28 jul 2026): si el manifest trae un clip con
+            alfa (esqueleto retargeteado, ver animate_engine.py) se pinta ese
+            en vez del PNG quieto. Mismo troquelado, misma vida secundaria y
+            mismo parallax encima -- solo cambia la fuente del pixel.
+            `transparent` es obligatorio: sin el Remotion aplana el alfa sobre
+            negro y el personaje entra como un rectangulo. */}
+        {video ? (
+          <OffthreadVideo src={video} loop muted transparent
+            style={{ width: "100%", height: "100%", objectFit: "contain", filter: DIE_CUT }} />
+        ) : (
+          <Img src={src} style={{ width: "100%", height: "100%", objectFit: "contain", filter: DIE_CUT }} />
+        )}
       </div>
     </div>
   );
@@ -1120,9 +1137,13 @@ export const CTAStamp = ({ from, caseNo = 1, dur = 46, label = "NEW FILE TOMORRO
 // el efecto -- se ve mucho mas real porque ES real. blend "screen" para fuego/
 // chispas (aclara sin tapar), "lighten" para agua/humo/niebla.
 // ============================================================================
+// humo/polvo/niebla/lluvia/nieve llegan con el RGB INVERTIDO desde
+// stock_effects.py (ver DARK_ON_PAPER): son blancos en origen y sobre el papel
+// casi blanco del tablero cualquier blend que aclare los borra. Invertidos +
+// multiply se leen como sombra sucia, que es el lenguaje sepia del canal.
 const _FX_BLEND = { fire: "screen", sparks: "screen", explosion: "screen",
-  lightning: "screen", water: "lighten", smoke: "lighten", fog: "lighten",
-  rain: "lighten", snow: "lighten", dust: "lighten" };
+  lightning: "screen", water: "lighten", smoke: "multiply", fog: "multiply",
+  rain: "multiply", snow: "multiply", dust: "multiply" };
 
 export const EffectOverlay = ({ src, category, from = 0, dur = 70, opacity = 0.85 }) => {
   const frame = useCurrentFrame();
@@ -1133,7 +1154,10 @@ export const EffectOverlay = ({ src, category, from = 0, dur = 70, opacity = 0.8
   return (
     <AbsoluteFill style={{ opacity: opacity * fade, mixBlendMode: _FX_BLEND[category] || "screen",
       pointerEvents: "none" }}>
-      <OffthreadVideo src={src} loop muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      {/* transparent: sin esto Remotion aplana el alpha sobre negro y el efecto
+          entra como un rectangulo opaco encima de la escena (27 jul 2026) */}
+      <OffthreadVideo src={src} loop muted transparent
+        style={{ width: "100%", height: "100%", objectFit: "cover" }} />
     </AbsoluteFill>
   );
 };

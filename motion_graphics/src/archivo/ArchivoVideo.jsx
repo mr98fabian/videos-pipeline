@@ -231,6 +231,7 @@ const SceneBlock = ({ scene, index, caseBase = 1, opening = false }) => {
         ) : (
         <Cutout
           src={staticFile(scene.fg)}
+          video={scene.fgVideo ? staticFile(scene.fgVideo) : null}
           from={0}
           x={50}
           y={LANES.safeTop + 90}
@@ -273,7 +274,8 @@ const SceneBlock = ({ scene, index, caseBase = 1, opening = false }) => {
       {b.action ? <ActionFX action={b.action} from={0} cx={fxAt.x} cy={fxAt.y} /> : null}
       {b.evidence ? <EvidencePhoto src={staticFile(b.evidence.src)} from={b.evidence.at} year={b.evidence.year} side={index % 2 === 0 ? "right" : "left"} /> : null}
       {b.cta ? <CTAStamp from={b.cta.at} caseNo={caseBase} dur={b.cta.dur ?? 46} label={b.cta.label} /> : null}
-      {b.effect ? <EffectOverlay src={staticFile(b.effect.src)} category={b.effect.category} from={b.effect.at} /> : null}
+      {b.effect ? <EffectOverlay src={staticFile(b.effect.src)} category={b.effect.category}
+        from={b.effect.at} dur={b.effect.dur ?? 70} opacity={b.effect.opacity ?? 0.85} /> : null}
     </Board>
   );
 };

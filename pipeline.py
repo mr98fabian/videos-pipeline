@@ -75,6 +75,115 @@ HIDDENFACTS_STYLE = (
     "sketch look. No bright saturated colors. Only human characters, never "
     "humanoid animals."
 )
+# ============================================================================
+# PLACAS SEPARADAS (28 jul 2026) — personaje y fondo se generan como DOS
+# imagenes distintas por escena, no una sola.
+#
+# Por que: todo lo que el motor hace despues consiste en SEPARAR cosas que la
+# imagen trae juntas, y cada solape en la imagen es una separacion que ya no se
+# puede hacer. Tres fallos medidos que salen del mismo sitio:
+#   - 3 de 10 escenas del ultimo render dieron "recorte fallo" y cayeron a foto
+#     clavada: BiRefNet no separa al sujeto de un fondo cargado.
+#   - cutout_parts() necesita figuras que no se toquen para partirlas.
+#   - el esqueleto (AnimatedDrawings) no encuentra la articulacion si el brazo
+#     esta pegado al torso; el miembro se anima como parte del tronco.
+# Contra fondo blanco plano y pose en A, los tres funcionan.
+#
+# Pose en A y no en T: la T se lee como maniqui si un fotograma la muestra sin
+# animar, y el retargeter maneja las dos igual de bien.
+# ============================================================================
+CHARACTER_PLATE = (
+    "Full body from head to feet, entire figure inside the frame with margin, "
+    "nothing cropped. Relaxed A-pose: arms hanging away from the torso at about "
+    "45 degrees, hands clearly separated from the body, legs apart in a wide "
+    "stance with a clear visible gap of background between the two feet, feet "
+    "never touching each other. "
+    "No limb touching or overlapping another limb or the torso. Facing the "
+    "viewer, centered, standing upright. Plain flat pure white background, "
+    "no floor, no shadow, no ground line, no props, no scenery, no other "
+    "characters. One single character only."
+)
+BACKGROUND_PLATE = (
+    "Empty scene with NO people, NO characters, NO figures anywhere. "
+    "Environment only."
+)
+# El estilo del canal pide grano de pelicula, textura rayada y sombras: sobre
+# la placa eso es basura que hay que recortar despues. El motor YA pone el
+# grano, el papel y la sombra troquelada (DIE_CUT) por encima.
+# Medido en la placa del general (28 jul 2026): el modelo pinto una sombra
+# casi negra (43,11,9) entre los faldones. No es un fallo del recorte -- el
+# hueco entre las piernas venia relleno de negro en el PNG original, y ningun
+# recorte por color lo puede quitar sin comerse las botas.
+PLATE_STYLE = (
+    "1990s Nickelodeon rubber-hose cartoon style, exaggerated comic-book "
+    "expressions with big unsettling eyes, thick wobbly hand-drawn black "
+    "outlines. Color palette: sepia, dusty burnt yellow, aged parchment, dark "
+    "brown. CLEAN FLAT LINE ART: flat solid fills, no film grain, no scratches, "
+    "no paper texture, no vignette, no gradient, no cast shadow, no shadow "
+    "under the feet, no ground line, no floor. The space between the arms and "
+    "the body and between the legs must be pure background color, never filled "
+    "with shadow or dark shapes. Only human characters, never humanoid animals."
+)
+# sustantivos de persona con los que se deriva la placa de personaje cuando el
+# guion es escrito a mano y no trae 'character_terms'
+_PERSON_RE = re.compile(
+    r"\b(?:a|an|one|two|three|the|several|)\s*(?:[a-z-]+\s+){0,3}?"
+    r"(man|men|woman|women|person|people|soldier|soldiers|officer|officers|"
+    r"general|generals|detective|detectives|guard|guards|worker|workers|"
+    r"handyman|policeman|policemen|prisoner|prisoners|spy|spies|king|queen|"
+    r"boy|girl|scientist|sailor|sailors|tourist|tourists|crowd)\b",
+    re.I,
+)
+
+
+# notas de encuadre que el guion arrastra y que no pintan nada en ninguna placa
+_CAMERA_RE = re.compile(
+    r",\s*(?:full figures?(?: apart)?|half figures?|close ?ups?|standing apart"
+    r"|full figures? apart)\b.*$", re.I)
+# el participio (-ing) parte la frase: delante queda QUIEN, detras DONDE
+_GERUND_RE = re.compile(
+    r"\b(\w+ing)\s+(?:inside|into|in front of|at|on|in|under|near|behind|"
+    r"outside|across|through|over|beside|down|along|through)\s+(.+)$", re.I)
+
+
+def _plate_terms(term: str, char_term: str | None) -> tuple[str, str | None]:
+    """(prompt de fondo, prompt de personaje o None) para una escena.
+
+    Con `character_terms` del guion se respeta tal cual: es lo que Claude
+    escribio ya separado. Sin el (guiones a mano) se parte el search_term por
+    el participio -- delante esta QUIEN y detras DONDE:
+      "a man in workman overalls hiding inside a dark storage closet"
+        -> personaje "a man in workman overalls" / fondo "a dark storage closet"
+    Partir mal es peor que no partir: un fondo que sigue pidiendo gente mas un
+    "NO people" pegado detras es un prompt que se contradice, y el modelo hace
+    lo que le da la gana.
+    """
+    clean = _CAMERA_RE.sub("", (term or "").strip()).strip(" ,")
+    has_person = bool(_PERSON_RE.search(clean))
+    if not has_person and not char_term:
+        return term, None            # escena sin personaje: una sola placa
+
+    place = None
+    g = _GERUND_RE.search(clean)
+    if g:
+        cand = g.group(2).split(" with ")[0].strip(" ,.")
+        # si el "sitio" sigue nombrando gente ("across from two policemen"),
+        # el corte esta mal: un fondo que pide personas y a la vez dice
+        # "NO people" es un prompt que se contradice
+        if cand and not _PERSON_RE.search(cand):
+            place = cand
+
+    if char_term:
+        # Claude ya escribio el personaje aparte; el fondo es el sitio si se
+        # pudo aislar, y si no el termino tal cual
+        return f"{place or clean}, {BACKGROUND_PLATE}", char_term
+    if not place:
+        # hay persona pero no se puede separar el sitio -> no se parte: mejor
+        # una placa correcta que dos mal cortadas
+        return term, None
+    return f"{place}, {BACKGROUND_PLATE}", clean[:g.start()].strip(" ,")
+
+
 DEFAULT_RATE = "+8%"
 DEFAULT_CLIPS = 10  # ~4-5s/escena en un Short de 45s. Antes 5 (~9s/escena) -- muy
                     # por debajo del benchmark de retencion de 2-4s por corte
@@ -124,6 +233,21 @@ SCRIPT_SCHEMA = {
                             "separately and makes them ACT on each other (one shoves, the other "
                             "topples), which only works if they do not overlap in the image.",
         },
+        "character_terms": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "PARALLEL to search_terms, exactly the same length. For a scene "
+                            "whose subject is a PERSON, put the character alone here: who they "
+                            "are and what they wear, nothing else -- 'a museum handyman in "
+                            "workman overalls', 'an elderly Prussian general in dress uniform'. "
+                            "No place, no action, no props, no other characters: the engine adds "
+                            "the pose and the plain background, and the ACTION comes from the "
+                            "skeleton animation, not from the drawing. For a scene with no person "
+                            "(an empty room, a document, a railway track) put an EMPTY STRING. "
+                            "The character is drawn on its own plate and composited over the "
+                            "background plate, so anything that touches the figure in the image "
+                            "can never be separated again.",
+        },
         "title": {"type": "string", "description": "YouTube Shorts title, <90 chars, curiosity-driven"},
         "description": {"type": "string", "description": "YouTube description with 3-5 hashtags at the end"},
         "music_mood": {
@@ -142,23 +266,51 @@ SCRIPT_SCHEMA = {
                             "on, not a subtitle.",
         },
     },
-    "required": ["script", "search_terms", "title", "description", "music_mood", "hook_card"],
+    "required": ["script", "search_terms", "character_terms", "title", "description",
+                 "music_mood", "hook_card"],
     "additionalProperties": False,
 }
+
+# NOTA (28 jul 2026): el canal de finanzas personales que este prompt describia
+# esta en pausa -- se retoma en el futuro, no ahora. Guardado abajo en
+# FINANCE_SCRIPT_PROMPT_CONTEXT para no perder el trabajo. Foco actual: SOLO
+# HiddenFacts (historia oculta/engaños/espionaje).
+FINANCE_SCRIPT_PROMPT_CONTEXT = """\
+Context: personal-finance channel for a US/English-speaking audience.
+Voice: second person throughout ("you", "your paycheck", "your bank account") — never
+"we" or "I". This is proven to retain viewers better than third-person narration.
+Angle templates:
+- "Why can't you ___?" — explains a universal money frustration through a real rule or bias
+- "You never noticed that ___" — reveals a hidden mechanic in something the viewer does weekly
+- "The ___ effect" — names a real, citable phenomenon and mirrors it onto the viewer's habits
+- "What if your ___ is ___?" — a provocative reframe grounded in a concrete number or rule
+"""
 
 SCRIPT_PROMPT = """\
 Create a viral YouTube Short script about: {topic}
 
-Context: personal-finance channel for a US/English-speaking audience. Assume 50% of
-viewers watch on mute (subtitles are burned in). Target 60-65 seconds of spoken content.
-DURACION MINIMA 60s: medido en este canal, edge-tts a +8% habla a ~3,15 wps, asi que
-190-200 palabras = 60-65s reales. Por debajo de 60s el video NO reparte igual y el
-guardrail de subida lo bloquea. 130 palabras NO alcanzan: dan 40s.
+Context: HiddenFacts channel — hidden history, hoaxes, and espionage for a US/English-
+speaking audience. Assume 50% of viewers watch on mute (subtitles are burned in). Target
+60-65 seconds of spoken content. DURACION MINIMA 60s: medido en este canal, edge-tts a +8%
+habla a ~3,15 wps, asi que 190-200 palabras = 60-65s reales. Por debajo de 60s el video NO
+reparte igual y el guardrail de subida lo bloquea. 130 palabras NO alcanzan: dan 40s.
 
 Role: you are a scriptwriter whose Shorts consistently retain viewers past the 3-second mark.
 
-Voice: second person throughout ("you", "your paycheck", "your bank account") — never
-"we" or "I". This is proven to retain viewers better than third-person narration.
+Voice: third person, narrating real events — never "we" or "I", and never second-person
+finance-style address ("your paycheck"). The viewer is watching history unfold, not being
+lectured about their own life.
+
+APPROVED EXCEPTION — IMMERSIVE ANGLE (28 jul 2026). If the topic has ONE real, named,
+verifiable person whose situation can be handed to the viewer without inventing anything,
+write the WHOLE script in second person and put the viewer inside it: "you eat first,
+every day, and you do not know if today is the day". The point is that the stakes land in
+the viewer's own body instead of a stranger's — a third-person witness feels nothing.
+This does NOT replace the Black Tom template, it combines with it: still a famous anchor,
+still a consequence visible today, still the loop.
+Use it ONLY when the person is real and documented (Hitler's food taster, yes; "a soldier",
+no). If the event has no single clear protagonist, use standard third person. Never invent
+a person or a sensation to force this angle.
 
 Rhythm (follow this cadence, it is not optional): short sentence. Short sentence. One
 longer sentence that adds depth or nuance. Short sentence. A question, roughly every
@@ -223,35 +375,76 @@ Instructions:
    sentence. It should promise the shape of the story without giving the twist away, so a
    viewer who only reads the card (sound off, 2 seconds) still feels compelled to keep
    watching.
+9. title AND hook_card MUST both be phrased as an unresolved question, not a declarative
+   statement -- "Why did nobody stop the KGB assassin outside a London tube station?", not
+   "The KGB assassinated a man outside a London tube station." A statement resolves the
+   curiosity gap in the title itself, so the brain has nothing left open to chase; a
+   question opens it and the viewer has to watch to close it (this is why the wording does
+   not have to be the literal word "why" -- "how is it possible that...", "what nobody
+   tells you about..." open the same loop -- but it must read as a question, not a fact).
+   This is independent of the Black Tom template above: Black Tom validates WHICH topic
+   (famous icon + consequence visible today), this rule validates HOW the title/hook_card
+   is phrased. Apply both together. The spoken script can still open by stating the setup
+   (per rule 1) -- this rule is about title and hook_card specifically, the two things a
+   viewer reads before deciding whether to watch at all.
+   *** A BARE QUESTION IS NOT ENOUGH (curiosity research, 28 jul 2026) *** curiosity is an
+   information gap, and a gap needs something on BOTH sides -- what the viewer already
+   knows, and what's missing. A question with no prior fact primed reads as trivia, not a
+   gap, because there is nothing to feel deprived of yet. Every title/hook_card MUST prime
+   one concrete fact BEFORE or WITHIN the question, so the question opens a gap instead of
+   asking one out of nowhere: weak "Why did nobody stop the KGB assassin?" (no prime) vs
+   strong "The KGB assassin walked past a police officer to do it. Why did nobody stop
+   him?" (the officer is the prime; the question is what it's missing). The fact does the
+   priming even when the sentence stays a question: "How did a man the FBI followed for a
+   decade die free?" primes "FBI followed him for a decade" before asking.
+10. The FIRST search_term (and its Wan/hero framing) must show the FAMOUS ICON ITSELF in a
+    recognizable, unmistakable framing -- not a contextual establishing shot (a hallway, a
+    document, a crowd) that requires explanation before it reads. A viewer's brain either
+    recognizes a face/icon within about 100ms or it doesn't register in time to matter --
+    an unfamiliar establishing shot burns that entire window for nothing. If the topic's
+    icon cannot be shown instantly recognizable in frame one, it fails rule 9 of the Black
+    Tom template above (find a different angle) rather than opening on a vague shot.
 
-Pick ONE of these proven angle templates to frame the topic (whichever fits best):
-- "Why can't you ___?" — explains a universal money frustration through a real rule or bias
-- "You never noticed that ___" — reveals a hidden mechanic in something the viewer does weekly
-- "The ___ effect" — names a real, citable phenomenon and mirrors it onto the viewer's habits
-- "What if your ___ is ___?" — a provocative reframe grounded in a concrete number or rule
+*** PLANTILLA UNICA DEL CANAL: replicar Black Tom *** Es el unico video con re-watch real
+(3,76 -> 2,89) y de el se copian TRES cosas, no solo el loop: (1) el ancla es un ICONO
+FAMOSO que el espectador reconoce al instante y puede ver hoy (la Estatua de la Libertad),
+no un personaje historico que hay que presentar; (2) la consecuencia SIGUE VISIBLE HOY --
+la antorcha lleva cerrada desde entonces -- asi que el espectador puede comprobarlo el
+mismo ('ever since', 'to this day', 'still closed'); (3) el loop lexico y visual. Si el
+tema no tiene un icono reconocible con una huella visible hoy, buscar otro angulo del
+mismo hecho hasta encontrarlo -- no escribir el guion sin el.
 
 Constraints:
 - 190-200 words (NO menos: 130 palabras dan 40s y el minimo del canal son 60s).
   Conversational, spoken English. Fragments are fine.
 - Actionable and specific: real numbers, real rules, real examples.
 - NO markdown, NO emojis, NO "in this video", NO headers. Ready to voice as-is.
+- TWO PLATES PER SCENE. A scene with a person is drawn as two separate images:
+  the BACKGROUND (search_terms[i], the place with nobody in it) and the CHARACTER
+  (character_terms[i], the person alone). Write them so neither needs the other:
+  the background must read as a finished empty scene, and the character must read
+  as a standing figure with no context. Everything the engine does afterwards --
+  cutting the figure out, splitting two figures apart, rigging a skeleton -- is
+  separating things, and anything drawn touching cannot be separated later.
+  Put the ACTION in the script, not in character_terms: the movement comes from
+  the skeleton, so 'a handyman in workman overalls' is right and 'a handyman
+  climbing out of a closet' is wrong.
 - search_terms must be things a stock-footage site can match visually:
-  "person counting dollar bills" yes, "financial freedom" no. One term per scene,
-  in the order the scenes should appear.
+  "soldier reading a telegram by candlelight" yes, "the weight of betrayal" no. One
+  term per scene, in the order the scenes should appear.
 - description: open with a 1-2 sentence hook mirroring the script's tone, one sentence
   teasing the reframe, then 3-5 hashtags on their own line at the end.
 """
 
 IDEAS_PROMPT = """\
-Generate 5 viral YouTube Shorts topic ideas for a personal-finance channel (US/English
-audience). Use these proven angle templates, picking whichever fits each idea best:
-- "Why can't you ___?" — a universal money frustration explained through a real rule/bias
-- "You never noticed that ___" — a hidden mechanic in a weekly financial habit
-- "The ___ effect" — a real, citable phenomenon mirrored onto money behavior
-- "What if your ___ is ___?" — a provocative reframe grounded in a concrete number/rule
+Generate 5 viral YouTube Shorts topic ideas for HiddenFacts (US/English audience) — hidden
+history, hoaxes, and espionage. Each idea must fit the Black Tom template: a famous icon
+the viewer recognizes instantly, whose consequence is still visible today. If an idea has
+no such anchor, find a different angle on the same event instead of proposing it without one.
 
-Each idea must be a short, curiosity-driven title under 70 characters, specific enough
-to script in under 130 words (one clear rule, mechanism, or number — not a broad theme).
+Each idea must be a short, curiosity-driven title phrased as an unresolved question (see
+title/hook_card rule in SCRIPT_PROMPT), under 70 characters, specific enough to script in
+190-200 words (one clear event, not a broad theme).
 Avoid topics already in this list: {existing_topics}
 """
 
@@ -581,6 +774,26 @@ def generate_audio(script: str, voice: str, rate: str, out_dir: Path) -> tuple[P
         trimmed.replace(mp3_path)
     except Exception as e:
         log("audio", f"trim de silencio final omitido: {e}")
+
+    # Recorta el silencio de ARRANQUE (28 jul 2026, investigacion de atencion):
+    # edge-tts deja 100-300ms de silencio antes de la primera palabra. La
+    # ventana de orientacion visual/auditiva es de ~100ms -- ese silencio
+    # regala la ventana entera antes de que suene nada. Se recorta el audio Y
+    # se restan los ms recortados a CADA timestamp de palabra, para que subs y
+    # medios sigan sincronizados.
+    lead_trimmed = out_dir / "voice_lead.mp3"
+    try:
+        run(["ffmpeg", "-y", "-i", str(mp3_path), "-af",
+             "silenceremove=start_periods=1:start_silence=0.1:start_threshold=-45dB",
+             str(lead_trimmed)])
+        cut = ffprobe_duration(mp3_path) - ffprobe_duration(lead_trimmed)
+        if 0 < cut < 1.0:  # guarda de sanidad: nunca recortar mas de 1s
+            words = [(max(t - cut, 0.0), max(t2 - cut, 0.0), w) for t, t2, w in words]
+            lead_trimmed.replace(mp3_path)
+        else:
+            lead_trimmed.unlink(missing_ok=True)
+    except Exception as e:
+        log("audio", f"trim de silencio inicial omitido: {e}")
 
     dur = ffprobe_duration(mp3_path)
     log("audio", f"{dur:.1f}s de audio, {len(words)} palabras")
@@ -1325,7 +1538,8 @@ def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
                   out_dir: Path, media_source: str, veo_hero_index: int | None = None,
                   punch_index: int | None = None, style: str | None = None,
                   static: bool = False, hook_strong: bool = False,
-                  wan_hero_path: Path | None = None) -> list[Path]:
+                  wan_hero_path: Path | None = None,
+                  character_terms: list[str] | None = None) -> list[Path]:
     """media_source: 'pexels' | 'nanobanana' | 'gradient'. Siempre cae a gradiente si falla.
     veo_hero_index: si se da (y hay GEMINI_API_KEY), ese clip se anima con Veo en vez de
     quedar estatico -- modo hibrido: barato en general, impacto en el momento clave.
@@ -1364,6 +1578,10 @@ def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
                           "cae a Nano Banana API")
 
     terms = (search_terms * ((n_clips // max(len(search_terms), 1)) + 1))[:n_clips]
+    # character_terms viaja en paralelo a search_terms y se recicla igual, para
+    # que escena i y personaje i sigan emparejados tras el recorte a n_clips
+    _ct = list(character_terms or [])
+    char_terms = ((_ct * ((n_clips // max(len(_ct), 1)) + 1))[:n_clips]) if _ct else []
 
     # Con estilo (ej. Roblox) generamos primero una hoja de personaje por cada
     # campeon mencionado en CUALQUIER escena, una sola vez, y la reusamos como
@@ -1395,7 +1613,7 @@ def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
         clips = _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                                      veo_hero_index, punch_index, style, static, hook_strong,
                                      wan_hero_path, gemini_key, piapi_key, pexels_key,
-                                     sheet_cache, named_char_cache)
+                                     sheet_cache, named_char_cache, char_terms=char_terms)
     finally:
         if flow_session_cm is not None:
             try:
@@ -1409,8 +1627,9 @@ def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
 def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                          veo_hero_index, punch_index, style, static, hook_strong,
                          wan_hero_path, gemini_key, piapi_key, pexels_key,
-                         sheet_cache, named_char_cache) -> list[Path]:
+                         sheet_cache, named_char_cache, char_terms=None) -> list[Path]:
     clips: list[Path] = []
+    char_terms = list(char_terms or [])
     for i, term in enumerate(terms):
         raw = clips_dir / f"raw_{i}.mp4"
         got = False
@@ -1441,7 +1660,12 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                 champ_refs = [sheet_cache.get(_champion_id(s), s) for s in raw_champ_refs]
             else:
                 champ_refs = raw_champ_refs
-            gen_term = term
+            # DOS PLACAS: el fondo se pide vacio y el personaje aparte, en pose
+            # de A sobre blanco. La escena 0 queda fuera a proposito -- es un
+            # primer plano de cara que el motor clava como foto, no troquela.
+            raw_char = (char_terms[i] if i < len(char_terms) else None) or None
+            bg_term, plate_term = (term, None) if i == 0 else _plate_terms(term, raw_char)
+            gen_term = bg_term
             if i == 0:
                 # pattern interrupt (segundo 0-1): encuadre inesperado que rompe lo
                 # "familiar" del feed antes de que el pulgar decida seguir scrolleando
@@ -1457,6 +1681,15 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                       _flow_or_nanobanana_generate_image if media_source == "flow" else
                       _nanobanana_generate_image)
             gen_key = piapi_key if media_source == "seedream" else gemini_key
+            # Respaldo cruzado: si el generador principal falla la escena entera
+            # (saldo agotado, 429, moderacion), se intenta con el OTRO proveedor
+            # antes de caer al gradiente. Sin esto una cuenta sin credito tumba
+            # las 10 escenas del video y el motor Archivo se cae por falta de
+            # nb_*.png (paso real el 27 jul 2026 con los creditos de Gemini).
+            if media_source == "seedream":
+                alt_fn, alt_key, alt_name = _nanobanana_generate_image, gemini_key, "Nano Banana"
+            else:
+                alt_fn, alt_key, alt_name = _seedream_generate_image, piapi_key, "Seedream"
             # CACHE DE ESCENAS GENERICAS: una escena sin nombres propios ni fechas
             # sirve igual en cualquier video -> se genera una vez y se reusa (cero
             # llamada de imagen). Las escenas con personaje de referencia quedan
@@ -1476,11 +1709,47 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
             else:
                 gen_ok = gen_fn(gen_term, img_path, gen_key, reference_image=char_ref,
                                 reference_images=champ_refs, style_directive=style)
+                if not gen_ok and alt_key:
+                    log("media", f"clip {i + 1}/{n_clips}: respaldo con {alt_name}")
+                    gen_ok = alt_fn(gen_term, img_path, alt_key, reference_image=char_ref,
+                                    reference_images=champ_refs, style_directive=style)
                 if gen_ok and not char_ref and not champ_refs:
                     try:
                         scene_cache_store(gen_term, style, img_path)
                     except Exception:
                         pass
+            # PLACA DE PERSONAJE: imagen aparte, misma escena. El motor la
+            # troquela contra blanco (donde BiRefNet no falla) y la compone
+            # sobre la placa de fondo. Si falla, la escena sigue siendo valida:
+            # queda el fondo vacio como foto clavada, nunca bloquea el render.
+            if gen_ok and plate_term:
+                ch_path = clips_dir / f"ch_{i}.png"
+                ch_prompt = f"{plate_term}. {CHARACTER_PLATE}"
+                ch_hit = None
+                try:
+                    from visual_cache import scene_cache_lookup, scene_cache_store
+                    ch_hit = scene_cache_lookup(ch_prompt, PLATE_STYLE)
+                except Exception:
+                    ch_hit = None
+                if ch_hit:
+                    shutil.copyfile(ch_hit, ch_path)
+                    log("media", f"clip {i + 1}/{n_clips}: personaje cacheado '{plate_term[:40]}'")
+                else:
+                    ch_ok = gen_fn(ch_prompt, ch_path, gen_key, reference_image=char_ref,
+                                   reference_images=champ_refs, style_directive=PLATE_STYLE)
+                    if not ch_ok and alt_key:
+                        ch_ok = alt_fn(ch_prompt, ch_path, alt_key, reference_image=char_ref,
+                                       reference_images=champ_refs, style_directive=PLATE_STYLE)
+                    if ch_ok:
+                        log("media", f"clip {i + 1}/{n_clips}: placa personaje '{plate_term[:40]}'")
+                        if not char_ref and not champ_refs:
+                            try:
+                                scene_cache_store(ch_prompt, PLATE_STYLE, ch_path)
+                            except Exception:
+                                pass
+                    else:
+                        ch_path.unlink(missing_ok=True)
+                        log("media", f"clip {i + 1}/{n_clips}: placa personaje fallo, solo fondo")
             if gen_ok:
                 if i == veo_hero_index:
                     log("media", f"clip {i + 1}/{n_clips}: animando con Veo (~$1, puede tardar ~1-2 min)...")
@@ -1496,7 +1765,9 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                                         punch=(i == punch_index), hook=(i == 0), static=static,
                                         hook_strong=hook_strong)
                     got = True
-                    log("media", f"clip {i + 1}/{n_clips}: Nano Banana '{term}'")
+                    # el log decia siempre "Nano Banana" aunque generara Seedream/Flow
+                    # y llevo a diagnosticar mal una corrida (27 jul 2026)
+                    log("media", f"clip {i + 1}/{n_clips}: {media_source} '{term}'")
         elif media_source == "pexels" and pexels_key:
             got = _pexels_download(term, raw, pexels_key)
             if got:
@@ -2802,8 +3073,9 @@ def main() -> int:
         parser.print_help()
         return 1
 
-    if args.nanobanana and not os.getenv("GEMINI_API_KEY"):
-        print("ERROR: falta GEMINI_API_KEY. Consiguela gratis en https://aistudio.google.com/apikey")
+    if args.nanobanana and not os.getenv("GEMINI_API_KEY") and not os.getenv("PIAPI_API_KEY"):
+        print("ERROR: falta GEMINI_API_KEY (o PIAPI_API_KEY para usar Seedream). "
+              "Consiguela gratis en https://aistudio.google.com/apikey")
         return 1
     if args.seedream and not os.getenv("PIAPI_API_KEY"):
         print("ERROR: falta PIAPI_API_KEY en .env. Registrate en https://piapi.ai y anda a "
@@ -2841,8 +3113,14 @@ def main() -> int:
             suffix += 1
     _atomic_write_json(out_dir / "script.json", data)
 
+    # SEEDREAM ES EL PRINCIPAL (27 jul 2026). Los creditos prepago de Gemini se
+    # agotaron ("Your prepayment credits are depleted", 429 en las 10 escenas) y
+    # Nano Banana paso a respaldo. --nanobanana se resuelve a seedream si hay
+    # PIAPI_API_KEY, para que generar_video.bat, los runs --auto y los programados
+    # sigan funcionando sin editar ningun comando.
     media_source = ("flow" if args.flow else
-                    "seedream" if args.seedream else
+                    "seedream" if (args.seedream or
+                                   (args.nanobanana and os.getenv("PIAPI_API_KEY"))) else
                     "nanobanana" if args.nanobanana else
                     ("gradient" if args.no_pexels else "pexels"))
 
@@ -2903,6 +3181,7 @@ def main() -> int:
                               out_dir, media_source=media_source, veo_hero_index=args.veo_hero,
                               punch_index=args.punch_index, style=data.get("style") or HIDDENFACTS_STYLE,
                               static=bool(data.get("caption_text")) or silent_card_mode,
+                              character_terms=data.get("character_terms"),
                               hook_strong=hook_strong,
                               wan_hero_path=args.wan_hero)
 

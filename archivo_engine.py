@@ -47,6 +47,18 @@ COLD_FRAMES = 0
 # palabra, para que el reinicio empalme con el frame 0. Poner >0 para volver.
 CLOSE_TAIL = 0
 
+# PERSONAJES ANIMADOS DESACTIVADOS (28 jul 2026, decision del usuario tras
+# verlo montado: "noo horrible, mejor dejemoslo como antes de agregar el
+# movimiento"). La cadena funciona entera -- placa -> articulaciones via el
+# contenedor docker_torchserve -> retarget BVH -> limpieza por fotograma -- y
+# esta en animate_engine.py, intacta y con cache. Lo que no funciona es el
+# RESULTADO: con solo dos movimientos de catalogo (wave/shamble) el gesto no
+# tiene nada que ver con lo que se esta narrando, y un personaje saludando
+# mientras se habla de una derrota lee peor que un sticker quieto.
+# La via para retomarlo es MoMask (texto -> BVH, ya instalado y probado en
+# tools/momask/), no mas movimientos de catalogo.
+ANIMATE_CHARACTERS = False
+
 
 def _run(cmd: list[str], cwd: Path | None = None, timeout: float = 900.0) -> None:
     r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
@@ -230,7 +242,7 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                     audio_dur: float, slug: str) -> dict:
     """Arma el manifest para ArchivoVideo. words = [(start_seg, palabra)]."""
     sys.path.insert(0, str(ROOT))
-    from visual_cache import cached_cutout, cutout_coverage, cutout_parts
+    from visual_cache import cached_cutout, cutout_coverage, cutout_parts, plate_cutout
     import pipeline as pl
 
     clips = out_dir / "clips"
@@ -264,10 +276,24 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
         fg_rel = None
         treatment = "photo"
         parts_rel = []
+        # PLACA DE PERSONAJE (28 jul 2026): si pipeline.py genero ch_<i>.png, el
+        # troquelado sale de ahi (figura entera en pose de A sobre blanco) y no
+        # de la imagen de escena. Contra fondo blanco BiRefNet no falla, que era
+        # el origen de las escenas que caian a "foto clavada".
+        plate = clips / f"ch_{i}.png"
+        cut_src = plate if plate.exists() else img
         try:
-            if (i + 1) in force_photo:
+            if (i + 1) in force_photo and cut_src is img:
                 raise ValueError("force_photo")
-            cut = cached_cutout(img)
+            cut = None
+            if cut_src is plate:
+                # contra fondo plano el relleno por color vacia tambien los
+                # huecos INTERIORES (entre brazos y torso, entre las piernas),
+                # que es justo lo que rembg deja macizo y se lee como sucio
+                cut = plate_cutout(plate)
+                if cut is None:
+                    print(f"[archivo] escena {i}: placa no recortable por color, va rembg")
+            cut = cut or cached_cutout(cut_src)
             if cutout_coverage(cut) > 0.17:  # v2: recortes chicos (cabezas sueltas) -> foto clavada, que es lo que el usuario ama
                 shutil.copyfile(cut, pub / f"fg_{i}.png")
                 fg_rel = f"archivo/{slug}/fg_{i}.png"
@@ -369,24 +395,6 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
             at = max(int(s_["dur"] * 0.4), 6)
         s_["beats"]["action"] = {"type": atype, "at": at, "dur": 16}
 
-        # STOCK EFFECT (26 jul 2026): si la misma narracion mapea a una
-        # categoria de la biblioteca de greenscreen (fuego/agua/humo/etc.) y hay
-        # un clip cacheado, se compone footage REAL en vez de solo el FX
-        # dibujado -- referencia: explainers estilo Vox que hacen exactamente
-        # esto. Cae en silencio si no hay PIXABAY_API_KEY o la categoria esta
-        # vacia: nunca bloquea el render por falta de biblioteca.
-        try:
-            import stock_effects as _fx
-            cat = _fx.detect_effect(narr)
-            clip = _fx.pick_effect_clip(cat) if cat else None
-            if clip:
-                dest = pub / f"fx_{si}.webm"
-                shutil.copyfile(clip, dest)
-                s_["beats"]["effect"] = {"src": f"archivo/{slug}/fx_{si}.webm",
-                                          "at": max(at - 3, 0), "category": cat}
-        except Exception as e:
-            print(f"[archivo] efecto stock omitido escena {si}: {e}")
-
         # INTERACCION entre piezas: la mas grande ACTUA el verbo, las demas
         # REACCIONAN unos frames despues (causa -> efecto legible en pantalla).
         for k, p in enumerate(s_.get("parts") or []):
@@ -399,6 +407,65 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                 away = -1 if p["nx"] < (s_["parts"][0]["nx"] - 0.02) else 1
                 p["action"] = {"type": rtype, "at": at + lag + (k - 1) * 2,
                                 "dur": 16, "away": away, "amp": 0.7}
+
+    # 4a-bis. PERSONAJE ANIMADO: la placa con esqueleto retargeteado sustituye
+    #     al sticker quieto. Solo escenas con placa propia (ch_<i>.png) y un
+    #     unico recorte -- con varias piezas cada una tendria su propio clip y
+    #     eso es el siguiente paso, no este.
+    #     Falla en silencio: sin contenedor ni AnimatedDrawings la escena sigue
+    #     con el PNG quieto, que es peor pero valido. Animar no puede tumbar un
+    #     render programado.
+    try:
+        import animate_engine as _an
+        for si, s_ in enumerate(scenes):
+            if not ANIMATE_CHARACTERS or not s_.get("fg") or s_.get("parts"):
+                continue
+            plate = clips / f"ch_{si}.png"
+            if not plate.exists():
+                continue
+            narr = " ".join(w["w"] for w in scene_words[si])
+            clip = _an.animate(plate, _an.motion_for(narr))
+            if not clip:
+                continue
+            dest = pub / f"fgv_{si}.mov"
+            shutil.copyfile(clip, dest)
+            s_["fgVideo"] = f"archivo/{slug}/fgv_{si}.mov"
+    except Exception as e:
+        print(f"[archivo] personajes animados omitidos: {e}")
+
+    # 4b. STOCK EFFECT: footage greenscreen REAL compuesto sobre la escena
+    #     (referencia: explainers estilo Vox).
+    #     BUG hasta el 27 jul 2026: este bloque vivia DENTRO del bucle de accion,
+    #     despues de un `continue` -- una escena sin verbo dibujado nunca llegaba
+    #     a mirar la biblioteca, y ademas la deteccion literal solo acertaba 1 de
+    #     17 frases en un guion real. Resultado: 30 clips cacheados y CERO usados.
+    #     Ahora recorre TODAS las escenas y, si no hay match literal, cae a una
+    #     textura atmosferica a baja opacidad -> movimiento continuo en cada
+    #     escena, que es lo que sostiene la retencion.
+    #     Sigue cayendo en silencio si no hay biblioteca: nunca bloquea el render.
+    try:
+        import stock_effects as _fx
+        for si, s_ in enumerate(scenes):
+            narr = " ".join(w["w"] for w in scene_words[si])
+            cat = _fx.detect_effect(narr)
+            op = _fx.MATCH_OPACITY if cat else _fx.AMBIENT_OPACITY
+            if not cat:
+                cat = _fx.ambient_effect(si)
+            clip = _fx.pick_effect_clip(cat)
+            if not clip:
+                continue
+            dest = pub / f"fx_{si}{clip.suffix}"
+            shutil.copyfile(clip, dest)
+            act = (s_["beats"].get("action") or {}).get("at")
+            s_["beats"]["effect"] = {
+                "src": f"archivo/{slug}/fx_{si}{clip.suffix}",
+                "at": max((act - 3) if act is not None else 0, 0),
+                "dur": max(s_["dur"] - 4, 24),
+                "category": cat,
+                "opacity": op,
+            }
+    except Exception as e:
+        print(f"[archivo] efectos stock omitidos: {e}")
 
     # 5. FOTO REAL de archivo (Wikimedia libre) clavada como EVIDENCIA en 1-2
     #    escenas clave -> momento "esto paso de verdad" (feedback 24 jul).
