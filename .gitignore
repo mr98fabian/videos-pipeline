@@ -34,18 +34,35 @@ venv/
 # Herramienta embebida con su propio repo git anidado (Kokoro TTS) — no la trackeamos
 tools/kokoro_tts/
 
+# Herramientas de animacion (28 jul 2026): repos clonados + venv propio + pesos
+# preentrenados. momask trae los checkpoints de HumanML3D (~190MB) dentro del
+# propio clon; animated_drawings clona mmpose completo; depthflow arrastra
+# PyTorch+CUDA en su venv. Mismo patron que tools/kokoro_tts/: el codigo que
+# los invoca (animate_engine.py) SI se trackea, el repo/venv no.
+tools/momask/
+tools/animated_drawings/
+tools/depthflow/
+
 # Remotion (motion_graphics/): node_modules se regenera con npm install, no se trackea
 motion_graphics/node_modules/
 motion_graphics/out/
 motion_graphics/public/collage_photo.png
 motion_graphics/public/scene_sticker_*.png
 motion_graphics/public/sticker_*.png
+# assets generados por video (fondos, recortes, fx, clips animados) --
+# datos de runtime, no codigo. *.png/*.mp4 ya los cubren en parte; esto anade
+# los formatos con alfa real (.mov ProRes, .webm) que no estaban cubiertos.
+motion_graphics/public/archivo/
+*.mov
+*.webm
 
 # backups y reportes runtime (no codigo)
 *.bak
 performance_report.csv
 vidiq_key.txt
 assets/cache/
+assets/image_cache/
+assets/sticker_library/
 
 # clips de terceros descargados por viral_lab.py (nunca al repo)
 viral/
