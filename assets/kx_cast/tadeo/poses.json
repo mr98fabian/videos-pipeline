@@ -1,0 +1,154 @@
+{
+  "grito": [
+    {
+      "file": "grito_1.png",
+      "from": "Face_screaming_at_camera_202608040456 (1).jpeg"
+    },
+    {
+      "file": "grito_2.png",
+      "from": "Face_screaming_at_camera_202608040456 (2).jpeg"
+    },
+    {
+      "file": "grito_3.png",
+      "from": "Face_screaming_at_camera_202608040456.jpeg"
+    },
+    {
+      "file": "grito_4.png",
+      "from": "Face_screaming_at_camera_202608040457.jpeg"
+    },
+    {
+      "file": "grito_5.png",
+      "from": "Face_screaming_at_camera_202608040458.jpeg"
+    }
+  ],
+  "explicando": [
+    {
+      "file": "explicando_1.png",
+      "from": "Cartoon_character_explaining_202608040458.jpeg"
+    },
+    {
+      "file": "explicando_2.png",
+      "from": "Cartoon_character_explaining_som…_202608040458 (2).jpeg"
+    },
+    {
+      "file": "explicando_3.png",
+      "from": "Cartoon_character_explaining_som…_202608040458.jpeg"
+    }
+  ],
+  "senalando": [
+    {
+      "file": "senalando_1.png",
+      "from": "Character_pointing_outward_vecto…_202608040458.jpeg"
+    },
+    {
+      "file": "senalando_2.png",
+      "from": "Vector_cartoon_character_pointing_202608040458.jpeg"
+    },
+    {
+      "file": "senalando_3.png",
+      "from": "Vector_cartoon_character_pointin…_202608040458.jpeg"
+    }
+  ],
+  "confundido": [
+    {
+      "file": "confundido_1.png",
+      "from": "Cartoon_character_shrugging_202608040458.jpeg"
+    },
+    {
+      "file": "confundido_2.png",
+      "from": "Cartoon_character_shrugging_in_c…_202608040458.jpeg"
+    },
+    {
+      "file": "confundido_3.png",
+      "from": "Character_shrugging_and_looking_…_202608040458.jpeg"
+    },
+    {
+      "file": "confundido_4.png",
+      "from": "Character_shrugging_in_confusion_202608040458.jpeg"
+    }
+  ],
+  "estafado": [
+    {
+      "file": "estafado_1.png",
+      "from": "Cartoon_character_crying_standing_202608040458.jpeg"
+    },
+    {
+      "file": "estafado_2.png",
+      "from": "Cartoon_character_crying_with_di…_202608040458.jpeg"
+    },
+    {
+      "file": "estafado_3.png",
+      "from": "Cartoon_character_standing_in_di…_202608040458.jpeg"
+    },
+    {
+      "file": "estafado_4.png",
+      "from": "Cartoon_character_standing_with_…_202608040458.jpeg"
+    }
+  ],
+  "codicia": [
+    {
+      "file": "codicia_1.png",
+      "from": "Cartoon_character_holding_cash_202608040458 (1).jpeg"
+    },
+    {
+      "file": "codicia_2.png",
+      "from": "Cartoon_character_holding_cash_202608040458.jpeg"
+    },
+    {
+      "file": "codicia_3.png",
+      "from": "Cartoon_figure_holding_cash_202608040458.jpeg"
+    }
+  ],
+  "bolsillos": [
+    {
+      "file": "bolsillos_1.png",
+      "from": "Cartoon_character_showing_empty_…_202608040457.jpeg"
+    },
+    {
+      "file": "bolsillos_2.png",
+      "from": "Cartoon_character_shrugging_empt…_202608040457.jpeg"
+    },
+    {
+      "file": "bolsillos_3.png",
+      "from": "Person_showing_empty_pockets_res…_202608040458.jpeg"
+    }
+  ],
+  "decidido": [
+    {
+      "file": "decidido_1.png",
+      "from": "Cartoon_character_punching_downw…_202608040457.jpeg"
+    },
+    {
+      "file": "decidido_2.png",
+      "from": "Character_punching_downward_cartoon_202608040457.jpeg"
+    }
+  ],
+  "triunfo": [
+    {
+      "file": "triunfo_1.png",
+      "from": "Cartoon_character_standing_with_…_202608040457.jpeg"
+    },
+    {
+      "file": "triunfo_2.png",
+      "from": "Character_standing_with_arms_cro…_202608040457 (1).jpeg"
+    },
+    {
+      "file": "triunfo_3.png",
+      "from": "Character_standing_with_arms_cro…_202608040457.jpeg"
+    }
+  ],
+  "picaro": [
+    {
+      "file": "picaro_1.png",
+      "from": "Cartoon_character_winking_facing…_202608040457.jpeg"
+    },
+    {
+      "file": "picaro_2.png",
+      "from": "Cartoon_character_winking_forward_202608040457 (2).jpeg"
+    },
+    {
+      "file": "picaro_3.png",
+      "from": "Cartoon_character_winking_forward_202608040457.jpeg"
+    }
+  ]
+}

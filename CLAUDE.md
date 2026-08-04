@@ -140,6 +140,7 @@ Every number below was verified with vidIQ, not taken from the source video (`a1
 
 ### The documentation corpus
 ~20 Spanish `.md` files at the root hold the channel strategy, not code docs. The ones that actually get consulted:
+- **`ESTADO_SESION.md` — READ THIS FIRST, before anything else.** The user runs two Claude sessions in parallel to stretch tokens, and this file is the handoff between them: what was just done, what is half-finished, what is next. **Update it before the session ends** (overwrite, don't append — history belongs in `HISTORIAL_MEJORAS.md`). Because two sessions can edit the same files, `git diff` before touching code the other session may have changed.
 - `HISTORIAL_MEJORAS.md` — the chronological research → change → where-it-shipped → hypothesis log. **Append an entry here whenever a change affects the output of a video.**
 - `RETENTION_CHECKLIST.md` + `EDICION_GUIONES.md` — script/editing rules; `FORMATOS_A_PROBAR.md` — the numbered backlog of formats to test.
 - `PROGRESO_CANAL.md` / `MEJORAS_CANAL.md` — channel state and pending levers; `MEJORAS_CODIGO.md` — known code debt with numbered items.

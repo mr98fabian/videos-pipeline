@@ -329,7 +329,7 @@ def upload_video(video_path: str | Path, title: str, description: str,
               f"({SHORTS_SWEET_MIN:.0f}-{SHORTS_SWEET_MAX:.0f}s). Reparte, pero con menos "
               f"alcance que un video del doble de largo con la misma retencion.")
     if default_language is None:
-        default_language = "es" if account == "impixxel" else "en"
+        default_language = "es" if account in ("impixxel", "korex") else "en"
     youtube = get_youtube_client(account)
     _check_duplicate_title(youtube, title)
     if publish_at or privacy_status == "public":
@@ -663,8 +663,10 @@ if __name__ == "__main__":
         epilog="Si un video_id empieza con '-', antepone '--' antes: "
                "py youtube_api.py update -- -abc123 --title '...'")
     parser.add_argument("--account", default="default",
-                         help="'default' = HiddenFacts, 'impixxel' = canal ImPixxel "
-                              "(usa su propio token_<account>.json)")
+                         help="'default' = HiddenFacts, 'impixxel' = canal ImPixxel, "
+                              "'mindcheckpoint' = canal MindCheckpoint, 'korex' = canal "
+                              "KoreX (finanzas, es) -- cada uno usa su propio "
+                              "token_<account>.json")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_upload = sub.add_parser("upload")

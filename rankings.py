@@ -22,7 +22,7 @@ from pathlib import Path
 
 from pipeline import (
     ROOT, OUTPUT_ROOT, WIDTH, HEIGHT, FPS, log, run, ffprobe_duration,
-    generate_audio, generate_subtitles, _lyria_generate_music, _list_sfx,
+    generate_audio, generate_subtitles, _list_sfx,
     slugify,
 )
 
@@ -128,20 +128,10 @@ def assemble_ranking(clips_meta: list[dict], clip_paths: list[Path], title: str,
          "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
          str(concat_path)], cwd=prep_dir)
 
-    # 3. musica de fondo (Lyria si hay key, si no biblioteca local via pipeline._pick_music)
-    import os
-    music = None
-    gemini_key = os.getenv("GEMINI_API_KEY", "")
-    if gemini_key:
-        lyria_path = out_dir / "music_lyria.mp3"
-        if _lyria_generate_music(
-            "Energetic hype 8-bit chiptune, countdown ranking video style, punchy and exciting, "
-            "builds tension, instrumental only, no vocals", lyria_path, gemini_key,
-        ):
-            music = lyria_path
-    if not music:
-        from pipeline import _pick_music
-        music = _pick_music()
+    # 3. musica de fondo: biblioteca local. La generacion con Lyria se elimino
+    # junto con el resto de Gemini el 3 ago 2026.
+    from pipeline import _pick_music
+    music = _pick_music()
 
     # 4. SFX de transicion en cada corte entre clips
     sfx_files = _list_sfx()

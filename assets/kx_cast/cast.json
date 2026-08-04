@@ -1,0 +1,24 @@
+{
+  "tadeo": {
+    "asombro": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_3.png"
+    },
+    "estafado": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_8.png"
+    },
+    "senalando": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_9.png"
+    },
+    "confundido": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_12.png"
+    },
+    "picaro": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_14.png"
+    }
+  },
+  "bruja": {
+    "malvada": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_11.png"
+    }
+  }
+}

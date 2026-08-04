@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import base64
+import hashlib
 import json
 import os
 import re
@@ -142,8 +143,12 @@ _CAMERA_RE = re.compile(
     r"|full figures? apart)\b.*$", re.I)
 # el participio (-ing) parte la frase: delante queda QUIEN, detras DONDE
 _GERUND_RE = re.compile(
-    r"\b(\w+ing)\s+(?:inside|into|in front of|at|on|in|under|near|behind|"
-    r"outside|across|through|over|beside|down|along|through)\s+(.+)$", re.I)
+    # el (?:\w+\s+)? admite un adverbio entre el gerundio y la preposicion:
+    # "sitting ALONE in a plain quiet room" no matcheaba y la escena acababa
+    # con un prompt contradictorio (la persona + "escena vacia sin gente"),
+    # que el modelo resuelve dibujando a la persona igual (28 jul 2026)
+    r"\b(\w+ing)\s+(?:\w+\s+)?(?:inside|into|in front of|at|on|in|under|near|behind|"
+    r"outside|across|through|over|beside|down|along)\s+(.+)$", re.I)
 
 
 def _plate_terms(term: str, char_term: str | None) -> tuple[str, str | None]:
@@ -174,9 +179,16 @@ def _plate_terms(term: str, char_term: str | None) -> tuple[str, str | None]:
             place = cand
 
     if char_term:
-        # Claude ya escribio el personaje aparte; el fondo es el sitio si se
-        # pudo aislar, y si no el termino tal cual
-        return f"{place or clean}, {BACKGROUND_PLATE}", char_term
+        if place:
+            return f"{place}, {BACKGROUND_PLATE}", char_term
+        # NO se pudo aislar el sitio. Pegar "escena vacia sin gente" detras de
+        # un termino que sigue nombrando a una persona es un prompt que se
+        # contradice, y el modelo lo resuelve dibujando a la persona igual: el
+        # fondo acababa con una copia del personaje que se veia como una sombra
+        # gigante detras de la tarjeta. Mejor una sola imagen compuesta.
+        if has_person:
+            return term, None
+        return f"{clean}, {BACKGROUND_PLATE}", char_term
     if not place:
         # hay persona pero no se puede separar el sitio -> no se parte: mejor
         # una placa correcta que dos mal cortadas
@@ -196,7 +208,7 @@ SCRIPT_SCHEMA = {
     "properties": {
         "script": {
             "type": "string",
-            "description": "Voiceover text, word-for-word, 190-200 words, no markdown. "
+            "description": "Voiceover text, word-for-word, 355-375 words, no markdown. "
                             "*** HARD RULE: NOTHING EXPLANATORY AFTER THE PAYOFF *** The payoff is "
                             "the sentence that delivers what the hook promised (the twist, the "
                             "result, the reveal). The moment it lands, the story is OVER for the "
@@ -265,9 +277,20 @@ SCRIPT_SCHEMA = {
                             "hook sentence word-for-word; it should read like a caption someone would pause "
                             "on, not a subtitle.",
         },
+        "hook_punch": {
+            "type": "string",
+            "description": "EXACTLY 3-5 words, no more. The visual hook: rendered huge and bold at the "
+                            "top of the card, above hook_card. Kallaway (reviewed 30 jul 2026) argues the "
+                            "visual hook is far more powerful than the spoken one because people read "
+                            "faster than they hear -- a full-sentence card is read too slowly to land in "
+                            "the window that decides the swipe. This is the 3-5 words the viewer absorbs "
+                            "in one glance, BEFORE reading anything else. Make it concrete and loaded, not "
+                            "a topic label: 'HE INVOICED HIS SISTER' not 'FAMILY DRAMA'; 'THE TORCH NEVER "
+                            "REOPENED' not 'STATUE OF LIBERTY'. No final period. It may be uppercase.",
+        },
     },
     "required": ["script", "search_terms", "character_terms", "title", "description",
-                 "music_mood", "hook_card"],
+                 "music_mood", "hook_card", "hook_punch"],
     "additionalProperties": False,
 }
 
@@ -291,9 +314,10 @@ Create a viral YouTube Short script about: {topic}
 
 Context: HiddenFacts channel — hidden history, hoaxes, and espionage for a US/English-
 speaking audience. Assume 50% of viewers watch on mute (subtitles are burned in). Target
-60-65 seconds of spoken content. DURACION MINIMA 60s: medido en este canal, edge-tts a +8%
-habla a ~3,15 wps, asi que 190-200 palabras = 60-65s reales. Por debajo de 60s el video NO
-reparte igual y el guardrail de subida lo bloquea. 130 palabras NO alcanzan: dan 40s.
+90 seconds of spoken content. MEDIDO 31 jul 2026 sobre 4 videos reales (no estimado):
+edge-tts a +8% con --trim-silence entrega 4,07 palabras/segundo, asi que 355-375 palabras
+= ~90s finales. Sin --trim-silence el mismo guion sale ~11% mas largo. Los 175s salen de
+medir los 50 videos mas recientes de Reddit Gossipz: TODOS entre 163s y 179s, mediana 176s.
 
 Role: you are a scriptwriter whose Shorts consistently retain viewers past the 3-second mark.
 
@@ -375,28 +399,171 @@ Instructions:
    sentence. It should promise the shape of the story without giving the twist away, so a
    viewer who only reads the card (sound off, 2 seconds) still feels compelled to keep
    watching.
-9. title AND hook_card MUST both be phrased as an unresolved question, not a declarative
-   statement -- "Why did nobody stop the KGB assassin outside a London tube station?", not
-   "The KGB assassinated a man outside a London tube station." A statement resolves the
-   curiosity gap in the title itself, so the brain has nothing left open to chase; a
-   question opens it and the viewer has to watch to close it (this is why the wording does
-   not have to be the literal word "why" -- "how is it possible that...", "what nobody
-   tells you about..." open the same loop -- but it must read as a question, not a fact).
-   This is independent of the Black Tom template above: Black Tom validates WHICH topic
-   (famous icon + consequence visible today), this rule validates HOW the title/hook_card
-   is phrased. Apply both together. The spoken script can still open by stating the setup
-   (per rule 1) -- this rule is about title and hook_card specifically, the two things a
-   viewer reads before deciding whether to watch at all.
-   *** A BARE QUESTION IS NOT ENOUGH (curiosity research, 28 jul 2026) *** curiosity is an
-   information gap, and a gap needs something on BOTH sides -- what the viewer already
-   knows, and what's missing. A question with no prior fact primed reads as trivia, not a
-   gap, because there is nothing to feel deprived of yet. Every title/hook_card MUST prime
-   one concrete fact BEFORE or WITHIN the question, so the question opens a gap instead of
-   asking one out of nowhere: weak "Why did nobody stop the KGB assassin?" (no prime) vs
-   strong "The KGB assassin walked past a police officer to do it. Why did nobody stop
-   him?" (the officer is the prime; the question is what it's missing). The fact does the
-   priming even when the sentence stays a question: "How did a man the FBI followed for a
-   decade die free?" primes "FBI followed him for a decade" before asking.
+9. *** OPEN WITH A FLAT UNRESOLVED FACT, NOT A QUESTION *** (rewritten 1 ago 2026, from
+   the oral-narrative masters: Garcia Marquez, Chekhov, "Cronica de una muerte anunciada".)
+   The script, the title and the hook_card must all open with a DECLARATIVE statement of
+   something that cannot be true, or should not be, stated in the flattest possible tone --
+   and they must NOT explain it. Do not open with "Why".
+   The old rule locked the first word to "Why". It is retired because a question ASKS the
+   viewer to become curious; a contradiction stated as plain fact leaves them uncomfortable
+   until it resolves, which is stronger and does not sound like a quiz channel. Garcia
+   Marquez never asks a question. He states two things that cannot both be true and lets
+   the reader do the asking.
+   Required shape -- three parts, all inside the first sentence:
+     (a) the impossible fact, said flatly, no adjectives, no build-up;
+     (b) ONE concrete verifiable detail carried inside it (a number, a date, a proper noun,
+         an object). This is the "prime": curiosity is an information gap and a gap needs
+         something on BOTH sides. Without a concrete detail there is nothing to feel
+         deprived of yet, and the line reads as vague mood instead of a gap;
+     (c) a SECOND TIME folded in -- the future consequence, or how long it went on, or when
+         it was found out. The opening of "Cien anos de soledad" holds three moments in one
+         sentence and two of them are unexplained; that is the whole engine.
+   Weak (old style): "Why did my grandmother write her recipes wrong?"
+   Weak (self-resolving): "My grandmother wrote every recipe wrong because she was losing
+   her memory." <- the subordinate clause answers it in second 3 and the video is over.
+   Strong: "My grandmother wrote every recipe wrong on purpose, and we did not find out
+   until we spread all thirty-one cards on her kitchen table after the funeral."
+   *** NEVER RESOLVE THE HOOK IN THE HOOK. *** Any "because...", "since...", "so that..."
+   attached to the opening fact kills the video. If the first sentence contains its own
+   answer, the viewer owes you nothing from second 3 on -- which is exactly where measured
+   drop-off happens. Cut the clause and let it hang.
+   *** ANNOUNCING THE ENDING IS ALLOWED AND OFTEN BETTER. *** "Cronica de una muerte
+   anunciada" tells you in line one who dies. Curiosity about HOW survives 90 seconds;
+   curiosity about WHAT is spent in ten. Giving away the outcome and making the mechanism
+   the question is a legitimate, stronger opening -- not a spoiler.
+9b. *** THE 3-BEAT HOOK: the first 3 sentences must turn the viewer around ***
+   (Kallaway hook framework, 428k-sub channel whose own numbers verify it, reviewed
+   30 jul 2026.) The mental model: the viewer is driving past at 70mph. Sentence 1 makes
+   them slow down, sentence 2 makes them stop, sentence 3 makes them turn around. Our old
+   rule only handled sentence 1 -- the "Why" question -- and then went straight into
+   chronological setup, which loses the turn-around. Structure the opening as exactly three
+   beats, in this order:
+   (a) CONTEXT LEAN -- the "Why" question itself (rule 9). It states the topic plainly so
+       the right viewer self-selects IN, and carries the concrete prime so they lean in.
+       Do NOT try to be mysterious about the subject; be mysterious about the OUTCOME.
+   (b) SCROLL-STOP INTERJECTION -- ONE short sentence that must open with a contrast word:
+       "But", "Except", "Yet", "Although". Its only job is to stun: it contradicts what the
+       viewer just assumed from (a). Example shape: "But the will was not the part that
+       destroyed her." This is a setup line, not the payoff.
+   (c) CONTRARIAN SNAPBACK -- one sentence that sends the story in the OPPOSITE direction
+       from the lean in (a), still on topic. The bigger the reversal, the stronger the hook:
+       "Because the person who lost everything that day was the one holding the envelope."
+   Only AFTER these three beats does the chronological setup begin.
+   *** STACCATO OPENING *** Beats (b) and (c) must be SHORT -- under 12 words each. Short
+   sentences force maximum clarity and raise value-per-word exactly where attention is most
+   expensive. Sentences may grow to medium and long only after the third beat.
+   *** SPEED TO VALUE *** Do not save every concrete detail for the ending. Land one real,
+   specific piece of the story (a number, a dated fact, a quoted line) within the first ~4
+   seconds of narration -- inside or immediately after the 3-beat hook. Burying all payoff
+   at the end assumes the viewer stays; frontloading earns the stay. This does NOT weaken
+   the loop rule: the FINAL twist still stays hidden, only the first hit of value moves up.
+9e. *** NO TODO ES VENGANZA: EL REGISTRO CALIDO GANA MAS *** (medido 31 jul 2026.)
+   En el top 10 de Reddit Gossipz, los tres videos mas vistos NO son de venganza,
+   son de REVERSION EMOCIONAL -- alguien injustamente no reconocido que por fin
+   recibe reconocimiento:
+     1.66M "I called my stepdad by his first name for 17 years. Last Tuesday I called him dad..."
+     974k  "I was born blind. I got my vision back the day I married him."
+     919k  "I told my father that my stepdad is more of a man than he will ever be."
+   El pago no es un castigo al villano, es un reconocimiento que llega tarde y
+   revienta a alguien que aguanto en silencio durante anos. Es MAS compartible que
+   la venganza porque el espectador lo manda a alguien que quiere, no para burlarse.
+   Regla practica: alterna registros. Si los ultimos dos guiones fueron de traicion
+   y castigo, el siguiente debe ser de reconocimiento tardio. Un canal que solo hace
+   venganza se siente de una sola nota y satura rapido.
+   Detalle de ejecucion que hace creible el registro calido: DETALLE CONCRETO Y
+   ESPECIFICO, no adjetivos. Ellos no dicen "era un buen padrastro", dicen "trajo
+   una cana de pescar", "engancho su propia camisa", "encontre las entradas en el
+   cajon de su caja de herramientas, mismo partido, dos asientos, sin escanear".
+9d. *** THE TITLE IS THE FIRST LINE OF THE SCRIPT, VERBATIM *** (medido 31 jul 2026
+   sobre los 50 videos mas recientes de Reddit Gossipz, el lider del formato.)
+   El titulo NO es una pregunta separada del guion: es literalmente la primera
+   frase hablada, copiada tal cual, cortada a media idea con "...". El espectador
+   lee el titulo, empieza el audio, y la voz dice exactamente lo que acaba de leer
+   -- cero friccion entre ambos.
+   Patron medido en su top 10: 7/10 arrancan en PRIMERA PERSONA ("I..." / "My..."),
+   2/10 abren con una CITA TEXTUAL de dialogo, y CERO empiezan con "Why".
+   Ejemplos reales suyos (1,6M y 1,6M de vistas):
+     "I called my stepdad by his first name for 17 years. Last Tuesday I called him dad..."
+     'During dinner, my mom slid a ring box across the table and said, "Your uncle picked it himself."'
+   *** ESTO ANULA la parte de la regla 9 que obligaba al TITULO a empezar con "Why" ***
+   para el canal de historias. La regla 9 la pidio el usuario el 30 jul; la evidencia
+   del 31 jul muestra que el lider del formato hace lo contrario y el titulo es su
+   palanca principal. La curiosidad se genera TRUNCANDO la frase, no preguntando.
+   El guion hablado puede seguir cualquiera de las dos formas -- lo que importa es
+   que titulo y primera linea sean el mismo texto.
+9c. *** THE BODY OF THE SCRIPT, NOT JUST THE HOOK *** (Kallaway storytelling +
+   Trey Parker/Matt Stone, reviewed 31 jul 2026.) Rule 9b fixes the first three
+   sentences; these three fix everything after them.
+   (a) BUT / THEREFORE, NEVER "AND THEN". Between any two beats the word that fits
+       must be "but" or "therefore" -- never "and then". "And then" piles detail on
+       detail and the viewer drifts; "but/therefore" opens a conflict that has to be
+       closed. Aim for the MAJORITY of sentences after the hook to chain with
+       but / so / because / therefore / yet. Do not force it to 100% -- that reads
+       robotic -- but "I did this. I did that. Then this happened." is the failure
+       mode to avoid.
+   (b) VARY SENTENCE LENGTH ON PURPOSE. Alternate short, medium and long sentences.
+       A page where every sentence is the same length reads as monotonous even when
+       the content is good (Gary Provost). Note: our own channel data does NOT yet
+       confirm this one -- the best-retaining video so far has the LOWEST variance --
+       so treat it as a soft preference, not a hard rule.
+   (c) HEAD-FAKE BEFORE THE PAYOFF. Peak dopamine lands just BEFORE the answer, not
+       at the answer. So: give enough detail that the viewer starts guessing the
+       resolution, let them get close, then swerve once to a different answer than
+       the one they were building toward -- and only then deliver the real payoff.
+       One swerve, not three. Without it the story is a straight line from question
+       to answer and the middle goes flat, which is exactly where viewers leave.
+9f. *** ONE PAYOFF AT THE END IS A FAILED SCRIPT: BUILD A LADDER *** (1 ago 2026, from
+   the transcript of a 1.6M-view Short on a 5,320-subscriber channel -- the closest
+   verified comparable this channel has.)
+   Two structural requirements, both mandatory.
+   (a) COLD OPEN ON THE CONSEQUENCE, THEN REWIND. The first sentence states the END
+       STATE -- what it cost, who stopped speaking to whom, what was sent -- and the
+       rest of the script explains how it got there. Same engine as "Cronica de una
+       muerte anunciada" in rule 9: the outcome is free, the mechanism is the debt.
+       This guarantees every viewer who watches three seconds receives a promise, and
+       it stacks a SECOND open loop (what was in the file / what did they do) on top
+       of the first, so closing one does not release the viewer.
+   (b) A PAYOFF LADDER AT IRREGULAR INTERVALS. A payoff is any moment the viewer is
+       rewarded for still being there: a number that lands, a lie exposed, someone
+       who was wrong being shown to be wrong, a document produced. Requirements:
+         - at least FOUR payoffs across the script, and the biggest one last;
+         - never more than ~20 seconds (~85 spoken words) with none. Measured on the
+           first version of the visitor-log script, seconds 8 to 37 contained only
+           setup -- room number, window, filing procedure -- and that is exactly the
+           band where this channel's retention already collapses;
+         - space them UNEVENLY. A regular beat lets the brain predict when the next
+           reward is due, and a predictable gap is a safe moment to leave. Irregular
+           reward schedules are the single most under-used retention lever available
+           here, and they cost nothing but ordering.
+       Declare them in the script JSON as `payoffs`: a list of short verbatim phrases
+       from the script, in order. `_check_payoff_spacing` reads that list and warns on
+       count, on gaps, and on a rhythm that is too regular.
+   Corollary: the counter overlay (`counter_overlay.py`) should FILL LATE, near the
+   final payoff, not at the halfway mark. Goal-gradient: motivation to keep watching
+   rises as a visible goal gets close, so a bar that completes at 45% spends the whole
+   second half giving nothing back.
+9h. *** LA APUESTA ES COTIDIANA, NO MORTAL *** (2 ago 2026, a peticion de Fabian
+   tras detectar que cinco guiones seguidos tenian una muerte o una perdida grave.)
+   El drama sale de que algo PEQUENO escale, no de que alguien se muera. Matar a un
+   personaje es el atajo barato: sube la temperatura sin que el guion se la gane.
+   La prueba que lo zanja: el comparable verificado de 1,6M vistas (`kmiZss057XE`,
+   canal de 5.320 subs) no tiene ni un muerto. Va de la compra del supermercado --
+   los padres llaman parasito al hijo y luego se gastan 2.500 dolares al mes porque
+   no saben comprar. Es mezquino, es cotidiano, y viaja por eso: todo el mundo ha
+   sentido que su familia no le valora por dinero. Nadie ha enterrado a cinco
+   parientes.
+   Reglas:
+   - Por defecto la historia NO lleva muerte, funeral, enfermedad terminal ni
+     perdida gestacional. Si el giro solo funciona con un muerto, el giro es flojo.
+   - Territorio bueno: dinero que no se devuelve, credito robado en el trabajo,
+     el vecino, el grupo de padres del colegio, quien nunca paga su parte, la
+     invitada de blanco. Bajo riesgo, alta identificacion.
+   - Tres costes de abusar de la muerte, en orden: monotonia (quien ve dos ya sabe
+     como va el tercero), techo de audiencia (la gente entra a Shorts a
+     entretenerse) e idoneidad para anunciantes.
+   - Excepcion: una muerte cada varios videos esta bien. Lo que rompe el canal es
+     la racha, no el caso suelto. Por eso `_check_apuesta_cotidiana` mira los
+     guiones ANTERIORES, no solo este.
 10. The FIRST search_term (and its Wan/hero framing) must show the FAMOUS ICON ITSELF in a
     recognizable, unmistakable framing -- not a contextual establishing shot (a hallway, a
     document, a crowd) that requires explanation before it reads. A viewer's brain either
@@ -415,7 +582,7 @@ tema no tiene un icono reconocible con una huella visible hoy, buscar otro angul
 mismo hecho hasta encontrarlo -- no escribir el guion sin el.
 
 Constraints:
-- 190-200 words (NO menos: 130 palabras dan 40s y el minimo del canal son 60s).
+- 355-375 words (NO menos: 160 palabras dan ~40s y el objetivo son 90s).
   Conversational, spoken English. Fragments are fine.
 - Actionable and specific: real numbers, real rules, real examples.
 - NO markdown, NO emojis, NO "in this video", NO headers. Ready to voice as-is.
@@ -444,7 +611,7 @@ no such anchor, find a different angle on the same event instead of proposing it
 
 Each idea must be a short, curiosity-driven title phrased as an unresolved question (see
 title/hook_card rule in SCRIPT_PROMPT), under 70 characters, specific enough to script in
-190-200 words (one clear event, not a broad theme).
+355-375 words (one clear event, not a broad theme).
 Avoid topics already in this list: {existing_topics}
 """
 
@@ -487,6 +654,21 @@ def ffprobe_duration(path: Path, timeout: float = 30.0) -> float:
         capture_output=True, text=True, check=True, timeout=timeout,
     )
     return float(out.stdout.strip())
+
+
+def ffprobe_resolution(path: Path, timeout: float = 30.0) -> tuple[int, int] | None:
+    """(ancho, alto) reales del stream de video, o None si no se puede leer."""
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height",
+             "-of", "csv=p=0:s=x", str(path)],
+            capture_output=True, text=True, check=True, timeout=timeout,
+        )
+        w, h = out.stdout.strip().split("x")[:2]
+        return int(w), int(h)
+    except Exception:
+        return None
 
 
 def _atomic_write_json(path: Path, data) -> None:
@@ -642,6 +824,55 @@ async def _tts(script: str, voice: str, rate: str, mp3_path: Path) -> list[tuple
     return words
 
 
+def trim_silence_inplace(audio_path: Path, words: list[tuple[float, float, str]],
+                         keep: float = 0.10, noise: float = -35.0,
+                         min_silence: float = 0.20):
+    """Recorta los silencios de la voz y remapea los timestamps de palabra.
+
+    edge-tts deja ~0.4s entre oraciones; medido 30 jul 2026 eso era el 13,9% de
+    un guion de 16 oraciones. En Shorts manda el tiempo absoluto visto, asi que
+    ese aire es retencion regalada.
+
+    Devuelve (audio_path, words) ya en el eje recortado. El original se guarda
+    como voice_raw.mp3 y voice.mp3 pasa a ser la version apretada, para que
+    nada aguas abajo tenga que enterarse del cambio.
+
+    No lleva los silencios a cero (keep=0.10 por defecto): a cero las palabras
+    se pisan y suena atropellado, peor que el original.
+    """
+    try:
+        import trim_silence as tsm
+    except Exception as e:
+        log("audio", f"AVISO: no se pudo importar trim_silence ({e}), sigo sin recortar")
+        return audio_path, words
+
+    try:
+        total = ffprobe_duration(audio_path)
+        sils = tsm.detect_silences(audio_path, noise, min_silence)
+        rem = tsm.removal_intervals(sils, keep)
+        if not rem:
+            log("audio", "sin silencios que recortar")
+            return audio_path, words
+
+        segs = tsm.keep_segments(rem, total)
+        tmp = audio_path.with_name("voice_tight.mp3")
+        tsm.build_audio(audio_path, tmp, segs)
+
+        raw = audio_path.with_name("voice_raw.mp3")
+        audio_path.replace(raw)
+        tmp.replace(audio_path)
+
+        new_words = [(tsm.remap(s, rem), tsm.remap(e, rem), w) for s, e, w in words]
+        cut = sum(e - s for s, e in rem)
+        log("audio", f"silencios recortados: -{cut:.2f}s ({cut / total * 100:.1f}%), "
+                     f"{total:.1f}s -> {total - cut:.1f}s (original en voice_raw.mp3)")
+        return audio_path, new_words
+    except Exception as e:
+        log("audio", f"AVISO: fallo el recorte de silencios ({type(e).__name__}: {e}), "
+                     f"sigo con la voz original")
+        return audio_path, words
+
+
 KOKORO_DIR = ROOT / "tools" / "kokoro_tts"
 # Prefijos de voz Kokoro -> si --voice empieza con uno de estos, se usa Kokoro
 # (voz local, mas natural, gratis e ilimitada) en vez de edge-tts.
@@ -665,11 +896,197 @@ def _kokoro_tts(script: str, voice: str, wav_path: Path, speed: float = 1.0) -> 
     return [(float(s), float(e), w) for s, e, w in words_raw]
 
 
-WPS_MIN, WPS_MAX = 2.3, 2.7  # rango reportado como optimo para narracion clara en mute
+CHATTERBOX_DIR = ROOT / "tools" / "chatterbox_tts"
+# Prefijo de voz Chatterbox: --voice cb_es / cb_en. Hasta el 3 ago 2026 el
+# pipeline SOLO sabia enrutar a Kokoro o edge-tts, asi que todo guion en espanol
+# caia en edge-tts (es-US-AlonsoNeural) y sonaba a lector de Windows: Chatterbox
+# existia en tools/ pero unicamente viral_lab.py lo llamaba.
+CHATTERBOX_VOICE_PREFIXES = ("cb_",)
+# Timbre de referencia. Sin --ref, Chatterbox usa su voz por defecto, que en
+# espanol sale ambigua y aguda: el canal necesita narrador masculino de
+# documental. Chatterbox toma del --ref SOLO EL TIMBRE (y con el, el acento); la
+# prosodia la genera el. Dos hallazgos de la sesion del 3 ago 2026, ambos de oido:
+#  - Clonar una muestra de edge-tts a exaggeration 0.3 seguia sonando a robot;
+#    con exaggeration 0.45 + cfg 0.3 pasa a sonar humano. El problema eran los
+#    parametros, no el origen sintetico de la muestra.
+#  - Las voces en espanol de Kokoro (em_*) son de Espana y el acento viaja con el
+#    timbre, asi que la muestra tiene que ser LATAM. Se eligio base mexicana:
+#    es el "espanol neutro" del doblaje, el que no suena de ningun pais concreto.
+# assets/voice_refs/<lang>.wav manda si existe; si no, se sintetiza y se cachea.
+CHATTERBOX_REF_DIR = ROOT / "assets" / "voice_refs"
+_REF_SEED_VOICE = {"es": "es-MX-JorgeNeural", "en": "en-US-AndrewNeural"}
+# Frase larga y en tono neutro: la referencia define el timbre, asi que no debe
+# llevar carga emocional ni signos de exclamacion.
+_REF_SEED_TEXT = {
+    "es": "En noviembre de aquel año, los documentos del archivo revelaron una "
+          "operación que nadie había registrado. Las cifras estaban ahí, firmadas, "
+          "y durante años ninguna autoridad quiso revisarlas con atención.",
+    "en": "In November of that year, the archive documents revealed an operation "
+          "no one had recorded. The figures were there, signed, and for years no "
+          "authority cared to examine them closely.",
+}
 
 
-def _check_pacing(script: str, target_seconds: float = 60.0) -> None:
-    """Avisa ANTES de gastar creditos de TTS/Nano Banana si la densidad de
+def _chatterbox_ref(lang: str) -> Path | None:
+    """Devuelve (creandola si hace falta) la muestra de timbre para ese idioma.
+
+    Un wav propio en assets/voice_refs/<lang>.wav tiene prioridad: si el usuario
+    deja ahi una grabacion real, se clona esa en vez de la sintetica.
+    """
+    CHATTERBOX_REF_DIR.mkdir(parents=True, exist_ok=True)
+    ref = CHATTERBOX_REF_DIR / f"{lang}.wav"
+    if ref.exists():
+        return ref
+    seed_voice = _REF_SEED_VOICE.get(lang)
+    if not seed_voice:
+        return None
+    mp3 = ref.with_suffix(".mp3")
+    try:
+        log("audio", f"Creando muestra de timbre masculino ({seed_voice})...")
+        asyncio.run(_tts(_REF_SEED_TEXT[lang], seed_voice, "-5%", mp3))
+        run(["ffmpeg", "-y", "-i", str(mp3), "-ar", "24000", "-ac", "1", str(ref)])
+        mp3.unlink(missing_ok=True)
+        return ref
+    except Exception as e:
+        log("audio", f"AVISO: sin muestra de timbre ({type(e).__name__}: {e}), "
+                     f"Chatterbox usara su voz por defecto")
+        return None
+
+
+def _align_words(audio: Path, script: str = "",
+                 lang: str = "") -> list[tuple[float, float, str]]:
+    """Timestamps REALES por palabra sobre el audio ya sintetizado.
+
+    Chatterbox no devuelve tiempos (ver tools/chatterbox_tts/synth.py) y los de
+    Kokoro son una estimacion por longitud de caracter. Todo lo que va sincronizado
+    -- subtitulos karaoke, SFX, cortes de escena, el motor KoreX -- necesita timing
+    acustico, asi que se reconoce el propio audio con whisper.
+    """
+    from faster_whisper import WhisperModel
+    try:
+        import torch
+        cuda = torch.cuda.is_available()
+    except Exception:
+        cuda = False
+    device, compute = ("cuda", "float16") if cuda else ("cpu", "int8")
+    m = WhisperModel("base", device=device, compute_type=compute)
+    segs, _ = m.transcribe(str(audio), word_timestamps=True, language=lang or None)
+    heard = [(float(w.start), float(w.end), w.word.strip())
+             for s in segs for w in (s.words or []) if w.word.strip()]
+    return _snap_to_script(heard, script) if script else heard
+
+
+def _norm_word(w: str) -> str:
+    """Forma comparable: minusculas, sin puntuacion y sin tildes/dieresis."""
+    import unicodedata
+    w = "".join(c for c in unicodedata.normalize("NFD", w.lower())
+                if unicodedata.category(c) != "Mn")
+    return re.sub(r"[^\w]", "", w)
+
+
+def _snap_to_script(heard: list[tuple[float, float, str]],
+                    script: str) -> list[tuple[float, float, str]]:
+    """Devuelve las palabras DEL GUION con los tiempos que midio whisper.
+
+    Whisper transcribe lo que oye, no lo que escribimos: donde entiende mal, el
+    subtitulo quemado muestra una palabra distinta a la narrada y parece que el
+    TTS "cambio el guion" (reportado por el usuario 3 ago 2026). El audio manda
+    para el TIMING, el guion manda para el TEXTO.
+
+    Se alinean ambas secuencias con difflib; a cada palabra del guion sin
+    contraparte reconocida se le reparte el hueco temporal de sus vecinas, asi
+    que nunca se pierde ni se reordena una palabra del guion.
+    """
+    import difflib
+    target = [w for w in re.findall(r"\S+", script) if _norm_word(w)]
+    if not target or not heard:
+        return heard
+    sm = difflib.SequenceMatcher(
+        a=[_norm_word(w) for _, _, w in heard],
+        b=[_norm_word(w) for w in target], autojunk=False)
+    times: list[tuple[float, float] | None] = [None] * len(target)
+    for i, j, n in sm.get_matching_blocks():
+        for k in range(n):
+            times[j + k] = (heard[i + k][0], heard[i + k][1])
+    # Rellena los no emparejados repartiendo el hueco entre anclas conocidas.
+    first = next((t for t in times if t), (heard[0][0], heard[0][1]))
+    last = next((t for t in reversed(times) if t), (heard[-1][0], heard[-1][1]))
+    idx = 0
+    while idx < len(times):
+        if times[idx] is not None:
+            idx += 1
+            continue
+        end = idx
+        while end < len(times) and times[end] is None:
+            end += 1
+        lo = times[idx - 1][1] if idx > 0 else first[0]
+        hi = times[end][0] if end < len(times) else last[1]
+        step = max((hi - lo) / (end - idx), 0.06)
+        for k in range(idx, end):
+            times[k] = (lo + step * (k - idx), lo + step * (k - idx + 1))
+        idx = end
+    return [(t[0], t[1], w) for t, w in zip(times, target)]
+
+
+def _chatterbox_tts(script: str, voice: str, wav_path: Path,
+                    exaggeration: float = 0.45,
+                    cfg: float = 0.3) -> list[tuple[float, float, str]]:
+    """Corre tools/chatterbox_tts/synth.py en su propio venv (arrastra torch).
+
+    Cacheado por hash de texto+parametros en assets/cache/voices/: sintetizar es
+    lo mas lento del pipeline, y re-renderizar un video no debe volver a pagarlo.
+    """
+    lang = voice.split("_", 1)[1] if "_" in voice else "es"
+    ref = str(_chatterbox_ref(lang).resolve()) if _chatterbox_ref(lang) else ""
+    key = hashlib.sha1(f"{script}|{ref}|{exaggeration}|{cfg}|{lang}".encode()).hexdigest()[:16]
+    cache = ROOT / "assets" / "cache" / "voices"
+    cache.mkdir(parents=True, exist_ok=True)
+    cached = cache / f"{key}.wav"
+    if cached.exists():
+        log("audio", "voz Chatterbox desde cache")
+        shutil.copyfile(cached, wav_path)
+    else:
+        text_file = wav_path.with_suffix(".txt")
+        text_file.write_text(script, encoding="utf-8")
+        cmd = ["uv", "run", "--directory", str(CHATTERBOX_DIR), "synth.py",
+               "--text-file", str(text_file.resolve()), "--out", str(wav_path.resolve()),
+               "--exaggeration", str(exaggeration), "--cfg", str(cfg),
+               "--lang", lang]
+        if ref:
+            cmd += ["--ref", ref]
+        log("audio", f"Sintetizando voz con Chatterbox (lang={lang}"
+                     f"{', ref clonada' if ref else ''})...")
+        run(cmd, timeout=1800)
+        text_file.unlink(missing_ok=True)
+        if not wav_path.exists():
+            raise RuntimeError("Chatterbox no genero el wav")
+        shutil.copyfile(wav_path, cached)
+    return _align_words(wav_path, script=script, lang=lang)
+
+
+# Velocidad real de edge-tts a +8%, MEDIDA sobre 4 videos generados el 30 jul
+# 2026 (no estimada): 3,65 wps sin recortar, 4,07 wps con --trim-silence. Las
+# constantes anteriores (2,3-2,7) venian de otra configuracion y hacian que el
+# aviso de pacing saltara en TODOS los guiones aunque estuvieran bien.
+# El rango se centra en 4,07 (ritmo CON --trim-silence, que es como generamos
+# ahora). Sin recorte el mismo guion sale ~11% mas largo.
+WPS_MIN, WPS_MAX = 3.9, 4.3
+
+# Duracion objetivo. 60s -> 90s -> 175s el 31 jul 2026.
+# Los 175s NO son una estimacion: se midieron los 50 videos mas recientes de
+# Reddit Gossipz (196k subs, 416M vistas, mediana de 233k vistas por video) y
+# TODOS caen entre 163s y 179s, mediana 176s. Ni uno solo corto. Estan pegados
+# al techo de 3 minutos de Shorts, no al "punto dulce 30-45s" -- ese numero se
+# midio para HiddenFacts, que es otro formato.
+# TOPE FIJADO POR EL USUARIO 31 jul 2026: 90s maximo, aunque el lider use 175s.
+# A nuestro ritmo medido (4,07 wps con --trim-silence) => ~366 palabras.
+# Nota: ellos hablan a 5,78 wps, bastante mas rapido, asi que su guion de 175s
+# tiene ~1000 palabras. No copiar su conteo de palabras, copiar la DURACION.
+TARGET_SECONDS = 90.0
+
+
+def _check_pacing(script: str, target_seconds: float = TARGET_SECONDS) -> None:
+    """Avisa ANTES de gastar creditos de TTS/imagen si la densidad de
     palabras-por-segundo del guion cae fuera de [WPS_MIN, WPS_MAX]. No bloquea,
     solo informa (igual que el resto de logs del pipeline) -- ver
     RETENTION_CHECKLIST.md."""
@@ -687,6 +1104,326 @@ def _check_pacing(script: str, target_seconds: float = 60.0) -> None:
                        f"Considera bajar a ~{target_words} palabras.")
     else:
         log("pacing", f"{word_count} palabras / {target_seconds:.0f}s = {wps:.2f} wps (OK)")
+
+
+def _starts_with_why(text: str) -> bool:
+    """True si el texto arranca literalmente con 'Why' / 'Por que' (con o sin
+    tilde, con o sin '¿' de apertura)."""
+    t = (text or "").strip().lstrip("¿\"'“”‘’-— ").lower()
+    return t.startswith("why") or t.startswith("por que") or t.startswith("por qué")
+
+
+def _check_open_hook(script: str, title: str, hook_card: str,
+                     formato: str = "") -> None:
+    """La primera frase debe AFIRMAR un hecho imposible y dejarlo sin resolver
+    (regla 9 reescrita el 1 ago 2026; antes obligaba a abrir con "Why").
+
+    Dos avisos distintos:
+      - abre con pregunta -> el modelo viejo, mas debil: la pregunta PIDE al
+        espectador que se interese en vez de dejarlo incomodo.
+      - la frase se auto-resuelve -> una subordinada causal ("because...",
+        "so that...") contesta el misterio en el segundo 3 y a partir de ahi
+        no le debemos nada al espectador. Es exactamente donde la retencion
+        medida se cae.
+
+    Vive aqui y no solo en el prompt porque los guiones escritos a mano entran
+    por --script-file y NO pasan por Claude: sin este aviso la regla no se
+    aplicaria justo en el camino que mas usamos.
+    """
+    for etiqueta, texto in (("guion", script), ("titulo", title), ("hook_card", hook_card)):
+        if texto and _starts_with_why(texto):
+            log("lint", f"AVISO: el {etiqueta} abre con pregunta 'Why/Por que'. "
+                        f"La regla 9 pide un hecho imposible AFIRMADO en seco "
+                        f"(Garcia Marquez nunca pregunta).")
+
+    primera = next((x.strip() for x in re.split(r"(?<=[.!?])\s+", script or "") if x.strip()), "")
+    if primera and _RESUELVE_HOOK.search(primera):
+        log("lint", "AVISO: la 1a frase contiene su propia respuesta "
+                    "(because/since/so that/porque). Corta la subordinada y "
+                    "dejala colgando -- regla 9, 'never resolve the hook in the hook'.")
+    tiene_cifra = re.search(r"\d", primera)
+    tiene_nombre = re.search(r"\s[A-Z][a-z]+", primera)
+    tiene_numero = any(w.strip(".,;:-").upper() in _AUTO_RED
+                       for w in re.split(r"[\s-]+", primera))
+    if formato == "chisme":
+        # Excepcion pedida por Fabian el 1 ago 2026 y respaldada por el unico
+        # dato real que hay: el ganador de 1,6M tambien abre con marco, no con
+        # hecho. El chisme hablado empieza por la REACCION del que cuenta y el
+        # oyente se inclina para averiguar que la provoco; un hecho en seco es
+        # periodismo, no chisme. La intencion de la regla 9 se conserva -- el
+        # hueco sigue necesitando su prime -- solo se mueve de sitio: en vez de
+        # exigirlo en la 1a frase, se admite en los primeros ~3 segundos.
+        ventana = " ".join(script.split()[:int(3 * WPS_SPOKEN)])
+        if not (re.search(r"\d", ventana) or re.search(r"\s[A-Z][a-z]+", ventana)
+                or any(w.strip(".,;:-").upper() in _AUTO_RED
+                       for w in re.split(r"[\s-]+", ventana))):
+            log("lint", "AVISO: formato chisme, pero en los primeros 3 segundos "
+                        "no hay ningun dato concreto. El marco emocional abre la "
+                        "puerta; sin dato detras no hay hueco que llenar.")
+        return
+
+    if primera and not (tiene_cifra or tiene_nombre or tiene_numero):
+        log("lint", "AVISO: la 1a frase no lleva ningun dato concreto dentro "
+                    "(cifra, fecha o nombre propio). Sin ese 'prime' no hay hueco "
+                    "de informacion que llenar, solo ambiente -- regla 9.")
+
+
+# Subordinadas que resuelven el gancho dentro del propio gancho.
+_RESUELVE_HOOK = re.compile(
+    r"\b(because|so that|which is why|porque|ya que|"
+    r"puesto que|de modo que)\b", re.I)
+
+
+# Palabras por segundo reales de edge-tts a +8% tras recortar silencios, medidas
+# sobre los tres guiones de agosto: ~4.3. Se usa para traducir posiciones del
+# texto a segundos aproximados sin tener que sintetizar el audio.
+WPS_SPOKEN = 4.3
+PAYOFF_MAX_GAP_S = 20.0
+PAYOFF_MIN_COUNT = 4
+
+
+# Frases de preambulo disfrazadas de narracion. Medido 1 ago 2026 en
+# -79EJI_BSsE: "My name doesn't matter, but my story does" ocupa el segundo
+# 4,0-5,8 y la retencion se desploma desde el 5,5 (104,9% -> 59,4% en 4,6s).
+# Segundo y medio de desfase = lo que tarda alguien en decidir y deslizar.
+_RELLENO = [
+    r"my name (does\s*n.?t|doesn't) matter", r"this is my story", r"here'?s my story",
+    r"let me tell you", r"i'?ll tell you", r"it all started", r"where do i (even )?begin",
+    r"buckle up", r"bear with me", r"a bit of context", r"some background",
+    r"mi nombre no importa", r"esta es mi historia", r"dejame contarte",
+    r"todo empezo cuando", r"para que entiendas", r"os cuento",
+]
+_RELLENO_RE = [re.compile(p, re.I) for p in _RELLENO]
+VENTANA_CRITICA = (5.0, 10.0)
+
+
+_MUERTE = re.compile(
+    r"\b(died|death|dead|funeral|buried|grave|headstone|cemetery|"
+    r"terminal|miscarriage|stillborn|passed away|murio|muerte|"
+    r"entierro|lapida|cementerio)\b|no heartbeat", re.I)
+
+
+def _check_apuesta_cotidiana(script: str, script_path=None) -> None:
+    """Regla 9h: avisa de la RACHA de historias con muerte, no del caso suelto.
+
+    Una muerte cada varios videos esta bien. Lo que rompe el canal es encadenar
+    -- medido el 2 ago 2026: cinco guiones seguidos con funeral o perdida, y el
+    comparable de 1,6M no tiene ninguna.
+    """
+    aqui = bool(_MUERTE.search(script or ""))
+    if not aqui:
+        return
+    carpeta = Path(script_path).parent if script_path else Path("scripts")
+    if not carpeta.is_dir():
+        log("lint", "AVISO: este guion se apoya en una muerte (regla 9h).")
+        return
+    otros = sorted(carpeta.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)[:6]
+    con = sum(1 for f in otros
+              if f.name != Path(script_path or "").name
+              and _MUERTE.search(f.read_text(encoding="utf-8", errors="ignore")))
+    if con >= 2:
+        log("lint", f"AVISO: este guion se apoya en una muerte, y {con} de los "
+                    f"ultimos guiones tambien. Es una racha, no un caso suelto -- "
+                    f"regla 9h. El comparable de 1,6M no tiene ni un muerto.")
+
+
+def _check_relleno_inicial(script: str) -> None:
+    """Ninguna frase de los primeros 10s puede existir sin aportar un hecho.
+
+    Regla 9g. El relleno no aburre: rompe la confianza. El espectador acaba de
+    aceptar una promesa y la siguiente frase no le da nada, asi que concluye
+    que el resto tampoco. Por eso la caida es tan vertical y no gradual.
+    """
+    t = 0.0
+    for frase in [x.strip() for x in re.split(r"(?<=[.!?])\s+", script or "") if x.strip()]:
+        dur = len(frase.split()) / WPS_SPOKEN
+        if t > 12.0:
+            break
+        for rx in _RELLENO_RE:
+            if rx.search(frase):
+                log("lint", f"AVISO: relleno en el segundo {t:.1f} -> {frase!r}. "
+                            f"Ninguna frase de los primeros 10s puede existir sin "
+                            f"aportar un hecho nuevo (regla 9g).")
+                break
+        t += dur
+
+
+def _check_ventana_critica(script: str, payoffs: list[str] | None) -> None:
+    """Tiene que haber un premio entre el segundo 5 y el 10 (regla 9g).
+
+    Es la ventana donde la retencion medida se desangra: -45,5 puntos en 4,6s.
+    La regla 9f reparte premios pero no fija ninguno AQUI, y por eso el
+    visitor-log salio con premios en el 3,2 y el 20,1 -- el hueco justo encima.
+    """
+    if not payoffs:
+        return
+    a, b = VENTANA_CRITICA
+    for frase in payoffs:
+        i = script.lower().find(frase.lower())
+        if i < 0:
+            continue
+        t = len(script[:i].split()) / WPS_SPOKEN
+        if a <= t <= b:
+            return
+    log("lint", f"AVISO: ningun premio entre el segundo {a:.0f} y el {b:.0f}. "
+                f"Es la ventana donde la retencion medida cae 45 puntos en 4,6s "
+                f"-- regla 9g, premio obligatorio ahi.")
+
+
+def _check_payoff_spacing(script: str, payoffs: list[str] | None) -> None:
+    """Verifica la escalera de premios de la regla 9f.
+
+    Un premio es cualquier momento en que el espectador cobra por seguir ahi.
+    Tres avisos: pocos premios, un hueco largo sin ninguno, y un ritmo
+    demasiado regular (si el cerebro puede predecir cuando llega el siguiente,
+    el hueco previsible es un momento seguro para irse).
+
+    Vive aqui y no solo en el prompt porque los guiones a mano entran por
+    --script-file y no pasan por Claude.
+    """
+    if not payoffs:
+        log("lint", "AVISO: el guion no declara `payoffs`. Sin la escalera de la "
+                    "regla 9f no hay forma de saber si hay 30s seguidos sin premio.")
+        return
+
+    palabras = script.split()
+    total_s = len(palabras) / WPS_SPOKEN
+    pos = []
+    for frase in payoffs:
+        i = script.lower().find(frase.lower())
+        if i < 0:
+            log("lint", f"AVISO: el payoff {frase!r} no aparece literal en el guion.")
+            continue
+        pos.append(len(script[:i].split()) / WPS_SPOKEN)
+    if not pos:
+        return
+    pos.sort()
+
+    if len(pos) < PAYOFF_MIN_COUNT:
+        log("lint", f"AVISO: solo {len(pos)} premios declarados (minimo "
+                    f"{PAYOFF_MIN_COUNT}, regla 9f). Un unico pago al final solo "
+                    f"lo cobra quien llega al final.")
+
+    huecos = [pos[0]] + [b - a for a, b in zip(pos, pos[1:])] + [total_s - pos[-1]]
+    peor = max(huecos)
+    if peor > PAYOFF_MAX_GAP_S:
+        i = huecos.index(peor)
+        desde = 0.0 if i == 0 else pos[i - 1]
+        log("lint", f"AVISO: {peor:.0f}s sin ningun premio (del segundo {desde:.0f} "
+                    f"al {desde + peor:.0f}). Maximo {PAYOFF_MAX_GAP_S:.0f}s, regla 9f.")
+
+    internos = huecos[1:-1]
+    if len(internos) >= 3:
+        media = sum(internos) / len(internos)
+        desv = (sum((x - media) ** 2 for x in internos) / len(internos)) ** 0.5
+        if media and desv / media < 0.25:
+            log("lint", f"AVISO: los premios llegan a intervalos casi iguales "
+                        f"(~{media:.0f}s, desviacion {desv:.1f}s). Un ritmo predecible "
+                        f"le dice al espectador cuando puede irse -- regla 9f pide "
+                        f"espaciado irregular.")
+
+
+_CONTRAST_OPENERS = ("but", "except", "yet", "although", "however",
+                     "pero", "salvo", "aunque", "sin embargo")
+
+
+def _check_hook_beats(script: str) -> None:
+    """Verifica el gancho de 3 tiempos de la regla 9b (framework Kallaway).
+
+    Beat 1 = el hecho imposible afirmado (regla 9, _check_open_hook), beat 2 = frase
+    corta que arranca con palabra de contraste, beat 3 = giro contrario.
+    Solo avisa; igual que el resto del lint, nunca bloquea. Vive aqui y no
+    solo en el prompt porque los guiones a mano entran por --script-file y no
+    pasan por Claude.
+    """
+    sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", script or "") if s.strip()]
+    if len(sents) < 3:
+        log("lint", "AVISO: el guion tiene menos de 3 oraciones, no se puede "
+                    "verificar el gancho de 3 tiempos (regla 9b).")
+        return
+
+    beat2 = sents[1]
+    first_word = re.sub(r"[^\w]", "", beat2.split()[0]).lower() if beat2.split() else ""
+    if first_word not in _CONTRAST_OPENERS:
+        log("lint", f"AVISO: la 2a oracion no abre con palabra de contraste "
+                    f"(But/Except/Yet/Although); abre con {first_word!r}. Es el "
+                    f"'scroll-stop' de la regla 9b, sin el no hay freno tras el gancho.")
+
+    for i, beat in ((2, sents[1]), (3, sents[2])):
+        n = len(beat.split())
+        if n > 12:
+            log("lint", f"AVISO: la oracion {i} del gancho tiene {n} palabras (max 12) "
+                        f"-- la apertura debe ser staccato, regla 9b.")
+
+
+_CONNECTIVES = ("but", "therefore", "so", "because", "yet", "except", "although",
+                "however", "pero", "asi que", "porque", "aunque", "sin embargo")
+
+
+def _check_but_therefore(script: str) -> None:
+    """Avisa si el guion encadena escenas con 'and then' en vez de 'but/therefore'.
+
+    Regla de Trey Parker / Matt Stone (South Park), citada por Kallaway y
+    revisada 31 jul 2026: entre dos beats debe caber 'pero' o 'por lo tanto',
+    nunca 'y entonces'. 'Y entonces' apila detalles y el espectador se cae;
+    'pero/por lo tanto' abre un conflicto que hay que cerrar.
+
+    *** RECALIBRADO 31 jul 2026, LA EVIDENCIA LO CONTRADICE EN PARTE ***
+    Al medir el video #1 de Reddit Gossipz (1,66M vistas, lider del formato)
+    dio 0/27 conectores = 0%. Reprobaria este lint entero y aun asi es el video
+    mas visto del nicho. El consejo de Parker/Stone viene de comedia narrativa
+    larga (South Park) y NO parece transferir a este formato, que es una
+    acumulacion de vinetas cortas, no una cadena causal.
+    Por eso el umbral baja de 0,30 a 0,12: sigue avisando del caso patologico
+    (un guion sin ningun conector) pero ya no penaliza el patron que de hecho
+    usa el lider. Si al medir 3-5 competidores mas sigue dando ~0%, este check
+    hay que borrarlo, no seguir bajandole el umbral.
+    """
+    sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", script or "") if s.strip()]
+    if len(sents) < 4:
+        return
+    body = sents[1:]  # la primera es el gancho, no encadena con nada
+    hits = sum(1 for s in body
+               if s.split() and s.split()[0].strip(",.").lower() in _CONNECTIVES)
+    ratio = hits / len(body)
+    if ratio < 0.12:
+        log("lint", f"AVISO (suave): {hits}/{len(body)} oraciones encadenan con "
+                    f"but/therefore/so/because ({ratio:.0%}). Referencia: el lider "
+                    f"del formato esta en 0%, asi que esto NO es urgente -- solo "
+                    f"revisa que la historia no sea una lista plana de sucesos.")
+
+
+def _check_sentence_rhythm(script: str) -> None:
+    """Avisa si todas las oraciones miden casi lo mismo (ritmo monotono).
+
+    Principio de Gary Provost citado por Kallaway: alternar frases cortas,
+    medias y largas crea musica; frases todas iguales aburren.
+
+    *** RECALIBRADO 31 jul 2026: AYER DIJE QUE NO HABIA EVIDENCIA, AHORA SI LA HAY ***
+    Se implemento con umbral 3,5 y una nota diciendo que nuestros datos lo
+    contradecian (black_tom, el de mejor retencion, tenia la MENOR variacion:
+    3,7). Al medir al lider del formato el resultado se invierte: Reddit Gossipz
+    #1 (1,66M vistas) tiene desviacion 6,1, con frases de 2 a 24 palabras. Sus
+    frases de dos palabras ("Same game.", "Never scanned.") son justo el recurso
+    que rompe la monotonia.
+    Nuestros guiones de historias estaban entre 3,7 y 4,8, todos por debajo del
+    lider, asi que el umbral sube de 3,5 a 5,0. black_tom sigue siendo la
+    excepcion pero es de OTRO canal y otro formato (documental historico, no
+    historia personal en primera persona).
+    """
+    sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", script or "") if s.strip()]
+    if len(sents) < 6:
+        return
+    lens = [len(s.split()) for s in sents]
+    mean = sum(lens) / len(lens)
+    var = sum((x - mean) ** 2 for x in lens) / len(lens)
+    stdev = var ** 0.5
+    if stdev < 5.0:
+        log("lint", f"AVISO: las oraciones miden casi todas lo mismo "
+                    f"(media {mean:.0f} palabras, desviacion {stdev:.1f}; el lider "
+                    f"del formato esta en 6,1 con frases de 2 a 24 palabras). "
+                    f"Mete frases de 2-4 palabras entre las largas para romper la "
+                    f"monotonia (ver regla 9c).")
 
 
 def _check_script_lint(script: str, title: str, voice: str,
@@ -746,7 +1483,12 @@ def _rate_to_kokoro_speed(rate: str) -> float:
 
 
 def generate_audio(script: str, voice: str, rate: str, out_dir: Path) -> tuple[Path, list]:
-    if voice.startswith(KOKORO_VOICE_PREFIXES):
+    if voice.startswith(CHATTERBOX_VOICE_PREFIXES):
+        wav_path = out_dir / "voice.wav"
+        words = _chatterbox_tts(script, voice, wav_path)
+        mp3_path = out_dir / "voice.mp3"
+        run(["ffmpeg", "-y", "-i", str(wav_path), "-ar", "44100", str(mp3_path)])
+    elif voice.startswith(KOKORO_VOICE_PREFIXES):
         wav_path = out_dir / "voice.wav"
         speed = _rate_to_kokoro_speed(rate)
         log("audio", f"Sintetizando voz con Kokoro (local, voz {voice}, speed {speed})...")
@@ -812,6 +1554,14 @@ def _ass_time(seconds: float) -> str:
 
 
 SUB_LINE_CHARS = 14  # max chars por linea a fontsize 96 sin acercarse a los bordes
+# Cuantas palabras se muestran juntas por bloque de karaoke (una resaltada, el
+# resto en blanco). 1 = una palabra a la vez en pantalla, pedido explicito del
+# usuario 30 jul 2026 sobre un checklist de edicion tipo Hormozi.
+SUB_CHUNK_WORDS = 1
+# Volumen lineal de la musica de fondo antes del sidechain-duck contra la voz.
+# 0.09 ~= -20.9dB, dentro del rango -18/-22dB pedido explicitamente 30 jul
+# 2026 (antes 0.06 ~= -24.4dB, mas bajo de lo pedido).
+MUSIC_VOLUME = 0.09
 
 
 def _split_index(tokens: list[str]) -> int:
@@ -838,9 +1588,49 @@ def _split_index(tokens: list[str]) -> int:
 _CAP_ACTIVE = r"{\c&H00FFFF&\fscx100\fscy100\t(0,90,\fscx113\fscy113)}"
 _CAP_WHITE = r"{\c&HFFFFFF&\fscx100\fscy100}"
 
+# Rojo para las palabras que cargan el dato (1 ago 2026). Con SUB_CHUNK_WORDS=1
+# la palabra activa es la unica en pantalla, asi que el amarillo pasaba a ser el
+# 100% del texto y dejaba de significar nada: si todo resalta, nada resalta.
+# El rojo se reserva a las palabras de `caption_keywords`: verbos de accion y la
+# palabra que gira la frase ("rebuilt", "typed", "unfinished"), no sustantivos de
+# relleno. Objetivo ~5% del guion; pintar 40 palabras convierte el rojo en el
+# nuevo amarillo y se pierde otra vez la jerarquia.
+_CAP_RED = r"{\c&H2222DD&\fscx100\fscy100\t(0,90,\fscx118\fscy118)}"
+_CAP_RED_IDLE = r"{\c&H2222DD&\fscx100\fscy100}"
+
+
+# Cifras: van en rojo aunque el guion no las declare. Son las palabras que
+# cargan el dato en casi todo guion del canal ("forty times", "eleven days") y
+# asi el resalte funciona tambien en los guiones que genera Claude, donde no hay
+# lista de keywords escrita a mano.
+# ONE/TWO/THREE quedan FUERA a proposito: en ingles son relleno gramatical
+# ("one of us", "not one", "thirty one") mucho mas que dato. Medido en el guion
+# de las recetas, solas subian el resaltado del 7,7% al 10,6% sin aportar nada.
+_AUTO_RED = {
+    "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN",
+    "ELEVEN", "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN", "SIXTEEN", "SEVENTEEN",
+    "EIGHTEEN", "NINETEEN", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY",
+    "SEVENTY", "EIGHTY", "NINETY", "MILLION",
+}
+
+
+def _is_red(token: str, red_tokens: set[str]) -> bool:
+    key = token.strip(".,;:!?\"'()-")
+    return bool(key) and (key in red_tokens or key in _AUTO_RED or key.isdigit())
+
+
+def _keyword_tokens(keywords: list[str] | None) -> set[str]:
+    """Palabras sueltas en mayusculas y sin puntuacion, como salen en el .ass."""
+    tokens: set[str] = set()
+    for kw in keywords or []:
+        for part in re.findall(r"[A-Za-z0-9']+", kw.upper()):
+            tokens.add(part)
+    return tokens
+
 
 def generate_subtitles(words: list[tuple[float, float, str]], out_dir: Path,
-                       lead_ms: int = 0, offset_ms: int = 0) -> Path:
+                       lead_ms: int = 0, offset_ms: int = 0,
+                       keywords: list[str] | None = None) -> Path:
     # Karaoke palabra-por-palabra: agrupa en bloques cortos (max 3 palabras / 18
     # chars, texto-como-imagen: lectura instantanea sin "leer" gramaticalmente)
     # para conservar contexto de 2 lineas, pero emite UN evento por palabra con
@@ -860,11 +1650,12 @@ def generate_subtitles(words: list[tuple[float, float, str]], out_dir: Path,
         off = offset_ms / 1000
         words = [(ws + off, we + off, w) for ws, we, w in words]
 
+    red_tokens = _keyword_tokens(keywords)
     chunks: list[list[tuple[float, float, str]]] = []
     buf: list[tuple[float, float, str]] = []
     for w in words:
         buf.append(w)
-        if len(buf) >= 3 or len(" ".join(x[2] for x in buf)) >= 18:
+        if len(buf) >= SUB_CHUNK_WORDS or len(" ".join(x[2] for x in buf)) >= 18:
             chunks.append(buf)
             buf = []
     if buf:
@@ -884,8 +1675,18 @@ def generate_subtitles(words: list[tuple[float, float, str]], out_dir: Path,
             end = chunk[wi + 1][0] if wi + 1 < len(chunk) else chunk_end
             if end <= start:
                 end = start + 0.05
-            parts = [f"{_CAP_ACTIVE}{t}{_CAP_WHITE}" if j == wi else t
-                     for j, t in enumerate(tokens)]
+            parts = []
+            for j, t in enumerate(tokens):
+                red = _is_red(t, red_tokens)
+                if j == wi:
+                    lead_tag = _CAP_RED if red else _CAP_ACTIVE
+                    parts.append(f"{lead_tag}{t}{_CAP_WHITE}")
+                elif red:
+                    # la keyword se queda roja aunque no sea la activa: es lo que
+                    # rompe el bloque monocolor cuando hay varias palabras a la vez
+                    parts.append(f"{_CAP_RED_IDLE}{t}{_CAP_WHITE}")
+                else:
+                    parts.append(t)
             line1 = " ".join(parts[:split])
             line2 = " ".join(parts[split:])
             text = line1 + ("\\N" + line2 if line2 else "")
@@ -899,7 +1700,7 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,Arial Black,96,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,7,3,2,60,60,640,1
+Style: Cap,Arial Black,96,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,7,3,2,60,60,960,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -929,6 +1730,77 @@ def _gradient_clip(index: int, duration: float, path: Path) -> None:
     ])
 
 
+# Palabras que aparecen en casi todo search_term ("close up hands ...") y
+# matchearian con cualquier clip: no aportan senal para medir relevancia.
+_PEXELS_STOPWORDS = {
+    "the", "and", "with", "for", "from", "into", "onto", "over", "out",
+    "close", "shot", "view", "video", "footage", "clip", "scene",
+    "slowly", "slow", "detail", "person", "people", "someone",
+}
+
+
+def _pexels_relevance(term: str, video: dict) -> float:
+    """Fraccion de palabras significativas del termino presentes en los metadatos
+    del clip (slug de la URL + tags).
+
+    Pexels NUNCA falla por una query sin sentido: siempre devuelve algo. Medido
+    29 jul 2026, 'xzqvblorptronic nonexistent gibberish 9999' descargo un render
+    3D abstracto y la funcion devolvia True como si hubiera acertado -- ese es el
+    mecanismo real detras de "los clips no pegan con la historia". Esto no
+    bloquea nada (el pipeline debe seguir fallando suave), solo hace visible en
+    el log que el clip probablemente no corresponde al termino.
+    """
+    words = {w for w in re.findall(r"[a-z]+", term.lower())
+             if len(w) > 2 and w not in _PEXELS_STOPWORDS}
+    if not words:
+        return 1.0  # nada verificable: no penalizar
+    haystack = (video.get("url") or "").lower()
+    haystack += " " + " ".join(str(t).lower() for t in (video.get("tags") or []))
+    return sum(1 for w in words if w in haystack) / len(words)
+
+
+def _apply_entry_zoom(path: Path) -> None:
+    """Zoom-in rapido en el primer ~20% de frames de un clip de VIDEO (no
+    imagen estatica). Misma curva que hook=True en _static_image_clip
+    (+0.15 de zoom comprimido en el primer 20%, luego se asienta), pero
+    aplicado sobre un clip ya grabado -- los de Pexels nunca pasan por
+    zoompan porque _static_image_clip solo corre para imagenes generadas por
+    IA. Sobrescribe el archivo in place; si falla, deja el clip como estaba
+    (nunca bloquea el render por un efecto cosmetico)."""
+    try:
+        dur = ffprobe_duration(path)
+    except Exception:
+        return
+    frames = max(int(round(dur * FPS)), 1)
+    rush = max(int(frames * 0.2), 1)
+    # OJO con zoompan sobre VIDEO: 'd' es cuantos frames de SALIDA genera por
+    # cada frame de ENTRADA. En _static_image_clip la entrada es '-loop 1' con
+    # UNA imagen, asi que d=frames da exactamente esa cantidad. Aqui la entrada
+    # ya son N frames, asi que d debe ser 1 o el clip se multiplica por N
+    # (probado 30 jul 2026: un clip de 35s no terminaba de renderizar nunca).
+    # Con d=1 el contador 'on' avanza de a un frame, asi que sirve igual que en
+    # el caso de imagen ('n' NO existe como variable en zoompan).
+    zexpr = f"if(lt(on,{rush}),1.0+(0.15/{rush})*on,1.15)"
+    tmp = path.with_name(path.stem + "_zoom" + path.suffix)
+    try:
+        run([
+            "ffmpeg", "-y", "-i", str(path),
+            # el fps= va ANTES de zoompan: los clips de Pexels vienen a 25fps y
+            # zoompan solo DECLARA la tasa sin remuestrear, asi que sin esto un
+            # clip de 4s salia de 3.33s (100 frames reproducidos a 30fps).
+            "-vf", (f"fps={FPS},"
+                    f"scale={WIDTH * 2}:{HEIGHT * 2}:force_original_aspect_ratio=increase,"
+                    f"crop={WIDTH * 2}:{HEIGHT * 2},"
+                    f"zoompan=z='{zexpr}':d=1:s={WIDTH}x{HEIGHT}:fps={FPS},setsar=1"),
+            "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
+            str(tmp),
+        ])
+        tmp.replace(path)
+    except Exception as e:
+        log("media", f"AVISO: zoom de entrada de escena 1 fallo ({type(e).__name__}: {e}), sigo sin el")
+        tmp.unlink(missing_ok=True)
+
+
 def _pexels_download(term: str, path: Path, api_key: str) -> bool:
     try:
         r = requests.get(
@@ -946,18 +1818,31 @@ def _pexels_download(term: str, path: Path, api_key: str) -> bool:
             if not files:
                 continue
             best = min(files, key=lambda f: abs(f["height"] - HEIGHT))
+            if _pexels_relevance(term, video) == 0:
+                log("media", f"AVISO: el clip de Pexels para '{term}' no coincide con "
+                             f"ninguna palabra del termino ({video.get('url', '?')}) -- "
+                             f"revisa visualmente, puede ser metraje aleatorio")
             with requests.get(best["link"], stream=True, timeout=120) as dl:
                 dl.raise_for_status()
                 with open(path, "wb") as f:
                     for chunk in dl.iter_content(1 << 16):
                         f.write(chunk)
+            # Los metadatos de Pexels mienten: medido 29 jul 2026, el archivo
+            # '7299471-hd_1080_1920_30fps.mp4' (width/height declarados 1080x1920,
+            # y hasta el nombre lo dice) trae un stream real de 720x1280. Por eso
+            # esto se comprueba sobre el archivo ya descargado, no sobre el JSON.
+            real = ffprobe_resolution(path)
+            if real and real[0] < WIDTH:
+                log("media", f"AVISO: el clip para '{term}' es {real[0]}x{real[1]} real "
+                             f"(Pexels declaraba {best.get('width')}x{best.get('height')}), "
+                             f"por debajo de {WIDTH}x{HEIGHT} -- se reescalara hacia "
+                             f"arriba y perdera nitidez")
             return True
     except Exception as e:
         log("media", f"Pexels fallo para '{term}': {e}")
     return False
 
 
-NANOBANANA_MODEL = "gemini-2.5-flash-image"
 # Neutral a proposito: NO fuerza "photo-realistic" porque eso arruina estilos
 # especificos (ej. splash art de videojuegos). Cada prompt define su propio estilo.
 # Guardrails de composicion: el personaje quedaba "lanzado"/descentrado en escenas
@@ -1118,7 +2003,7 @@ def _get_named_character_sheet(name: str, phase: str, style_directive: str,
         "Keep the identity (face, outfit, colors, silhouette) clearly consistent "
         "across the three views. Vertical 9:16, no text, no labels."
     )
-    ok = _nanobanana_generate_image(prompt, sheet_path, api_key, reference_image=seed_ref, attempts=3)
+    ok = _seedream_generate_image(prompt, sheet_path, api_key, reference_image=seed_ref, attempts=3)
     if not ok:
         return None
     entry["phases"][f"{phase}_{style_key}"] = sheet_path.name
@@ -1133,7 +2018,7 @@ def _get_character_sheet(splash: Path, style_directive: str, api_key: str) -> Pa
     en disco. Usarla como referencia (en vez del splash pintado original) mantiene
     consistente el diseño del personaje entre escenas y evita que el modelo copie
     el estilo pintado del splash en escenas atmosfericas (ver memoria
-    estilo-roblox-nanobanana)."""
+    estilo-roblox-nanobanana, escrita cuando el generador era Nano Banana)."""
     ROBLOX_SHEETS_DIR.mkdir(parents=True, exist_ok=True)
     champ_id = _champion_id(splash)
     cache_key = re.sub(r"[^a-z0-9]+", "-", style_directive.lower())[:40]
@@ -1144,160 +2029,16 @@ def _get_character_sheet(splash: Path, style_directive: str, api_key: str) -> Pa
 
     log("media", f"generando hoja de personaje para '{champ_id}' (una vez, se reusa en todas las escenas)...")
     prompt = _character_sheet_prompt(champ_id, style_directive)
-    ok = _nanobanana_generate_image(prompt, sheet_path, api_key, reference_image=splash, attempts=3)
+    ok = _seedream_generate_image(prompt, sheet_path, api_key, reference_image=splash, attempts=3)
     return sheet_path if ok else None
 
 
-USAGE_LOG_PATH = ROOT / "gemini_usage.json"
-COST_PER_IMAGE = 0.04
-COST_PER_SONG = 0.08
-
-
-def _track_gemini_usage(kind: str, success: bool) -> None:
-    """Registra cada llamada a Nano Banana/Lyria en gemini_usage.json (por dia),
-    para poder avisar gasto estimado y fallos por cuota sin depender de una API
-    de balance que Gemini no expone al key de consumidor."""
-    today = datetime.now().strftime("%Y-%m-%d")
-    data = _load_json(USAGE_LOG_PATH, {})
-    day = data.setdefault(today, {"images_ok": 0, "images_failed": 0,
-                                   "songs_ok": 0, "songs_failed": 0})
-    key = f"{'images' if kind == 'image' else 'songs'}_{'ok' if success else 'failed'}"
-    day[key] += 1
-    _atomic_write_json(USAGE_LOG_PATH, data)
-
-
-def _usage_summary_today() -> str:
-    today = datetime.now().strftime("%Y-%m-%d")
-    data = _load_json(USAGE_LOG_PATH, {}).get(today)
-    if not data:
-        return ""
-    cost = data["images_ok"] * COST_PER_IMAGE + data["songs_ok"] * COST_PER_SONG
-    fails = data["images_failed"] + data["songs_failed"]
-    msg = (f"hoy: {data['images_ok']} imagenes + {data['songs_ok']} canciones "
-           f"OK (~${cost:.2f} estimado)")
-    if fails:
-        msg += f", {fails} llamadas fallidas (posible limite de cuota/creditos agotados)"
-    return msg
-
-
-def _nanobanana_generate_image(prompt: str, path: Path, api_key: str,
-                                reference_image: Path | None = None,
-                                reference_images: list[Path] | None = None,
-                                style_directive: str | None = None,
-                                attempts: int = 2) -> bool:
-    """reference_image: un solo personaje (uso original, Skick). reference_images:
-    varios personajes a la vez (lore multi-personaje). style_directive: estilo de
-    arte OBLIGATORIO para todo el frame -- va como PRIMERA instruccion, por encima
-    de la de fidelidad, porque el modelo tiende a copiar el estilo del splash de
-    referencia en escenas atmosfericas si no se le subordina explicitamente
-    (visto en el video de Yasuo Roblox: escenas de bosque/niebla revirtieron al
-    estilo pintado de LoL). attempts>1: reintento ante fallos transitorios de API."""
-    all_refs = list(reference_images or [])
-    if reference_image:
-        all_refs.insert(0, reference_image)
-    all_refs = [r for r in all_refs if r and r.exists()]
-
-    parts = []
-    if style_directive:
-        parts.append({"text": f"MANDATORY ART STYLE: {style_directive}. This art style applies "
-                               "to EVERY element of the frame -- characters, background, props, "
-                               "lighting, atmosphere -- with zero exceptions, no matter how "
-                               "dramatic or moody the scene is. Never revert to the art style "
-                               "of any reference image."})
-    if all_refs:
-        n = len(all_refs)
-        ref_word = "the reference image" if n == 1 else f"each of the {n} reference images"
-        if style_directive:
-            fidelity = (f"The reference images define each character's IDENTITY only -- face, "
-                        f"hair, outfit, silhouette, identifying features from {ref_word} -- NOT "
-                        "the art style. Re-render every character fully in the mandatory art "
-                        "style above while keeping their identity clearly recognizable. If "
-                        "multiple reference images are given, each corresponds to a different "
-                        "character appearing together as described in the scene.")
-        else:
-            fidelity = (f"CRITICAL: keep every character's design 100% faithful to {ref_word} "
-                        "provided (same face, same outfit, same silhouette, same identifying "
-                        "features) - only change pose/expression/background/art-style-treatment "
-                        "to match the scene described below. If multiple reference images are "
-                        "given, each corresponds to a different character that should appear "
-                        "together as described in the scene.")
-        parts.append({"text": fidelity})
-    parts.append({"text": prompt + NANOBANANA_STYLE_SUFFIX})
-    for ref in all_refs:
-        parts.append({
-            "inlineData": {
-                "mimeType": "image/png" if ref.suffix.lower() == ".png" else "image/jpeg",
-                "data": base64.b64encode(ref.read_bytes()).decode("ascii"),
-            }
-        })
-
-    for attempt in range(attempts):
-        try:
-            r = requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{NANOBANANA_MODEL}:generateContent",
-                headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
-                json={
-                    "contents": [{"parts": parts}],
-                    "generationConfig": {"imageConfig": {"aspectRatio": "9:16"}},
-                },
-                timeout=60,
-            )
-            r.raise_for_status()
-            resp_parts = r.json()["candidates"][0]["content"]["parts"]
-            for part in resp_parts:
-                if "inlineData" in part:
-                    path.write_bytes(base64.b64decode(part["inlineData"]["data"]))
-                    _track_gemini_usage("image", True)
-                    return True
-            raise RuntimeError("respuesta sin imagen")
-        except Exception as e:
-            if attempt < attempts - 1:
-                log("media", f"Nano Banana fallo (intento {attempt + 1}), reintento en 5s: {e}")
-                time.sleep(5)
-            else:
-                log("media", f"Nano Banana fallo para '{prompt[:60]}...': {e}")
-                _track_gemini_usage("image", False)
-    return False
-
-
-_ACTIVE_FLOW_SESSION = None  # seteado por acquire_media: un proyecto de Flow reusado
-                             # para todas las escenas de un video (evita reabrir
-                             # Chrome/Flow por cada imagen, ver flow_automation.py)
-
-
-def _flow_or_nanobanana_generate_image(prompt: str, path: Path, api_key: str,
-                                        reference_image: Path | None = None,
-                                        reference_images: list[Path] | None = None,
-                                        style_directive: str | None = None,
-                                        attempts: int = 2) -> bool:
-    """media_source='flow': genera gratis en Google Flow (nano banana 2) via
-    Playwright (flow_automation.py) en vez de pagar la API de Gemini. Cae a
-    Nano Banana API automaticamente si Flow falla (selector roto, timeout,
-    cuota, sin login) o si la escena necesita reference_image/reference_images/
-    style_directive -- Flow en este flujo no soporta consistencia de personaje,
-    solo texto a imagen."""
-    needs_reference = bool(reference_image or reference_images or style_directive)
-    if not needs_reference:
-        full_prompt = prompt + NANOBANANA_STYLE_SUFFIX
-        if _ACTIVE_FLOW_SESSION is not None:
-            ok = _ACTIVE_FLOW_SESSION.generate(full_prompt, path)
-        else:
-            from flow_automation import flow_generate_image
-            aspect = "9:16" if HEIGHT > WIDTH else "16:9"
-            ok = flow_generate_image(full_prompt, path, aspect_ratio=aspect)
-        if ok:
-            log("media", f"Flow OK (gratis) '{prompt[:60]}...'")
-            return True
-        log("media", f"Flow fallo para '{prompt[:60]}...', cae a Nano Banana API")
-    return _nanobanana_generate_image(prompt, path, api_key, reference_image=reference_image,
-                                       reference_images=reference_images,
-                                       style_directive=style_directive, attempts=attempts)
 
 
 def _piapi_upload_temp(image_path: Path, api_key: str) -> str:
     """Sube un archivo local al endpoint efimero de PiAPI (se borra solo a las 24h)
     y devuelve una URL publica -- Seedream (via PiAPI) solo acepta image_urls, no
-    base64 directo, a diferencia de Nano Banana/Gemini."""
+    base64 directo."""
     b64 = base64.b64encode(image_path.read_bytes()).decode("ascii")
     r = requests.post(
         "https://upload.theapi.app/api/ephemeral_resource",
@@ -1315,10 +2056,10 @@ def _seedream_generate_image(prompt: str, path: Path, api_key: str,
                               reference_images: list[Path] | None = None,
                               style_directive: str | None = None,
                               attempts: int = 2) -> bool:
-    """Alternativa a Nano Banana via Seedream (ByteDance) por PiAPI -- mejor
+    """Generador de imagenes del pipeline: Seedream (ByteDance) via PiAPI -- mejor
     consistencia de personaje multi-referencia segun benchmarks (ver
-    investigacion 19 jul 2026). Misma firma que _nanobanana_generate_image para
-    poder intercambiarlas en acquire_media(). image_urls debe ser URL publica,
+    investigacion 19 jul 2026). Es el UNICO generador de imagenes del pipeline
+    desde el 3 ago 2026 (ver nota de la eliminacion de Gemini arriba). image_urls debe ser URL publica,
     por eso cada referencia se sube primero al endpoint efimero de PiAPI."""
     all_refs = ([reference_image] if reference_image else []) + (reference_images or [])
     all_refs = [r for r in all_refs if r]
@@ -1451,51 +2192,6 @@ def _static_image_clip(image_path: Path, duration: float, path: Path, zoom_in: b
     ])
 
 
-VEO_MODEL = "veo-3.1-fast-generate-preview"
-VEO_CLIP_SECONDS = 8  # duracion fija que exige la API al partir de una imagen
-
-
-def _veo_animate_image(image_path: Path, motion_prompt: str, api_key: str,
-                       poll_timeout: float = 240.0) -> bytes | None:
-    """Anima una imagen fija con Veo (image-to-video). Cuesta ~$0.80-1.20 por clip
-    de 8s (tier Fast) -- usar solo en clips puntuales (--veo-hero), no en todos."""
-    try:
-        img_b64 = base64.b64encode(image_path.read_bytes()).decode("ascii")
-        r = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{VEO_MODEL}:predictLongRunning",
-            headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
-            json={
-                "instances": [{
-                    "prompt": motion_prompt,
-                    "image": {"bytesBase64Encoded": img_b64, "mimeType": "image/png"},
-                }],
-                "parameters": {"aspectRatio": "9:16"},
-            },
-            timeout=60,
-        )
-        r.raise_for_status()
-        op_name = r.json()["name"]
-
-        deadline = time.time() + poll_timeout
-        while time.time() < deadline:
-            time.sleep(10)
-            poll = requests.get(
-                f"https://generativelanguage.googleapis.com/v1beta/{op_name}",
-                headers={"x-goog-api-key": api_key}, timeout=30,
-            )
-            poll.raise_for_status()
-            data = poll.json()
-            if data.get("done"):
-                uri = data["response"]["generateVideoResponse"]["generatedSamples"][0]["video"]["uri"]
-                dl = requests.get(uri, headers={"x-goog-api-key": api_key}, timeout=120, allow_redirects=True)
-                dl.raise_for_status()
-                return dl.content
-        log("media", f"Veo timeout esperando animacion de '{image_path.name}'")
-    except Exception as e:
-        log("media", f"Veo fallo para '{motion_prompt[:60]}...': {e}")
-    return None
-
-
 def _scene_boundaries(words: list[tuple[float, float, str]], n_clips: int,
                        audio_dur: float) -> list[float]:
     """Duracion de cada escena de modo que los cortes caigan en FIN DE FRASE
@@ -1535,14 +2231,12 @@ def _scene_boundaries(words: list[tuple[float, float, str]], n_clips: int,
 
 
 def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
-                  out_dir: Path, media_source: str, veo_hero_index: int | None = None,
+                  out_dir: Path, media_source: str,
                   punch_index: int | None = None, style: str | None = None,
                   static: bool = False, hook_strong: bool = False,
                   wan_hero_path: Path | None = None,
                   character_terms: list[str] | None = None) -> list[Path]:
-    """media_source: 'pexels' | 'nanobanana' | 'gradient'. Siempre cae a gradiente si falla.
-    veo_hero_index: si se da (y hay GEMINI_API_KEY), ese clip se anima con Veo en vez de
-    quedar estatico -- modo hibrido: barato en general, impacto en el momento clave.
+    """media_source: 'seedream' | 'pexels' | 'gradient'. Siempre cae a gradiente si falla.
     punch_index: escena que recibe el zoom "golpe" (quieta y luego zoom rapido) para
     acentuar el remate/giro comico -- por defecto la penultima escena (ver
     RETENCION_PSICOLOGIA.md, feedback "falta energia visual").
@@ -1553,29 +2247,9 @@ def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
     clips_dir = out_dir / "clips"
     clips_dir.mkdir(exist_ok=True)
     pexels_key = os.getenv("PEXELS_API_KEY", "")
-    gemini_key = os.getenv("GEMINI_API_KEY", "")
     piapi_key = os.getenv("PIAPI_API_KEY", "")
     clips: list[Path] = []
 
-    global _ACTIVE_FLOW_SESSION
-    flow_session_cm = None
-    if media_source == "flow":
-        # un proyecto de Flow para TODO el video, no uno por escena -- evita
-        # reabrir Chrome/Flow y reconfigurar aspecto/modelo en cada imagen.
-        from flow_automation import FlowSession, is_logged_in
-        if is_logged_in():
-            aspect = "9:16" if HEIGHT > WIDTH else "16:9"
-            try:
-                flow_session_cm = FlowSession(aspect_ratio=aspect)
-                _ACTIVE_FLOW_SESSION = flow_session_cm.__enter__()
-                log("media", "Flow: proyecto abierto para este video")
-            except Exception as e:
-                log("media", f"Flow: no se pudo abrir sesion ({e}), cae a Nano Banana API")
-                flow_session_cm = None
-                _ACTIVE_FLOW_SESSION = None
-        else:
-            log("media", "Flow: sin sesion guardada (python flow_automation.py --login), "
-                          "cae a Nano Banana API")
 
     terms = (search_terms * ((n_clips // max(len(search_terms), 1)) + 1))[:n_clips]
     # character_terms viaja en paralelo a search_terms y se recicla igual, para
@@ -1587,13 +2261,13 @@ def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
     # campeon mencionado en CUALQUIER escena, una sola vez, y la reusamos como
     # referencia en todas las escenas -- evita que el diseño del personaje
     # varie entre escenas y que el modelo copie el estilo pintado del splash
-    # (ver memoria estilo-roblox-nanobanana).
+    # (ver memoria estilo-roblox-nanobanana, escrita cuando el generador era Nano Banana).
     sheet_cache: dict[str, Path] = {}
     named_char_cache: dict[tuple[str, str], Path] = {}
-    if media_source in ("nanobanana", "seedream", "flow") and (gemini_key or piapi_key) and style:
+    if media_source in ("seedream", "comfy") and (piapi_key or media_source == "comfy") and style:
         all_splashes = {s for t in search_terms for s in _champion_references(t)}
         for splash in all_splashes:
-            sheet = _get_character_sheet(splash, style, gemini_key)
+            sheet = _get_character_sheet(splash, style, piapi_key)
             if sheet:
                 sheet_cache[_champion_id(splash)] = sheet
 
@@ -1605,28 +2279,19 @@ def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
             if detected:
                 name, phase = detected
                 if (name, phase) not in named_char_cache:
-                    sheet = _get_named_character_sheet(name, phase, style, gemini_key, seed_term=t)
+                    sheet = _get_named_character_sheet(name, phase, style, piapi_key, seed_term=t)
                     if sheet:
                         named_char_cache[(name, phase)] = sheet
 
-    try:
-        clips = _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
-                                     veo_hero_index, punch_index, style, static, hook_strong,
-                                     wan_hero_path, gemini_key, piapi_key, pexels_key,
-                                     sheet_cache, named_char_cache, char_terms=char_terms)
-    finally:
-        if flow_session_cm is not None:
-            try:
-                flow_session_cm.__exit__(None, None, None)
-            except Exception as e:
-                log("media", f"Flow: error cerrando sesion (no critico): {e}")
-            _ACTIVE_FLOW_SESSION = None
-    return clips
+    return _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
+                                punch_index, style, static, hook_strong,
+                                wan_hero_path, piapi_key, pexels_key,
+                                sheet_cache, named_char_cache, char_terms=char_terms)
 
 
 def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
-                         veo_hero_index, punch_index, style, static, hook_strong,
-                         wan_hero_path, gemini_key, piapi_key, pexels_key,
+                         punch_index, style, static, hook_strong,
+                         wan_hero_path, piapi_key, pexels_key,
                          sheet_cache, named_char_cache, char_terms=None) -> list[Path]:
     clips: list[Path] = []
     char_terms = list(char_terms or [])
@@ -1635,8 +2300,7 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
         got = False
 
         if i == 0 and wan_hero_path is not None:
-            # hero local (Wan 2.2 via ComfyUI, gratis) -- mismo patron que
-            # veo_hero_index pero sin costo por API, solo la escena 0 para
+            # hero local (Wan 2.2 via ComfyUI, gratis): solo la escena 0, para
             # maxima retencion (ver plan de gancho + ComfyUI local).
             run(["ffmpeg", "-y", "-i", str(wan_hero_path),
                  "-vf", f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
@@ -1646,7 +2310,7 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
             got = True
             log("media", f"clip 1/{n_clips}: hero local Wan 2.2 OK")
 
-        if not got and media_source in ("nanobanana", "seedream", "flow") and (gemini_key or piapi_key):
+        if not got and (media_source == "comfy" or (media_source == "seedream" and piapi_key)):
             img_path = clips_dir / f"nb_{i}.png"
             detected = _detect_named_character(term)
             if detected and detected in named_char_cache:
@@ -1663,8 +2327,20 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
             # DOS PLACAS: el fondo se pide vacio y el personaje aparte, en pose
             # de A sobre blanco. La escena 0 queda fuera a proposito -- es un
             # primer plano de cara que el motor clava como foto, no troquela.
-            raw_char = (char_terms[i] if i < len(char_terms) else None) or None
-            bg_term, plate_term = (term, None) if i == 0 else _plate_terms(term, raw_char)
+            # Un character_term VACIO es una orden, no un hueco (28 jul 2026).
+            # Si el guion trae la lista, "" significa "esta escena NO lleva
+            # personaje" y se respeta. Antes caia al derivador por regex, que
+            # sacaba una figura igualmente: la escena de cierre del bucle salio
+            # como sticker recortado en vez de la misma foto de la escena 1, y
+            # el empalme final->inicio dejo de existir.
+            explicit = i < len(char_terms)
+            raw_char = (char_terms[i] if explicit else None) or None
+            if i == 0:
+                bg_term, plate_term = term, None
+            elif explicit and not raw_char:
+                bg_term, plate_term = term, None
+            else:
+                bg_term, plate_term = _plate_terms(term, raw_char)
             gen_term = bg_term
             if i == 0:
                 # pattern interrupt (segundo 0-1): encuadre inesperado que rompe lo
@@ -1677,19 +2353,16 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                 # que el zoom rigido (percepcion de movimiento biologico)
                 gen_term += (", include drifting smoke, dust, mist, or fabric/hair "
                              "moving gently in the scene")
-            gen_fn = (_seedream_generate_image if media_source == "seedream" else
-                      _flow_or_nanobanana_generate_image if media_source == "flow" else
-                      _nanobanana_generate_image)
-            gen_key = piapi_key if media_source == "seedream" else gemini_key
-            # Respaldo cruzado: si el generador principal falla la escena entera
-            # (saldo agotado, 429, moderacion), se intenta con el OTRO proveedor
-            # antes de caer al gradiente. Sin esto una cuenta sin credito tumba
-            # las 10 escenas del video y el motor Archivo se cae por falta de
-            # nb_*.png (paso real el 27 jul 2026 con los creditos de Gemini).
-            if media_source == "seedream":
-                alt_fn, alt_key, alt_name = _nanobanana_generate_image, gemini_key, "Nano Banana"
+            # Dos generadores desde el 3 ago 2026: Seedream (PiAPI, de pago) y
+            # ComfyUI local (gratis, sin limite, ver comfy_client.py). No hay
+            # respaldo cruzado automatico: si el elegido falla, la escena cae al
+            # gradiente, y con todas en gradiente el motor Archivo/KoreX se queda
+            # sin nb_*.png y no puede renderizar.
+            if media_source == "comfy":
+                import comfy_client
+                gen_fn, gen_key = comfy_client.generate_image, ""
             else:
-                alt_fn, alt_key, alt_name = _seedream_generate_image, piapi_key, "Seedream"
+                gen_fn, gen_key = _seedream_generate_image, piapi_key
             # CACHE DE ESCENAS GENERICAS: una escena sin nombres propios ni fechas
             # sirve igual en cualquier video -> se genera una vez y se reusa (cero
             # llamada de imagen). Las escenas con personaje de referencia quedan
@@ -1709,10 +2382,6 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
             else:
                 gen_ok = gen_fn(gen_term, img_path, gen_key, reference_image=char_ref,
                                 reference_images=champ_refs, style_directive=style)
-                if not gen_ok and alt_key:
-                    log("media", f"clip {i + 1}/{n_clips}: respaldo con {alt_name}")
-                    gen_ok = alt_fn(gen_term, img_path, alt_key, reference_image=char_ref,
-                                    reference_images=champ_refs, style_directive=style)
                 if gen_ok and not char_ref and not champ_refs:
                     try:
                         scene_cache_store(gen_term, style, img_path)
@@ -1724,6 +2393,15 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
             # queda el fondo vacio como foto clavada, nunca bloquea el render.
             if gen_ok and plate_term:
                 ch_path = clips_dir / f"ch_{i}.png"
+                # PLATE_STYLE prohibe "animales antropomorficos" para que el
+                # fondo/multitud de HiddenFacts nunca derive en un animal por
+                # accidente. Con char_ref (personaje con hoja de referencia
+                # propia, ej. Tadeo el mapache) ese texto contradice la imagen
+                # de referencia y el modelo empieza a titubear entre las dos --
+                # se retira solo en ese caso, nunca para figuras sin referencia.
+                plate_style = (PLATE_STYLE.replace(
+                    " Only human characters, never humanoid animals.", "")
+                    if char_ref else PLATE_STYLE)
                 ch_prompt = f"{plate_term}. {CHARACTER_PLATE}"
                 ch_hit = None
                 try:
@@ -1736,10 +2414,10 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                     log("media", f"clip {i + 1}/{n_clips}: personaje cacheado '{plate_term[:40]}'")
                 else:
                     ch_ok = gen_fn(ch_prompt, ch_path, gen_key, reference_image=char_ref,
-                                   reference_images=champ_refs, style_directive=PLATE_STYLE)
+                                   reference_images=champ_refs, style_directive=plate_style)
                     if not ch_ok and alt_key:
                         ch_ok = alt_fn(ch_prompt, ch_path, alt_key, reference_image=char_ref,
-                                       reference_images=champ_refs, style_directive=PLATE_STYLE)
+                                       reference_images=champ_refs, style_directive=plate_style)
                     if ch_ok:
                         log("media", f"clip {i + 1}/{n_clips}: placa personaje '{plate_term[:40]}'")
                         if not char_ref and not champ_refs:
@@ -1751,67 +2429,30 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                         ch_path.unlink(missing_ok=True)
                         log("media", f"clip {i + 1}/{n_clips}: placa personaje fallo, solo fondo")
             if gen_ok:
-                if i == veo_hero_index:
-                    log("media", f"clip {i + 1}/{n_clips}: animando con Veo (~$1, puede tardar ~1-2 min)...")
-                    video_bytes = _veo_animate_image(img_path, term, gemini_key)
-                    if video_bytes:
-                        raw.write_bytes(video_bytes)
-                        got = True
-                        log("media", f"clip {i + 1}/{n_clips}: Veo OK")
-                    else:
-                        log("media", f"clip {i + 1}/{n_clips}: Veo fallo, cae a imagen estatica")
                 if not got:
                     _static_image_clip(img_path, durations[i] + 1.0, raw, move=i,
                                         punch=(i == punch_index), hook=(i == 0), static=static,
                                         hook_strong=hook_strong)
                     got = True
-                    # el log decia siempre "Nano Banana" aunque generara Seedream/Flow
-                    # y llevo a diagnosticar mal una corrida (27 jul 2026)
                     log("media", f"clip {i + 1}/{n_clips}: {media_source} '{term}'")
         elif media_source == "pexels" and pexels_key:
             got = _pexels_download(term, raw, pexels_key)
             if got:
                 log("media", f"clip {i + 1}/{n_clips}: Pexels '{term}'")
+                if i == 0:
+                    # Los clips de Pexels nunca pasan por _static_image_clip (esa
+                    # funcion solo corre para imagenes generadas por IA), asi que
+                    # el zoom de entrada de la escena 1 -- la palanca #1 de
+                    # retencion en Shorts -- nunca se aplicaba en el camino que
+                    # de verdad usamos. Detectado 30 jul 2026 auditando un
+                    # checklist externo.
+                    _apply_entry_zoom(raw)
 
         if not got:
             log("media", f"clip {i + 1}/{n_clips}: gradiente (fallback)")
             _gradient_clip(i, durations[i] + 1.0, raw)
         clips.append(raw)
     return clips
-
-
-LYRIA_MODEL = "lyria-3-clip-preview"  # clips fijos de 30s; suficiente para loopear de fondo
-
-
-def _lyria_generate_music(mood_prompt: str, out_path: Path, api_key: str) -> bool:
-    """Genera musica instrumental con Lyria 3 via Gemini API (~$0.08/cancion,
-    misma GEMINI_API_KEY que Nano Banana). Devuelve False y deja usar la
-    biblioteca local (assets/music/) como fallback si algo falla."""
-    try:
-        r = requests.post(
-            "https://generativelanguage.googleapis.com/v1beta/interactions",
-            headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
-            json={
-                "model": LYRIA_MODEL,
-                "input": f"{mood_prompt}. Instrumental only, no vocals.",
-                "response_format": {"type": "audio"},
-            },
-            timeout=90,
-        )
-        r.raise_for_status()
-        data = r.json()
-        for step in data.get("steps", []):
-            if step.get("type") != "model_output":
-                continue
-            for block in step.get("content", []):
-                if block.get("type") == "audio" and block.get("data"):
-                    out_path.write_bytes(base64.b64decode(block["data"]))
-                    _track_gemini_usage("song", True)
-                    return True
-    except Exception as e:
-        log("music", f"Lyria fallo: {e}")
-        _track_gemini_usage("song", False)
-    return False
 
 
 SFX_DIR = ROOT / "assets" / "sfx"
@@ -2124,15 +2765,9 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
             import random
             stinger_path = random.choice(candidates)
 
+    # La musica generada (Lyria) se elimino con el resto de Gemini el 3 ago 2026:
+    # queda solo la biblioteca local de assets/music.
     music = None
-    gemini_key = os.getenv("GEMINI_API_KEY", "")
-    if gemini_key and music_mood:
-        lyria_path = out_dir / "music_lyria.mp3"
-        log("music", f"Generando musica con Lyria 3: {music_mood!r}...")
-        if _lyria_generate_music(music_mood, lyria_path, gemini_key):
-            music = lyria_path
-        else:
-            log("music", "Lyria fallo, uso biblioteca local de musica")
     # music_mood=None explicito (no "sin music_mood en el guion", eso no pasa --
     # es requerido por el schema) significa "sin musica a proposito" (modo
     # silent_card_mode: el video se sube mudo de musica para agregar despues a
@@ -2389,7 +3024,7 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         fade_out_start = max(total_dur - fade_dur, 0)
         audio_filters += (
             f"{voice_lbl}asplit=2[voice_mix][voice_trigger];"
-            f"[{music_idx}:a]aloop=loop=-1:size=2e9,volume=0.06,"
+            f"[{music_idx}:a]aloop=loop=-1:size=2e9,volume={MUSIC_VOLUME},"
             f"afade=t=in:st=0:d={fade_dur:.2f},"
             f"afade=t=out:st={fade_out_start:.2f}:d={fade_dur:.2f}[bg];"
             "[bg][voice_trigger]sidechaincompress="
@@ -2940,8 +3575,17 @@ def main() -> int:
     parser.add_argument("topic", nargs="?", help="Tema del video (en ingles o espanol)")
     parser.add_argument("--script-file", help="JSON con script/search_terms/title/description (omite Claude)")
     parser.add_argument("--voice", default=DEFAULT_VOICE)
+    parser.add_argument("--trim-silence", dest="trim_silence", action="store_true",
+                        help="recorta las pausas de la narracion antes de calcular escenas "
+                             "y subtitulos (edge-tts deja ~0.4s por oracion; medido 13,9%% "
+                             "del video). Guarda el original en voice_raw.mp3")
+    parser.add_argument("--trim-keep", dest="trim_keep", type=float, default=0.10,
+                        help="hueco a conservar en cada silencio (default 0.10s). A 0 las "
+                             "palabras se pisan y suena peor que el original")
     parser.add_argument("--rate", default=DEFAULT_RATE)
-    parser.add_argument("--clips", type=int, default=DEFAULT_CLIPS)
+    parser.add_argument("--clips", type=int, default=None,
+                        help=f"escenas del video. Por defecto, UNA POR search_term "
+                             f"(regla 1:1 frase<->imagen); {DEFAULT_CLIPS} si el guion no trae.")
     parser.add_argument("--no-pexels", action="store_true", help="Usa gradientes en vez de Pexels")
     parser.add_argument("--no-sfx", action="store_true",
                         help="No coloca efectos de sonido automaticos (requiere ANTHROPIC_API_KEY "
@@ -2962,29 +3606,18 @@ def main() -> int:
                         help="Nombre de archivo dentro de assets/sfx/ para reemplazar el swish "
                              f"de papel por defecto ({STICKER_SFX_DEFAULT}). Para probar de oido "
                              "otro sonido sin tocar el codigo.")
-    parser.add_argument("--nanobanana", action="store_true",
-                        help="Usa imagenes estaticas generadas con Nano Banana (Gemini) en vez de "
-                             "Pexels/gradiente. Requiere GEMINI_API_KEY.")
+    parser.add_argument("--comfy", action="store_true",
+                        help="Genera las imagenes en LOCAL con ComfyUI + FLUX.1-schnell "
+                             "(gratis, sin limite de cuota, licencia Apache-2.0 apta para uso "
+                             "comercial). No soporta imagen de referencia, asi que NO da "
+                             "consistencia de personaje -- ver comfy_client.py.")
     parser.add_argument("--seedream", action="store_true",
                         help="Usa imagenes estaticas generadas con Seedream (ByteDance, via PiAPI) "
-                             "en vez de Nano Banana -- mejor consistencia multi-referencia de "
-                             "personaje segun benchmarks (ver investigacion 19 jul 2026). Requiere "
-                             "PIAPI_API_KEY. Las hojas de personaje siguen usando Nano Banana por "
-                             "ahora (requiere tambien GEMINI_API_KEY si el guion usa 'style').")
-    parser.add_argument("--flow", action="store_true",
-                        help="Genera imagenes gratis en Google Flow (nano banana 2) via "
-                             "automatizacion propia (flow_automation.py) en vez de pagar la API "
-                             "de Gemini. Requiere login previo: 'python flow_automation.py "
-                             "--login'. Cae a Nano Banana API (GEMINI_API_KEY) automaticamente "
-                             "si Flow falla o si la escena necesita reference_image/style "
-                             "(Flow no soporta consistencia de personaje en este flujo).")
-    parser.add_argument("--veo-hero", type=int, default=None, metavar="N",
-                        help="Anima con Veo (image-to-video, ~$1) solo la escena N (0-indexed) "
-                             "de --nanobanana; el resto queda estatico. Modo hibrido costo/impacto.")
+                             "en vez de Pexels/gradiente. Es el unico generador de imagenes del "
+                             "repo desde el 3 ago 2026. Requiere PIAPI_API_KEY.")
     parser.add_argument("--wan-hero", type=Path, default=None, metavar="PATH",
                         help="Usa un video ya animado localmente (Wan 2.2 via ComfyUI, gratis) "
-                             "como escena 0 en vez de generarla; el resto sigue estatico igual "
-                             "que --veo-hero pero sin costo de API.")
+                             "como escena 0 en vez de generarla; el resto sigue estatico.")
     parser.add_argument("--watermark", default="",
                         help="Texto de marca de agua (esquina superior derecha). Vacio por "
                              "defecto -- especifica explicitamente '--watermark ImPixxel' para "
@@ -3023,8 +3656,14 @@ def main() -> int:
     parser.add_argument("--archivo", action="store_true",
                         help="Renderiza con el motor visual 'Archivo Vivo' (Remotion, "
                              "collage documental punchy) en vez del ensamblado FFmpeg "
-                             "clasico. Requiere imagenes de escena (--nanobanana/--seedream). "
+                             "clasico. Requiere imagenes de escena (--seedream/--comfy). "
                              "Ver archivo_engine.py.")
+    parser.add_argument("--korex", action="store_true",
+                        help="Renderiza con el motor visual de KOREX (Remotion): set fijo "
+                             "con parallax, paleta cerrada de 3 tonos + acento por villano, "
+                             "personaje troquelado con squash-stretch. Es la piel del canal "
+                             "de finanzas satiricas (Tadeo), NO el expediente de HiddenFacts. "
+                             "Requiere imagenes de escena (--seedream). Ver korex_engine.py.")
     parser.add_argument("--ideas", action="store_true",
                         help="Genera 5 ideas de tema nuevas (usando topics.txt como referencia) y termina")
     parser.add_argument("--auto", action="store_true",
@@ -3073,23 +3712,10 @@ def main() -> int:
         parser.print_help()
         return 1
 
-    if args.nanobanana and not os.getenv("GEMINI_API_KEY") and not os.getenv("PIAPI_API_KEY"):
-        print("ERROR: falta GEMINI_API_KEY (o PIAPI_API_KEY para usar Seedream). "
-              "Consiguela gratis en https://aistudio.google.com/apikey")
-        return 1
     if args.seedream and not os.getenv("PIAPI_API_KEY"):
         print("ERROR: falta PIAPI_API_KEY en .env. Registrate en https://piapi.ai y anda a "
               "Workspace > Settings > API Keys.")
         return 1
-    if args.flow:
-        if not os.getenv("GEMINI_API_KEY"):
-            print("ERROR: --flow necesita GEMINI_API_KEY igual (como fallback si Flow falla).")
-            return 1
-        from flow_automation import is_logged_in
-        if not is_logged_in():
-            print("ERROR: no hay sesion de Flow guardada. Corre primero: "
-                  "python flow_automation.py --login")
-            return 1
 
     base_slug = f"{date.today().isoformat()}-{slugify(topic)}"
     out_dir = OUTPUT_ROOT / base_slug
@@ -3113,15 +3739,11 @@ def main() -> int:
             suffix += 1
     _atomic_write_json(out_dir / "script.json", data)
 
-    # SEEDREAM ES EL PRINCIPAL (27 jul 2026). Los creditos prepago de Gemini se
-    # agotaron ("Your prepayment credits are depleted", 429 en las 10 escenas) y
-    # Nano Banana paso a respaldo. --nanobanana se resuelve a seedream si hay
-    # PIAPI_API_KEY, para que generar_video.bat, los runs --auto y los programados
-    # sigan funcionando sin editar ningun comando.
-    media_source = ("flow" if args.flow else
-                    "seedream" if (args.seedream or
-                                   (args.nanobanana and os.getenv("PIAPI_API_KEY"))) else
-                    "nanobanana" if args.nanobanana else
+    # SEEDREAM ES EL UNICO GENERADOR (3 ago 2026). Gemini/Nano Banana, Veo, Lyria
+    # y la automatizacion de Flow se eliminaron del repo por pedido del usuario;
+    # antes Nano Banana ya habia quedado como respaldo al agotarse sus creditos.
+    media_source = ("comfy" if args.comfy else
+                    "seedream" if args.seedream else
                     ("gradient" if args.no_pexels else "pexels"))
 
     # --hook-max: bundle de palancas del gancho de los primeros 2s (opt-in, para
@@ -3156,7 +3778,8 @@ def main() -> int:
             run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono",
                  "-t", f"{card_duration:.2f}", "-q:a", "9", "-acodec", "libmp3lame",
                  str(audio_path)])
-            ass_path = generate_subtitles(words, out_dir, lead_ms=0, offset_ms=0)
+            ass_path = generate_subtitles(words, out_dir, lead_ms=0, offset_ms=0,
+                                          keywords=data.get("caption_keywords"))
             audio_dur = float(card_duration)
             durations = [audio_dur]
             n_clips = 1
@@ -3164,11 +3787,33 @@ def main() -> int:
             _check_pacing(data["script"])
             _check_script_lint(data["script"], data.get("title", ""), args.voice,
                                search_terms=data.get("search_terms"))
+            _check_open_hook(data["script"], data.get("title", ""),
+                               data.get("hook_card", "") or "")
+            _check_hook_beats(data["script"])
+            _check_payoff_spacing(data["script"], data.get("payoffs"))
+            _check_relleno_inicial(data["script"])
+            _check_ventana_critica(data["script"], data.get("payoffs"))
+            _check_but_therefore(data["script"])
+            _check_sentence_rhythm(data["script"])
             audio_path, words = with_retries(generate_audio, data["script"], args.voice, args.rate, out_dir)
-            ass_path = generate_subtitles(words, out_dir, lead_ms=subs_lead, offset_ms=subs_offset)
+            # El recorte va AQUI, entre la voz y todo lo demas: los subtitulos y
+            # las duraciones de escena se calculan despues, asi que ambos salen
+            # ya sobre el eje recortado. Hacerlo al final (sobre el video ya
+            # armado) desincroniza las imagenes hasta 7s -- medido 30 jul 2026.
+            if args.trim_silence:
+                audio_path, words = trim_silence_inplace(
+                    audio_path, words, keep=args.trim_keep)
+            ass_path = generate_subtitles(words, out_dir, lead_ms=subs_lead, offset_ms=subs_offset,
+                                          keywords=data.get("caption_keywords"))
 
             audio_dur = ffprobe_duration(audio_path)
-            n_clips = args.clips
+            # UNA ESCENA POR search_term (28 jul 2026). Antes se fijaba a
+            # DEFAULT_CLIPS=10 y los terminos sobrantes se DESCARTABAN en
+            # silencio: un guion de 13 frases perdia las 3 ultimas imagenes,
+            # que son justo el pago (la consecuencia visible hoy) y el eco de
+            # apertura que cierra el loop. El prompt exige 1:1 frase<->termino,
+            # asi que truncar aqui rompe una regla dura del canal.
+            n_clips = args.clips or len(data.get("search_terms") or []) or DEFAULT_CLIPS
             durations = _scene_boundaries(words, n_clips, audio_dur)
             if card_duration:
                 # script presente PERO se pidio una duracion fija de card (caso
@@ -3178,14 +3823,22 @@ def main() -> int:
                 durations = [audio_dur]
 
         clips = acquire_media(data["search_terms"], n_clips, durations,
-                              out_dir, media_source=media_source, veo_hero_index=args.veo_hero,
+                              out_dir, media_source=media_source,
                               punch_index=args.punch_index, style=data.get("style") or HIDDENFACTS_STYLE,
                               static=bool(data.get("caption_text")) or silent_card_mode,
                               character_terms=data.get("character_terms"),
                               hook_strong=hook_strong,
                               wan_hero_path=args.wan_hero)
 
-        if args.archivo and not silent_card_mode:
+        if args.korex and not silent_card_mode:
+            # Motor KOREX (3 ago 2026): piel propia del canal de finanzas
+            # satiricas. NO reusa Archivo Vivo porque ese es el expediente de
+            # HiddenFacts (polaroid REAL / EXHIBIT B / N. de caso) y sobre un
+            # mapache comico se lee absurdo. Ver korex_engine.py.
+            import korex_engine
+            final = korex_engine.render_from_parts(
+                out_dir, data, [(ws, w) for ws, _we, w in words], audio_path)
+        elif args.archivo and not silent_card_mode:
             # Motor "Archivo Vivo" (23 jul 2026): la composicion Remotion
             # manifest-driven reemplaza ensamblado FFmpeg + ASS + stickers +
             # collage (ver archivo_engine.py y memoria estilo-archivo-vivo)
@@ -3201,9 +3854,7 @@ def main() -> int:
             # silent_card_mode (sin narrador, card de texto largo): NO generar musica
             # propia -- estos videos se pensaron para reemplazar la musica con un
             # audio trending del nicho, agregado a mano en el editor de Shorts de
-            # Studio (ver memoria musica-trending-videos-solo-lectura). Generar
-            # musica igual solo gastaria cuota/plata de Lyria para algo que se va a
-            # descartar.
+            # Studio (ver memoria musica-trending-videos-solo-lectura).
             final = assemble(clips, audio_path, ass_path, out_dir,
                               music_mood=(None if silent_card_mode else data.get("music_mood")),
                               sfx_cues=sfx_cues,
@@ -3247,9 +3898,6 @@ def main() -> int:
 
     log("done", f"Video listo: {final}")
     log("done", f"Titulo: {data['title']}")
-    usage = _usage_summary_today()
-    if usage:
-        log("gemini", usage)
     return 0
 
 

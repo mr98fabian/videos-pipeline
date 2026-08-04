@@ -1177,22 +1177,37 @@ export const HookText = ({ text, dur = 46 }) => {
   const o = interpolate(frame, [dur - 8, dur], [1, 0], {
     extrapolateLeft: "clamp", extrapolateRight: "clamp",
   });
-  // PRIMERA FRASE COMPLETA, no las primeras N palabras: un hook cortado a
-  // mitad ("...on a spy") promete y no entrega, que es peor que no poner nada.
-  const first = String(text).split(/(?<=[.?!])\s+/)[0].trim();
-  const words = first.split(/\s+/).length > 12
-    ? first.split(/\s+/).slice(0, 12).join(" ") + "…" : first;
+  // FRASES COMPLETAS, nunca las primeras N palabras: un hook cortado a mitad
+  // ("...on a spy") promete y no entrega, que es peor que no poner nada.
+  //
+  // Se admiten VARIAS frases si caben (28 jul 2026). El patron del canal es
+  // "dato concreto + pregunta" ("The last men defending Hitler's bunker were
+  // French. Why?"): quedarse con la primera frase tiraba justo la pregunta,
+  // que es la parte que ABRE el hueco de curiosidad. El dato solo, sin
+  // pregunta, es trivia -- no da nada que cerrar.
+  const sentences = String(text).split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean);
+  let out = sentences[0] || "";
+  for (const s of sentences.slice(1)) {
+    if ((out + " " + s).split(/\s+/).length <= 14) out += " " + s;
+    else break;
+  }
+  const words = out.split(/\s+/).length > 14
+    ? out.split(/\s+/).slice(0, 14).join(" ") + "…" : out;
+  // UNA SOLA CAJA, no una por linea (28 jul 2026). Antes el fondo iba en el
+  // <span> con boxDecorationBreak:"clone", asi que cada linea traia su propio
+  // rectangulo del ancho de su texto: escalonado, con los bordes en zigzag y
+  // una linea suelta ("Why?") flotando en su cajita. Con el fondo en el div
+  // contenedor es un bloque limpio, que es lo que se lee en el frame 0.
   return (
     <div style={{
       position: "absolute", left: 55, right: 55, top: LANES.safeTop + 10,
       textAlign: "center", opacity: o,
+      background: "rgba(26,18,8,0.72)", padding: "14px 20px", borderRadius: 10,
     }}>
       <span style={{
         fontFamily: "Arial Black, sans-serif", fontWeight: 900, fontSize: 76,
         lineHeight: 1.06, color: "#FFFFFF", letterSpacing: 0.5,
         textShadow: "0 5px 0 rgba(26,18,8,0.9), 0 0 22px rgba(0,0,0,0.7)",
-        background: "rgba(26,18,8,0.62)", padding: "8px 16px", borderRadius: 8,
-        boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone",
       }}>{words}</span>
     </div>
   );
@@ -1204,7 +1219,13 @@ export const HookText = ({ text, dur = 46 }) => {
 //   Agrupa en bloques de hasta 3 palabras / 18 chars (misma regla del pipeline),
 //   activa en dorado + pop de escala, siempre dentro del carril de captions.
 // ============================================================================
-export const KineticTimed = ({ words, endFrame = Infinity, sizeActive = 92, sizeRest = 76, openerCount = 0 }) => {
+// Palabras que cargan el dato o el giro (equivalente a `caption_keywords` del
+// guion). Van en ROJO en vez de dorado incluso sin ser la palabra activa --
+// asi el color vuelve a ser jerarquia (~5% del guion) y no decoracion. Mismo
+// razonamiento que _CAP_RED en pipeline.py: con 1 palabra en pantalla a la vez,
+// si TODO fuera dorado el color dejaria de significar nada.
+export const KineticTimed = ({ words, endFrame = Infinity, sizeActive = 92, sizeRest = 76, openerCount = 0, redWords = [] }) => {
+  const redSet = new Set(redWords.map((w) => w.toUpperCase()));
   const frame = useCurrentFrame();
   if (frame >= endFrame) return null;
   // OPENER (26 jul 2026): las primeras 4-8 palabras (la promesa) se muestran
@@ -1263,13 +1284,16 @@ export const KineticTimed = ({ words, endFrame = Infinity, sizeActive = 92, size
           // invisible justo en el frame que tiene que vender la promesa.
           const p = isOpener ? 1 : pop(frame - wd.t, 5);
           const isActive = i === activeIdx;
+          const clean = wd.w.replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g, "").toUpperCase();
+          const isRed = redSet.has(clean);
+          const color = isRed ? RED : isActive ? GOLD : "#FFF";
           return (
             <span
               key={i}
               style={{
                 fontFamily: "Arial Black, sans-serif", fontWeight: 900,
                 fontSize: isActive ? szActive : szRest,
-                color: isActive ? GOLD : "#FFF",
+                color,
                 scale: `${p}`,
                 display: "inline-block",
                 textShadow: "4px 4px 0 #1a1208, -3px -3px 0 #1a1208, 3px -3px 0 #1a1208, -3px 3px 0 #1a1208, 0 10px 24px rgba(0,0,0,0.55)",

@@ -6,6 +6,9 @@ token*.json
 # Datos generados / estado de runtime (no es código)
 output/
 logs/
+# Material de terceros descargado solo para revisar en local (nunca se publica
+# ni se commitea: es contenido con copyright ajeno) + pruebas de edición
+tmp_local_review/
 gemini_usage.json
 used_topics.json
 video_log.csv
@@ -18,6 +21,13 @@ assets/characters/
 assets/skick/
 assets/creator_reference/
 assets/stickers/
+# Gameplay CC-BY para el panel inferior del split: son >1h de vídeo cada uno.
+# Se ignoran los .mp4 pero NO ATRIBUCION.md, que es donde vive el crédito
+# obligatorio de la licencia y sí debe versionarse.
+assets/gameplay/*
+!assets/gameplay/ATRIBUCION.md
+assets/satisfying_cc/*
+!assets/satisfying_cc/ATRIBUCION.md
 *.mp4
 *.mp3
 *.wav
@@ -66,3 +76,20 @@ assets/sticker_library/
 
 # clips de terceros descargados por viral_lab.py (nunca al repo)
 viral/
+
+# ComfyUI: repo clonado + pesos de FLUX/Wan (38GB). Mismo patron que
+# tools/kokoro_tts/ -- el codigo que lo usa (comfy_client.py) si va al repo.
+tools/comfyui/
+
+# EXCEPCIONES a los *.png / *.wav globales de arriba: estos no son assets
+# generados por video, son la MATERIA PRIMA del canal y rehacerlos cuesta
+# trabajo manual (curar salidas de Flow) o define como suena el canal.
+!assets/kx_cast/**/*.png
+!assets/kx_sets/**/*.png
+!assets/voice_refs/*.wav
+# ...menos los originales sin recortar, que son derivables de nuevo desde Flow
+assets/kx_cast/**/_originales/
+
+# temporales de analisis
+_tmp_shorts.json
+_tmp_shorts_metrics.json

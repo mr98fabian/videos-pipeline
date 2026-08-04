@@ -202,13 +202,22 @@ def _fetch_real_photo(query: str, pub: Path, slug: str):
     keys = {w.lower() for w in _re.findall(r"[A-Za-z]{4,}", query)}
     keys |= {w.lower() for w in _re.findall(r"\b[A-Z]{2,}\b", query)}  # siglas: CIA, FBI
     keys -= {"the", "and", "with", "from", "headquarters"}
+    # DOS palabras, no una (28 jul 2026): con una sola coincidencia, el titulo
+    # "300 Frenchmen Died Defending Hitler's Bunker" traia un grabado de "Eight
+    # Famous 17th-century Frenchmen" -- siglo equivocado, presentado como foto
+    # real del hecho. Una palabra suelta no identifica un evento; dos ya obligan
+    # a que el archivo hable del mismo tema. Sin foto es mejor que con la falsa.
+    need = 2 if len(keys) >= 3 else 1
     if keys:
-        relevant = [c for c in cands
-                    if any(k in (c.get("title") or "").lower() for k in keys)]
+        def _hits(c):
+            t = (c.get("title") or "").lower()
+            return sum(1 for k in keys if k in t)
+        relevant = [c for c in cands if _hits(c) >= need]
         if not relevant:
-            print(f"[archivo] foto real descartada: nada relevante para '{query}'")
+            print(f"[archivo] foto real descartada: nada relevante para '{query}' "
+                  f"(hacian falta {need} palabras en comun)")
             return None
-        cands = relevant
+        cands = sorted(relevant, key=_hits, reverse=True)
     # preferir dominio público / CC0 (sin obligación de atribución en el Short)
     cands.sort(key=lambda c: 0 if any(t in (c.get("license") or "").lower()
                                       for t in ("public domain", "cc0", "pd")) else 1)

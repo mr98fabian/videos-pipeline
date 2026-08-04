@@ -345,11 +345,27 @@ export const ArchivoVideo = ({ manifest }) => {
           <Audio src={staticFile("proof/sting.wav")} volume={0.5} />
         </Sequence>
       ) : null}
-      {m.scenes.map((s, i) => (
-        <Sequence key={`sw-${i}`} from={s.from} durationInFrames={20}>
-          <Audio src={staticFile("proof/whoosh.mp3")} volume={0.45} />
-        </Sequence>
-      ))}
+      {/* SFX de corte EMPAREJADO al caracter de la transicion visual, no un
+          whoosh generico repetido -- monotono es lo que se lee como "AI slop"
+          frente a un edit profesional donde cada entrada suena distinta
+          (ver skill explainer-parallax, hallazgo del 3 ago 2026). */}
+      {m.scenes.map((s, i) => {
+        const variant = i === 0 ? null : TRANSITIONS[(i - 1) % TRANSITIONS.length];
+        const CUT_SFX = {
+          leakL: { src: "proof/whoosh.mp3", vol: 0.45 },
+          leakR: { src: "proof/whoosh.mp3", vol: 0.45 },
+          burn: { src: "proof/impact.mp3", vol: 0.4 },
+          wipeDown: { src: "proof/paper.mp3", vol: 0.4 },
+          flashShake: { src: "proof/impact.mp3", vol: 0.5 },
+          wipeSide: { src: "proof/rip.mp3", vol: 0.4 },
+        };
+        const sfx = variant ? CUT_SFX[variant] : { src: "proof/whoosh.mp3", vol: 0.45 };
+        return (
+          <Sequence key={`sw-${i}`} from={s.from} durationInFrames={20}>
+            <Audio src={staticFile(sfx.src)} volume={sfx.vol} />
+          </Sequence>
+        );
+      })}
       {m.scenes.flatMap((s, i) => {
         const b = s.beats || {};
         const out = [];

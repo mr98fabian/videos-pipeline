@@ -9,6 +9,8 @@ import { Proof2 } from "./Proof2";
 import { ArchivoDemo } from "./archivo/ArchivoDemo";
 import { ArchivoDemo2 } from "./archivo/ArchivoDemo2";
 import { ArchivoVideo } from "./archivo/ArchivoVideo";
+import { StoryVideo } from "./archivo/StoryVideo";
+import { KorexVideo } from "./korex/KorexVideo";
 
 const WIDTH = 1080;
 const HEIGHT = 1920;
@@ -85,6 +87,42 @@ const RemotionRoot = () => {
         width={WIDTH}
         height={HEIGHT}
         defaultProps={{ manifest: { scenes: [], words: [], close: { from: 0, series: "WWII Secrets", caseNo: 1, share1: "", share2: "" } } }}
+        calculateMetadata={({ props }) => ({
+          durationInFrames: (props.manifest && props.manifest.durationInFrames) || FPS * 60,
+          fps: FPS,
+          width: WIDTH,
+          height: HEIGHT,
+        })}
+      />
+      {/* STORY VIDEO — Mind Checkpoint, formato historia sobre gameplay a
+          pantalla completa. Hermano de ArchivoVideo pero con fondo de VIDEO
+          continuo en vez de collage de fotos recortadas. */}
+      <Composition
+        id="StoryVideo"
+        component={StoryVideo}
+        durationInFrames={FPS * 90}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ gameplaySrc: "", words: [], redWords: [], beats: [], durationInFrames: FPS * 90 }}
+        calculateMetadata={({ props }) => ({
+          durationInFrames: props.durationInFrames || FPS * 90,
+          fps: FPS,
+          width: WIDTH,
+          height: HEIGHT,
+        })}
+      />
+      {/* KOREX — piel propia del canal de finanzas satiricas (Tadeo). NO
+          comparte plantilla con ArchivoVideo: ese es el expediente de
+          HiddenFacts y sobre un mapache comico se lee absurdo. */}
+      <Composition
+        id="KorexVideo"
+        component={KorexVideo}
+        durationInFrames={FPS * 60}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ manifest: { scenes: [], words: [], hook: "", durationInFrames: FPS * 60 } }}
         calculateMetadata={({ props }) => ({
           durationInFrames: (props.manifest && props.manifest.durationInFrames) || FPS * 60,
           fps: FPS,

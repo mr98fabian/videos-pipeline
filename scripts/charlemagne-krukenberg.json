@@ -1,35 +1,38 @@
 {
-  "script": "You are Gustav Krukenberg, and Berlin just handed you soldiers who are not even German. Three hundred Frenchmen, all that is left of an SS division that once had eleven thousand men in its ranks. The Red Army is two streets from the bunker, and Hitler is underground with a pistol he has not used yet. You put the French where the fighting is worst, because they are the only unit left still willing to die for a country that is not theirs. Here's the part nobody mentions. On April 28th your men destroy sixty-two Soviet tanks in a single day, more than any German unit still standing that week. France will call every one of them a traitor for it. Most of your men get sentenced to death before the guns even go cold, for defending a war that was never their war and a man who never once trusted them. You survive the bunker. You do not survive France. Hitler kills himself on April 30th, and the fighting goes on for two more days, because nobody told the men still holding his door. Three hundred foreigners were the last men standing between the Red Army and Adolf Hitler's door.",
+  "script": "Why were the last men defending Hitler's bunker French? The Soviet flag is already over the Reichstag, half a mile from where you are standing. Your name is Henri Fenet, you are twenty-five, and the three hundred Frenchmen with you are all that is left of an SS division that once had eleven thousand men. The Red Army is two streets away, and Hitler is underground with a pistol he has not used yet. Here's the part nobody mentions. On April twenty-eighth your battalion destroys sixty-two Soviet tanks in a single day, more than any German unit still standing. The next morning they walk you into the Chancellery and pin the Knight's Cross on you. Hitler shoots himself the day after that. Your men keep fighting two more days, because nobody comes up to tell them it is over. France gives you twenty years of hard labour. You get out in 1959, live until 2002, and almost nobody ever asks. Today that bunker is a car park in Berlin with one small information board on the corner. You can go stand on the spot where the last men defending Hitler's bunker were French.",
   "search_terms": [
-    "Soviet red flag raised over the Reichstag building, iconic wartime photo style",
-    "a stern SS commander in uniform standing over a map table, full figure",
-    "a small group of exhausted soldiers in worn uniforms standing apart, full figures",
+    "two soldiers in worn field uniforms standing in a ruined street, the damaged Reichstag building large behind them, wide shot",
+    "Soviet red flag raised over the Reichstag building, iconic wartime photo, close up",
+    "a young officer in a worn field uniform standing alone in rubble, full figure",
     "a dark underground bunker corridor with a single hanging bulb",
-    "soldiers crouching apart in rubble-strewn street combat positions, full figures",
+    "an official document stamped in red ink on a wooden desk, close up",
     "a burning Soviet tank in a rubble-filled street",
-    "a French flag being folded away in shadow, close up",
-    "a military tribunal courtroom with an empty defendant's chair",
-    "a soldier standing alone facing a firing squad wall, half figure",
+    "hands pinning an iron cross medal onto a uniform, close up",
     "an underground bunker room with a table and a pistol left on it, no people",
-    "a calendar page torn to April 30th, close up",
-    "exhausted soldiers still fighting in a smoke-filled street, full figures apart"
+    "a soldier firing from a shattered building window, full figure",
+    "a military tribunal courtroom with an empty defendant's chair",
+    "an elderly man sitting alone in a plain quiet room, full figure",
+    "an ordinary empty car park with a small information board on the corner, present day",
+    "two soldiers in worn field uniforms standing in a ruined street, the damaged Reichstag building large behind them, wide shot"
   ],
+  "force_photo": [1, 13],
   "character_terms": [
     "",
-    "a stern middle-aged SS division commander in field uniform with an Iron Cross",
-    "three exhausted French Waffen-SS soldiers in worn field uniforms",
     "",
-    "two soldiers in worn uniforms in a crouched combat stance",
+    "a young French officer in a worn field uniform, helmet under one arm",
     "",
     "",
     "",
-    "a young soldier in a worn uniform standing with hands bound",
     "",
     "",
-    "two exhausted soldiers in worn uniforms still holding rifles"
+    "a soldier in a worn field uniform firing from cover",
+    "a young man in a plain prison uniform",
+    "an elderly man in a plain dark jacket",
+    "",
+    ""
   ],
-  "title": "300 Frenchmen Died Defending Hitler. Why Did They Do It?",
-  "description": "By the last week of the war, Hitler's own army had almost nothing left — except three hundred French volunteers nobody in Germany trusted. They held the line around his bunker until the guns went silent, then went home to a country that wanted to execute them for it.\n\nWho were they really dying for, at that point?\n\n#wwii #history #hitler #berlin1945 #truestory",
+  "title": "300 Frenchmen Died Defending Hitler's Bunker. Why?",
+  "description": "By the last week of the war, the men holding the line around Hitler's bunker were not German. They were three hundred French volunteers, and their commander was decorated inside the Chancellery on April 29th — then sentenced to twenty years of hard labour by his own country four years later.\n\nToday the spot is a car park in Berlin with a single information board.\n\nWere they traitors to France, or men who picked a side and refused to leave it?\n\n#wwii #history #hitler #berlin1945 #truestory",
   "music_mood": "cold sparse strings, low ominous drone, restrained and serious, no vocals, no comedy",
-  "hook_card": "Three hundred foreigners were the last men defending Hitler's door. Why?"
+  "hook_card": "The last men defending Hitler's bunker were French. Why?"
 }
