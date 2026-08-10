@@ -1058,6 +1058,14 @@ CHATTERBOX_DIR = ROOT / "tools" / "chatterbox_tts"
 # caia en edge-tts (es-US-AlonsoNeural) y sonaba a lector de Windows: Chatterbox
 # existia en tools/ pero unicamente viral_lab.py lo llamaba.
 CHATTERBOX_VOICE_PREFIXES = ("cb_",)
+# Prefijo de voz Qwen3-TTS VoiceDesign: --voice qw_korex. Es la VOZ OFICIAL de
+# KOREX (casting de 21 muestras el 3 ago 2026, ver BRANDING_KOREX.md #7), pero
+# hasta el 9 ago solo se podia usar a mano desde tools/qwen_tts: el pipeline no
+# sabia enrutar ahi, asi que todos los videos de Tadeo salieron con Chatterbox
+# (cb_es), que es otra voz. La cadena `instruct` NO se duplica aca a proposito:
+# vive en tools/qwen_tts/synth.py:KOREX_VOICE y es su valor por defecto.
+QWEN_VOICE_PREFIXES = ("qw_",)
+QWEN_DIR = ROOT / "tools" / "qwen_tts"
 # Timbre de referencia. Sin --ref, Chatterbox usa su voz por defecto, que en
 # espanol sale ambigua y aguda: el canal necesita narrador masculino de
 # documental. Chatterbox toma del --ref SOLO EL TIMBRE (y con el, el acento); la
@@ -1257,6 +1265,63 @@ def _chatterbox_tts(
         if not wav_path.exists():
             raise RuntimeError("Chatterbox no genero el wav")
         shutil.copyfile(wav_path, cached)
+    return _align_words(wav_path, script=script, lang=lang)
+
+
+def _qwen_tts(
+    script: str, voice: str, wav_path: Path, language: str = "Spanish"
+) -> list[tuple[float, float, str]]:
+    """Corre tools/qwen_tts/synth.py en su propio venv (arrastra torch).
+
+    Mismo contrato que _chatterbox_tts: cachea por hash en assets/cache/voices/
+    y alinea con whisper, porque Qwen tampoco devuelve timestamps de palabra.
+    El `instruct` se deja en su valor por defecto (KOREX_VOICE en synth.py):
+    duplicar esa cadena aca es exactamente como diverge una identidad de marca.
+    """
+    # CLONAR LA MUESTRA CONGELADA, no re-disenar la voz (9 ago 2026). Con
+    # VoiceDesign cada llamada disena un timbre nuevo y el guion va troceado:
+    # el narrador cambiaba de voz a mitad del video. El wav aprobado del casting
+    # manda; el `instruct` solo describe el caracter.
+    clone_ref = ROOT / "assets" / "voice_refs" / "korex_narrador.wav"
+    clone = clone_ref if clone_ref.exists() else None
+    key = hashlib.sha1(
+        f"qwen|{script}|{voice}|{language}|clone={bool(clone)}".encode()
+    ).hexdigest()[:16]
+    cache = ROOT / "assets" / "cache" / "voices"
+    cache.mkdir(parents=True, exist_ok=True)
+    cached = cache / f"{key}.wav"
+    if cached.exists():
+        log("audio", "voz Qwen desde cache")
+        shutil.copyfile(cached, wav_path)
+    else:
+        text_file = wav_path.with_suffix(".txt")
+        text_file.write_text(script, encoding="utf-8")
+        log(
+            "audio",
+            f"Sintetizando voz con Qwen3-TTS ({language}, "
+            f"{'clonando la muestra oficial' if clone else 'VoiceDesign'})...",
+        )
+        cmd = [
+            "uv",
+            "run",
+            "--directory",
+            str(QWEN_DIR),
+            "synth.py",
+            "--text-file",
+            str(text_file.resolve()),
+            "--out",
+            str(wav_path.resolve()),
+            "--language",
+            language,
+        ]
+        if clone:
+            cmd += ["--clone-ref", str(clone.resolve())]
+        run(cmd, timeout=3600)
+        text_file.unlink(missing_ok=True)
+        if not wav_path.exists():
+            raise RuntimeError("Qwen3-TTS no genero el wav")
+        shutil.copyfile(wav_path, cached)
+    lang = "es" if language.lower().startswith("span") else "en"
     return _align_words(wav_path, script=script, lang=lang)
 
 
@@ -1914,6 +1979,11 @@ def generate_audio(
         words = _chatterbox_tts(script, voice, wav_path, **extra)
         mp3_path = out_dir / "voice.mp3"
         run(["ffmpeg", "-y", "-i", str(wav_path), "-ar", "44100", str(mp3_path)])
+    elif voice.startswith(QWEN_VOICE_PREFIXES):
+        wav_path = out_dir / "voice.wav"
+        words = _qwen_tts(script, voice, wav_path)
+        mp3_path = out_dir / "voice.mp3"
+        run(["ffmpeg", "-y", "-i", str(wav_path), "-ar", "44100", str(mp3_path)])
     elif voice.startswith(KOKORO_VOICE_PREFIXES):
         wav_path = out_dir / "voice.wav"
         speed = _rate_to_kokoro_speed(rate)
@@ -2006,9 +2076,14 @@ SUB_LINE_CHARS = 14  # max chars por linea a fontsize 96 sin acercarse a los bor
 # usuario 30 jul 2026 sobre un checklist de edicion tipo Hormozi.
 SUB_CHUNK_WORDS = 1
 # Volumen lineal de la musica de fondo antes del sidechain-duck contra la voz.
-# 0.09 ~= -20.9dB, dentro del rango -18/-22dB pedido explicitamente 30 jul
-# 2026 (antes 0.06 ~= -24.4dB, mas bajo de lo pedido).
-MUSIC_VOLUME = 0.09
+# 0.05 ~= -26dB (9 ago 2026, "la musica esta demasiado alto" con la voz de Qwen).
+# Historia: 0.06 -> 0.09 el 30 jul para entrar en la banda -18/-22dB pedida, con
+# edge-tts. El numero no era el problema: la VOZ cambio. Qwen entrega bastante
+# mas bajo que edge-tts y el `loudnorm` final, que normaliza la MEZCLA, subia
+# todo el conjunto -- o sea la musica -- para compensar. Por eso ahora la voz se
+# normaliza ANTES de mezclar (ver el filtro de abajo) y este numero vuelve a
+# significar algo constante entre motores de voz.
+MUSIC_VOLUME = 0.05
 
 
 def _split_index(tokens: list[str]) -> int:
@@ -4036,11 +4111,18 @@ def assemble(
 
     audio_labels = []
     audio_filters = ""
+    # La voz se normaliza ANTES de mezclar (9 ago 2026). Sin esto, la relacion
+    # musica/voz depende de lo fuerte que entregue el TTS de turno: la misma
+    # MUSIC_VOLUME sonaba correcta con edge-tts y demasiado alta con Qwen,
+    # porque el loudnorm del final normaliza la mezcla entera y sube el fondo
+    # para compensar una voz baja. Con la voz anclada a -16 LUFS, MUSIC_VOLUME
+    # es una relacion fija y no hay que retocarla cada vez que cambia el motor.
+    audio_filters += "[1:a]loudnorm=I=-16:TP=-1.5:LRA=11[voicenorm];"
     if card_ms:
-        audio_filters += f"[1:a]adelay={card_ms}|{card_ms}[voicesrc];"
+        audio_filters += f"[voicenorm]adelay={card_ms}|{card_ms}[voicesrc];"
         voice_lbl = "[voicesrc]"
     else:
-        voice_lbl = "[1:a]"
+        voice_lbl = "[voicenorm]"
     if music:
         fade_dur = min(2.5, total_dur / 4)
         fade_out_start = max(total_dur - fade_dur, 0)

@@ -28,6 +28,7 @@ from pathlib import Path
 
 MODEL_VOICEDESIGN = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
 MODEL_CUSTOMVOICE = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
+MODEL_BASE = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"  # clonado de un wav de referencia
 
 # ============================================================================
 # VOZ OFICIAL DE KOREX -- elegida por Fabian el 3 ago 2026 tras un casting de
@@ -69,6 +70,14 @@ def main() -> int:
                     help="tamano de trozo; los modelos TTS truncan en silencio "
                          "las generaciones largas (medido en Chatterbox: un "
                          "guion de 77s salia como 40s SIN ningun error)")
+    ap.add_argument("--clone-ref", default="",
+                    help="wav de referencia a CLONAR (modelo Base). Fija el "
+                         "timbre de verdad; el instruct solo fija el caracter "
+                         "y cambia en cada llamada")
+    ap.add_argument("--ref-text", default="",
+                    help="transcripcion del wav de referencia (modo ICL, mejor "
+                         "clonado). Si se omite se busca <wav>.txt; sin ella "
+                         "se clona solo con el x-vector")
     ap.add_argument("--device", default="auto")
     a = ap.parse_args()
 
@@ -82,7 +91,10 @@ def main() -> int:
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
     # bfloat16 solo tiene sentido en GPU; en CPU se cae o va lentisimo
     dtype = torch.bfloat16 if device.startswith("cuda") else torch.float32
-    model_id = MODEL_CUSTOMVOICE if a.speaker else MODEL_VOICEDESIGN
+    if a.clone_ref:
+        model_id = MODEL_BASE
+    else:
+        model_id = MODEL_CUSTOMVOICE if a.speaker else MODEL_VOICEDESIGN
     print(f"[qwen-tts] device={device} modelo={model_id}", file=sys.stderr)
 
     kw = {"device_map": device, "dtype": dtype}
@@ -113,16 +125,39 @@ def main() -> int:
         trozos.append(actual)
     print(f"[qwen-tts] {len(trozos)} trozos", file=sys.stderr)
 
+    # PROMPT DE CLONADO, UNO SOLO PARA TODO EL GUION. Se construye una vez y se
+    # reusa en cada trozo: es lo que hace que el timbre no se mueva.
+    clone_prompt = None
+    if a.clone_ref:
+        ref_text = a.ref_text
+        if not ref_text:
+            p = Path(a.clone_ref).with_suffix(".txt")
+            ref_text = p.read_text(encoding="utf-8").strip() if p.exists() else ""
+        clone_prompt = model.create_voice_clone_prompt(
+            ref_audio=str(Path(a.clone_ref).resolve()),
+            ref_text=ref_text or None,
+            x_vector_only_mode=not ref_text,
+        )
+        print(f"[qwen-tts] clonando {Path(a.clone_ref).name}"
+              f"{' (ICL con transcripcion)' if ref_text else ' (solo x-vector)'}",
+              file=sys.stderr)
+
     partes, sr = [], None
     for i, trozo in enumerate(trozos):
-        if a.speaker:
+        if clone_prompt is not None:
+            # CLONADO > DISEÑO (9 ago 2026). `generate_voice_design` DISEÑA UN
+            # TIMBRE NUEVO EN CADA LLAMADA: como el guion va troceado, cada
+            # trozo salia con una voz ligeramente distinta y en el video se oye
+            # cambiar al narrador a cada rato. El instruct fija el CARACTER, no
+            # la identidad. Clonar la muestra congelada la fija de verdad, y
+            # ademas la mantiene igual entre episodios.
+            wavs, sr = model.generate_voice_clone(
+                text=trozo, language=a.language, voice_clone_prompt=clone_prompt)
+        elif a.speaker:
             wavs, sr = model.generate_custom_voice(
                 text=trozo, language=a.language, speaker=a.speaker,
                 instruct=a.instruct)
         else:
-            # MISMO `instruct` EN TODOS LOS TROZOS: es lo que fija la identidad
-            # de la voz. Variarlo entre trozos suena a varios narradores, el
-            # mismo problema que Chatterbox resuelve con su wav de ancla.
             wavs, sr = model.generate_voice_design(
                 text=trozo, language=a.language, instruct=a.instruct)
         w = np.asarray(wavs[0])

@@ -283,6 +283,16 @@ class FlowSession:
         # ultimo motivo por el que Flow se nego, para que quien llame pueda
         # distinguir "reintentar sirve" de "este prompt no va a pasar nunca"
         self.last_refusal: str = ""
+        # URLs de media YA CONSUMIDAS por una escena anterior de esta misma
+        # sesion. Sin esto el pipeline se desincroniza en silencio (medido el
+        # 9 ago 2026, video de los tulipanes: desde la escena 6 cada imagen era
+        # la del prompt ANTERIOR -- la infografia salio en la frase de la
+        # subasta y la subasta en la del contrato). Causa: `count=4`, o sea
+        # CUATRO tiles por prompt, de los que se consume uno; los otros tres se
+        # cargan perezosamente y aparecen como "media nueva" en la escena
+        # siguiente. La huella local `before` no los ve porque el navegador
+        # todavia no los habia pedido cuando se tomo.
+        self._consumed: set[str] = set()
 
     # -- ciclo de vida -------------------------------------------------------
 
@@ -688,7 +698,7 @@ class FlowSession:
         want_mime = _WANT_MIME[self.mode]
         # la huella se toma DESPUES de adjuntar: subir una referencia mete esa
         # misma imagen en la grilla y si no, cuenta como "resultado nuevo"
-        before = {m["url"] for m in self._media()}
+        before = {m["url"] for m in self._media()} | self._consumed
         refusals_before = len(self._refusals())
         refusal_at: float | None = None  # cuando se vio el primer aviso de rechazo
 
@@ -731,7 +741,13 @@ class FlowSession:
                 and m["tag"] in want_tags
                 and m["url"] not in tried
             ]
-            for url in fresh:
+            # TODO tile nuevo de esta tirada queda quemado, se use o no: con
+            # count=4 sobran tres, y si no se marcan aqui la escena siguiente
+            # los toma por suyos y el video entero se desincroniza una escena.
+            self._consumed.update(fresh)
+            # el mas reciente primero: `_media()` va en orden de peticion del
+            # navegador, asi que el ultimo es el recien salido de este prompt.
+            for url in reversed(fresh):
                 tried.add(url)
                 if not self._download(url, path, want_mime):
                     continue

@@ -50,13 +50,60 @@ externos.**
   `--korex`); `post_question_comment.py` lee `comment_cta` de ahí (fallback:
   parsear la descripción como antes).
 
+### KOREX cambió de motor (9 ago, noche) — LEER ANTES DE TOCAR NADA DE KOREX
+
+**El motor de recortes/parallax es de HiddenFacts y SOLO de HiddenFacts.**
+Decisión de Fabián, explícita. KOREX se monta por el camino **clásico**: las
+imágenes de Flow a pantalla completa. O sea, **sin `--korex`**:
+
+```powershell
+py pipeline.py --script-file scripts/korex-tulipanes.json --flow --voice qw_korex
+```
+
+Tres cosas más que se arreglaron con él y que valen para todo lo que venga:
+
+1. **Flow iba desincronizado y no se veía.** `count=4` deja tres tiles sueltos
+   por prompt; la escena siguiente los tomaba por suyos. Desde la escena 6, cada
+   imagen era la del prompt anterior. Arreglado en `flow_automation` con un
+   `_consumed` de sesión. **Mirar siempre la hoja de contacto contra el guion**:
+   el fallo es silencioso y el vídeo parece correcto.
+2. **Tadeo tenía cuatro diseños.** Estudio completo en
+   `PERSONAJE_MODEL_SHEET.md`. Ya hay **hoja madre** (turnaround + expresiones)
+   en `assets/characters/tadeo/default_model_sheet.png`, y `CHARACTER_LOCK` es
+   ahora especificación contable. Las láminas fuera de modelo (`grito_1..5`,
+   la hoja vieja a boceto) están en `_rechazadas/`.
+3. **La voz oficial no se estaba usando.** Qwen existía en `tools/qwen_tts` pero
+   el pipeline no sabía enrutar ahí: todos los Tadeo anteriores salieron con
+   Chatterbox. Ahora `--voice qw_korex`.
+
+Y tres cosas mas que salieron de oirlo montado:
+
+4. **La voz cambiaba a mitad del video.** `generate_voice_design` DISEÑA un
+   timbre nuevo en CADA llamada y el guion va troceado: cada trozo era otro
+   narrador. Ahora se **clona** la muestra congelada del casting
+   (`assets/voice_refs/korex_narrador.wav`, modelo `Qwen3-TTS-...-Base` + ICL con
+   `korex_narrador.txt`). El `instruct` fija el caracter, no la identidad.
+5. **La musica sonaba alta y el numero no era el problema.** Qwen entrega mas
+   bajo que edge-tts y el `loudnorm` final normaliza la MEZCLA, asi que subia el
+   fondo para compensar. La voz se normaliza ahora ANTES de mezclar (-16 LUFS) y
+   `MUSIC_VOLUME` bajo a 0.05. Con eso el numero vale igual con cualquier TTS.
+6. **12 planos en 82s = 6,8s cada uno, un pase de diapositivas.** El guion pasa a
+   **24 beats** (frases cortas) -> 3,2s por plano. Las 12 imagenes buenas se
+   recolocaron y solo se generaron las 12 intercaladas: regenerar todo cuesta una
+   hora de Flow y no hacia falta.
+
+Salida viva: `output/2026-08-09-la-flor-que-costaba-mas-que-una-casa-y-e/video.mp4`,
+**76,8s, 24 escenas**. **Nada subido a YouTube.**
+
 ### Pendiente (es el siguiente paso)
 
-**Ningún video generado todavía con la regla 11** — Fabián decidió que la
-validación de punta a punta la hace la sesión de Claude. Hipótesis registrada
-en la entrada 2026-08-09 de `HISTORIAL_MEJORAS.md`: mediana de shares > 0 en la
-próxima tanda, comentarios/1000 vistas subiendo, retención igual o mejor con
-release 300ms.
+1. **Publicar el tulipanes como `unlisted`** y mirar shares/comentarios: es lo
+   único que valida la regla 11. Hoy es oficio, no dato.
+2. **Flow sigue escribiendo letreros garabateados** ("NOTARIO", "AUCTION HALL")
+   cuando el `search_term` nombra un objeto con texto. Se quita añadiendo
+   "sin texto ni letras" al término, como ya llevan los 12 nuevos.
+3. `korex_qa.py` está escrito para el motor viejo (avisa de color en escenas cuya
+   imagen ya no se descarta). Hay que reapuntarlo al camino clásico o retirarlo.
 
 ---
 

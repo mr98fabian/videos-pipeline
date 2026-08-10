@@ -84,7 +84,21 @@ CHARACTER_LOCK = (
     "black pupils, same dark bandit mask across the eyes, same rounded muzzle, "
     "same grey body with cream chest and belly, same ringed striped tail, same "
     "white four-fingered gloves. Same line weight and same flat grey shading as "
-    "the reference. Keep the character identical and change ONLY the pose and "
+    "the reference. "
+    # ESPECIFICACION MEDIBLE (9 ago 2026, ver PERSONAJE_MODEL_SHEET.md). La
+    # version anterior solo decia "igual que la referencia" y la biblioteca
+    # acabo con cuatro Tadeos: de 3 a 4,5 cabezas de alto, pecho blanco/gris/
+    # crema, antifaz de banda fina y de gafas, y unos primeros planos con
+    # pelaje erizado y dos filas de dientes que son otro personaje. Un rasgo
+    # que no se puede contar no se puede exigir.
+    "EXACT SPEC, do not deviate: body is 3.5 heads tall; smooth ROUND outline "
+    "with no fur tufts or spikes along the silhouette; the eye mask is a single "
+    "solid dark band across both eyes, wider than tall; chest, belly and muzzle "
+    "are one flat cream tone, never white and never grey; tail has exactly four "
+    "dark rings; gloves have four fingers; NO clothing of any kind; when the "
+    "mouth is open it is a plain dark shape with at most one simple tongue, "
+    "never rows of individual pointed teeth. "
+    "Keep the character identical and change ONLY the pose and "
     "the background. Do not redesign him, do not restyle him, do not make him "
     "realistic or furry, do not add or remove clothing that the reference does "
     "not have. Draw ONE single character in a real scene: never a character "
