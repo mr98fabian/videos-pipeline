@@ -139,6 +139,13 @@ def _canonical_sheet(character: str) -> Path | None:
     return sheets[0] if sheets else None
 
 
+def pose_text(pose: str) -> str:
+    """Descripcion en palabras de la pose, para cuando la pose viaja en el
+    PROMPT y no como imagen de referencia (ver el comentario de identidad en
+    pipeline.acquire_media)."""
+    return POSES.get(_slug(pose), "")
+
+
 def path_for(character: str, pose: str) -> Path:
     return CAST_DIR / _slug(character) / f"{_slug(pose)}.png"
 

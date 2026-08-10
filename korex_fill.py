@@ -61,9 +61,16 @@ def main() -> int:
             prompt = term
             if raw_char and "/" in raw_char:
                 c, _, p = raw_char.partition("/")
-                pose = kx_cast.pick(c, p, i) or kx_cast.get_pose(c, p)
+                # solo la HOJA MADRE como referencia; la pose va en palabras.
+                # Ver el comentario de identidad en pipeline.acquire_media.
                 sheet = kx_cast._canonical_sheet(c)
-                refs = [Path(x) for x in (pose, sheet) if x and Path(x).exists()]
+                refs = [Path(sheet)] if sheet and Path(sheet).exists() else []
+                if not refs:
+                    pose_img = kx_cast.pick(c, p, i) or kx_cast.get_pose(c, p)
+                    refs = [Path(pose_img)] if pose_img else []
+                pose_txt = kx_cast.pose_text(p)
+                if pose_txt:
+                    term = f"{term}. Tadeo esta {pose_txt}"
                 prompt = f"{term}. {kx_cast.CHARACTER_LOCK}"
             ok = fa.generate_image(
                 prompt,

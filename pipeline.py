@@ -3126,21 +3126,28 @@ def _acquire_clips_loop(
                         "media",
                         f"clip {i + 1}/{n_clips}: pose '{raw_char}' no resuelta ({e})",
                     )
-                if lib_pose and Path(lib_pose).exists():
+                # LA IDENTIDAD LA FIJA LA HOJA MADRE, NO LA LAMINA DE LA POSE
+                # (10 ago 2026). Antes se mandaba como referencia la lamina de
+                # la pose de esta escena, y las laminas de la biblioteca NO son
+                # el mismo personaje entre si: `bolsillos_1` lleva pantalones,
+                # `codicia` es mas alto y con otra cabeza, `triunfo_1` es un
+                # diseño mas anguloso. Una referencia distinta por escena es un
+                # Tadeo distinto por escena, que es exactamente lo que se veia.
+                # Ahora la referencia es SIEMPRE la misma (la hoja aprobada) y
+                # la pose viaja en el prompt, en palabras.
+                sheet = None
+                try:
+                    sheet = kx_cast._canonical_sheet(_c)
+                except Exception:
+                    sheet = None
+                if sheet and Path(sheet).exists():
+                    char_ref = Path(sheet)
+                    lib_pose = lib_pose or sheet
+                    _pose_txt = kx_cast.pose_text(_p)
+                    if _pose_txt:
+                        term = f"{term}. Tadeo esta {_pose_txt}"
+                elif lib_pose and Path(lib_pose).exists():
                     char_ref = Path(lib_pose)
-                    # Una sola referencia no aguanta cuando cambia la escena: se
-                    # suma la hoja canonica del personaje, que es la que define
-                    # la identidad, ademas de la pose concreta de esta escena.
-                    try:
-                        sheet = kx_cast._canonical_sheet(_c)
-                        if (
-                            sheet
-                            and Path(sheet).exists()
-                            and Path(sheet) != Path(lib_pose)
-                        ):
-                            champ_refs = list(champ_refs) + [Path(sheet)]
-                    except Exception:
-                        pass
                 else:
                     lib_pose = None
 
