@@ -1,0 +1,42 @@
+{
+  "style": "Animacion vectorial plana estilo 'rubber hose' anos 30 (Mickey/Oswald viejo), blanco y negro con grano de film vintage y parpadeo sutil, protagonista Tadeo el mapache con guantes blancos de boton",
+  "title": "¿Como sobrevivirias a una tarjeta de credito? (con Tadeo)",
+  "description": "Tadeo el mapache te explica por que pagas tu tarjeta y la deuda casi no baja: interes compuesto, sin jerga, con un frasco de dulces. Canal KoreX.",
+  "hook_card": "Pagas cada mes y la deuda sigue igual. ¿Como sobrevives a esto?",
+  "music_mood": "comedic_tense",
+  "search_terms": [
+    "Tadeo character: close-up cara sorprendida gritando directo a camara, contacto visual intenso",
+    "Tadeo character: oficina modesta con escritorio y papeles de banco desordenados",
+    "Tadeo character: mesa de madera con un frasco de vidrio de dulces casi vacio",
+    "Tadeo character: cuarto simple con un frasco de dulces gigante sobre la mesa",
+    "Bruja del Banco character: oficina bancaria oscura con estantes de libros de contabilidad",
+    "Tadeo character: mesa con el mismo frasco de dulces, luz tenue",
+    "INSERT infografico minimalista serio tipo Vox: grafico de barras pago vs interes cobrado primero, fondo blanco",
+    "Tadeo character: escritorio con calendario de pared y facturas apiladas",
+    "Tadeo character: cuarto simple, luz fria",
+    "Tadeo character: mesa de madera con un papel de deuda y una flecha roja dibujada",
+    "INSERT infografico minimalista serio tipo Vox: grafico de linea bajando rapido tras duplicar el pago, fondo blanco",
+    "Bruja del Banco character: oficina bancaria oscura, frasco fuera de alcance en un estante alto",
+    "Tadeo character: cuarto simple con luz calida de victoria",
+    "Tadeo character: cuarto simple, plano cerrado",
+    "Tadeo character: cuarto simple con signo de interrogacion flotando de fondo"
+  ],
+  "script": "Sobreviviste al mes, mijo. Pagaste trescientos a la tarjeta y la deuda bajó veinte, wow, qué hazaña. Miren a Tadeo, el genio, pensando que ya casi la liquidaba. Le pasó lo mismo a el, y sigue sin entender por qué, así que hoy le explicamos despacito. Imagina un frasco de dulces, Tadeo, a ver si así le entra. Metes veinte cada mes, pero antes de que cuenten para algo, la Bruja del Banco mete la garra y se roba diez de primero. El frasco casi ni se mueve, como tu cerebro procesando esto. Eso es lo que te está pasando: el banco cobra sus interéses antes de tocarte la deuda de verdad. Tadeo pagó el mínimo tres años derechito y seguía debiendo casi lo mismo, aplaudanle. Miren esa cara de payaso estafado. Pero hasta el torpe de Tadeo aprendió: dobló el pago y atacó primero la deuda más cara, no la comodita. Y ahi si la bruja se quedó con las manos vacías. Así de fácil era, y así de tonto se veía Tadeo sin saberlo. Sobreviviste al mes, mijo. Pagaste trescientos a la tarjeta, ¿o otra vez la bruja se comió tu dinero?",
+  "character_terms": [
+    "",
+    "Tadeo, sosteniendo un estado de cuenta bancario, cara de payaso orgulloso",
+    "Tadeo, senalando el frasco, cara confundida",
+    "Tadeo, gesticulando hacia camara, cara de sorpresa comica",
+    "Bruja del Banco, metiendo la garra en un frasco de dulces, riendose malvada",
+    "Tadeo, cara de resignacion mirando el frasco",
+    "",
+    "Tadeo, pagando la tarjeta, cara de payaso confundido",
+    "Tadeo, cara de payaso estafado, ojos llorosos comicos, close-up",
+    "Tadeo, golpeando la mesa decidido, senalando el papel",
+    "",
+    "Bruja del Banco, cara de furia, manos vacias",
+    "Tadeo, cara de triunfo satisfecho, brazos cruzados",
+    "Tadeo, cara sorprendida gritando directo a camara, contacto visual intenso",
+    "Tadeo, cara picara guinando un ojo directo a camara"
+  ]
+}

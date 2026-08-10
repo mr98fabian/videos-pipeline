@@ -1,0 +1,46 @@
+{
+  "script": "In 1940, one man volunteered to be captured and sent into Auschwitz, on purpose. His name was Witold Pilecki, a Polish cavalry officer who believed the world needed hard proof of what the Nazis were building. He deliberately walked into a German street roundup in occupied Warsaw and quietly let himself be arrested. Inside the camp, he built a secret resistance network of hundreds of starving prisoners, right under the noses of the guards. His reports were smuggled out in laundry carts and reached London itself, the first eyewitness accounts of the camp the Allies ever read. But here is the part that truly breaks your heart, the Allies did not believe the scale of what he described. After two and a half brutal years inside, he escaped through a bakery door at night and kept on fighting. He survived the entire war, only to be executed by the communist government he had also dared to resist. Poland then erased his name from its history books for forty long years, until the archives finally opened. The man who volunteered into hell to warn the world was silenced by it, twice.",
+  "search_terms": [
+    "a determined man's face in extreme close-up in dim candlelight, resolute expression, somber vintage documentary style",
+    "a man in a civilian coat studying secret documents by candlelight, vintage documentary style",
+    "soldiers herding civilians into trucks during a street roundup, tense somber vintage documentary style",
+    "prisoners whispering in a dark barracks at night, somber vintage documentary style",
+    "a folded note hidden inside a laundry cart passing a guarded gate, tense vintage documentary style",
+    "officials at a polished conference table pushing papers away dismissively, somber vintage documentary style",
+    "a man slipping through a bakery door into the night, tense vintage documentary style",
+    "a lone defendant standing in a bare courtroom before stern judges, dark somber vintage documentary style",
+    "an archive shelf with a single empty space where a file is missing, somber vintage documentary style",
+    "the determined man's face in dim candlelight again, echoing the opening, somber vintage documentary style"
+  ],
+  "hook_card": "He got himself sent to Auschwitz. On purpose.",
+  "title": "The Man Who Volunteered Into Auschwitz | Hidden Heroes",
+  "description": "1940: Witold Pilecki let himself be arrested so he could be sent into Auschwitz, build a resistance network inside, and smuggle the first eyewitness reports out to the Allies. They didn't believe him. He escaped, survived the war, and was executed by the communist regime he had also resisted. His story was erased for 40 years.\n\nWhat's braver: going in, or telling a truth nobody believes? GOING IN or TELLING IT. Say your pick below.\n\nA new historical secret every day. Subscribe so you don't miss tomorrow's.\n\n#history #wwii #truestory #hiddenfacts #shorts",
+  "case_no": 1,
+  "share_card": {
+    "line1": "He volunteered into Auschwitz",
+    "line2": "to warn the world."
+  },
+  "visual_beats": {
+    "4": {
+      "typewriter": {
+        "text": "REPORT No.1 — TO LONDON",
+        "at": 14,
+        "x": 110,
+        "y": 190
+      }
+    },
+    "8": {
+      "censor": {
+        "x": 190,
+        "y": 620,
+        "w": 700,
+        "h": 170,
+        "at": 6,
+        "reveal": 55,
+        "label": "ERASED"
+      }
+    }
+  },
+  "music_mood": "somber mournful slow ambient that grows quietly heroic toward the end, soft solemn strings and sparse piano, grave respectful documentary tone, low volume drone",
+  "style": "1990s Nickelodeon rubber-hose cartoon style, exaggerated comic-book expressions with big unsettling eyes, thick wobbly hand-drawn black outlines, snappy low-frame animation feel. Color palette: sepia, dusty burnt yellow, aged parchment, dark brown shadows instead of pure black. Heavy vintage film grain and scratched-film texture overlaid, retro documentary aesthetic, slightly distorted, high contrast, hand-drawn sketch look. No bright saturated colors. Only human characters, never humanoid animals."
+}

@@ -54,6 +54,15 @@ Orden sugerido: probar del 1 al 20, anotar resultado en `video_log.csv`
 20. **Doble-punchline explicito** -- guion escrito deliberadamente con el mecanismo del
     "giro + segundo micro-giro inmediato" (tecnica del guion viral de 5M vistas
     analizado), como estructura fija en vez de ocasional.
+21. **Historia en 2 partes con cliffhanger real (patron Extra History, prioridad alta)** --
+    UNA historia fuerte partida en 2 Shorts: la parte 1 corta en el punto de maxima
+    tension ("Y lo que encontraron adentro... parte 2 mañana"), la parte 2 se publica
+    24h despues, mismo horario. Es el motivo de suscripcion mas fuerte que existe
+    (serializacion = razon de volver; asi construyo Extra History sus 4,59M subs con
+    partes numeradas). Medir DISTINTO al resto: (a) subs ganados por la parte 1 vs
+    promedio del canal, (b) vistas de la parte 2 como % de la parte 1 (retencion de
+    serie), (c) comentarios pidiendo la parte 2. Si (a) supera 2x el promedio, formalizar
+    como formato regular. Registrar como "FORMATO #21: 2 partes" en outlier_reference.
 
 ## Como registrar el experimento
 

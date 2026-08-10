@@ -1,0 +1,53 @@
+{
+  "script": "In 1946, the United States dropped an atomic bomb on its own fleet, and then a swimsuit was named after it. The target was Bikini Atoll, a tiny paradise in the Pacific whose people were quietly shipped away from their homes forever. Ninety empty warships were anchored together as a ghost fleet, waiting to be destroyed in a single nuclear experiment. On July twenty fifth, a bomb detonated deep underwater and hurled an entire mountain of radioactive sea into the sky. The falling spray coated every ship in invisible radiation that no crew could ever fully scrub away again. But the sailors were sent aboard anyway, mopping the poisoned decks in shorts while their commanders insisted it was perfectly safe. Here is the part almost nobody ever connects, because just days later a French designer revealed a tiny new swimsuit. He named it the bikini, betting it would shock the entire world exactly like the bomb that now shared its name. The ghost fleet stayed so radioactive that most of the ships were finally towed far out and sunk in the deep ocean. And to this day, millions of people wear the name of a nuclear disaster without ever knowing the secret behind it.",
+  "search_terms": [
+    "a determined naval officer's face in extreme close-up, tense expression, somber vintage documentary style",
+    "island families loading belongings into a small boat leaving a palm beach, full figures, somber vintage documentary style",
+    "dozens of empty warships anchored close together in a calm lagoon, wide shot, vintage documentary style",
+    "a colossal column of water erupting from the sea beside distant warships, dramatic vintage documentary style",
+    "sailors in cloth masks scrubbing the steel deck of a battleship, full figures, tense vintage documentary style",
+    "a group of sailors mopping a warship deck in shorts under the sun, full figures, somber vintage documentary style",
+    "a fashion designer presenting a small swimsuit on a stand to reporters, full figure, vintage documentary style",
+    "a woman in a vintage two piece swimsuit posing for cameras on a beach, full figure, vintage documentary style",
+    "a rusting empty warship being towed out to open sea under a grey sky, wide shot, vintage documentary style",
+    "the naval officer's face again in close-up, echoing the opening, somber vintage documentary style"
+  ],
+  "hook_card": "They nuked their own fleet. Then named your swimsuit after it.",
+  "title": "The Nuclear Bomb Test That Named Your Swimsuit",
+  "description": "July 1946: Operation Crossroads at Bikini Atoll. The US Navy detonated an atomic bomb underwater among 90 of its own warships, a radioactive 'ghost fleet' sailors were then sent to scrub by hand. Days later, a French designer named his shocking new two-piece swimsuit the 'bikini' after the atoll. The islanders never got their home back.\n\nWas naming a swimsuit after a nuclear bomb clever or disgusting? CLEVER or DISGUSTING. Say your pick below.\n\nA new historical secret every day. Subscribe so you don't miss tomorrow's.\n\n#history #coldwar #nuclear #bikini #historyfacts #shorts",
+  "share_card": {
+    "line1": "Your swimsuit is named",
+    "line2": "after a nuclear bomb test."
+  },
+  "visual_beats": {
+    "4": {
+      "censor": {
+        "x": 190,
+        "y": 620,
+        "w": 700,
+        "h": 170,
+        "at": 6,
+        "reveal": 52,
+        "label": "RADIATION"
+      }
+    },
+    "6": {
+      "typewriter": {
+        "text": "BIKINI — JULY 1946",
+        "at": 18,
+        "x": 110,
+        "y": 190
+      }
+    }
+  },
+  "real_photo": {
+    "query": "Operation Crossroads Baker",
+    "scenes": [
+      3,
+      8
+    ],
+    "year": "1946"
+  },
+  "music_mood": "ominous slow-building nuclear dread ambient, deep low drones and sparse ticking percussion swelling toward an uneasy reveal, grave documentary tone, low volume",
+  "style": "1990s Nickelodeon rubber-hose cartoon style, exaggerated comic-book expressions with big unsettling eyes, thick wobbly hand-drawn black outlines, snappy low-frame animation feel. Color palette: sepia, dusty burnt yellow, aged parchment, dark brown shadows instead of pure black. Heavy vintage film grain and scratched-film texture overlaid, retro documentary aesthetic, slightly distorted, high contrast, hand-drawn sketch look. No bright saturated colors. Only human characters, never humanoid animals."
+}

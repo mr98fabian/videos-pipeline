@@ -22,9 +22,22 @@ if hasattr(sys.stdout, "reconfigure"):
 
 ROOT = Path(__file__).resolve().parent
 LOG_PATH = ROOT / "video_log.csv"
-FIELDS = ["logged_at", "output_dir", "video_id", "youtube_url", "title",
-          "style_summary", "music_mood", "word_count", "duration_sec", "privacy",
-          "keyword_score", "title_score", "outlier_reference"]
+FIELDS = [
+    "logged_at",
+    "output_dir",
+    "video_id",
+    "youtube_url",
+    "title",
+    "style_summary",
+    "music_mood",
+    "word_count",
+    "duration_sec",
+    "privacy",
+    "keyword_score",
+    "title_score",
+    "outlier_reference",
+    "account",
+]
 
 
 def _style_summary(style: str | None) -> str:
@@ -38,9 +51,20 @@ def _video_duration(video_path: Path) -> str:
     si falla. Permite correlacionar despues duracion vs retencion real."""
     try:
         out = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-             "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)],
-            capture_output=True, text=True, check=True, timeout=30,
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(video_path),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
         ).stdout.strip()
         return f"{float(out):.1f}"
     except Exception:
@@ -64,9 +88,15 @@ def _migrate_if_needed() -> None:
             writer.writerow({k: row.get(k, "") for k in FIELDS})
 
 
-def log_video(output_dir: str | Path, video_id: str, privacy: str = "unlisted",
-              keyword_score: float | None = None, title_score: float | None = None,
-              outlier_reference: str | None = None, account: str = "default") -> None:
+def log_video(
+    output_dir: str | Path,
+    video_id: str,
+    privacy: str = "unlisted",
+    keyword_score: float | None = None,
+    title_score: float | None = None,
+    outlier_reference: str | None = None,
+    account: str = "default",
+) -> None:
     out_dir = Path(output_dir)
     script_data = json.loads((out_dir / "script.json").read_text(encoding="utf-8"))
     title = (out_dir / "title.txt").read_text(encoding="utf-8").strip()
@@ -75,6 +105,7 @@ def log_video(output_dir: str | Path, video_id: str, privacy: str = "unlisted",
         # solo HiddenFacts tiene playlists tematicas hoy; ImPixxel no las usa
         try:
             import youtube_api as y
+
             desc = script_data.get("description", "")
             y.auto_add_to_playlist(video_id, title, desc, account=account)
         except Exception as e:
@@ -96,6 +127,10 @@ def log_video(output_dir: str | Path, video_id: str, privacy: str = "unlisted",
         "keyword_score": keyword_score if keyword_score is not None else "",
         "title_score": title_score if title_score is not None else "",
         "outlier_reference": outlier_reference or "",
+        # que cuenta/canal es dueno del video -- necesario para performance_report.py,
+        # que tiene que pedirle las metricas a la API con las credenciales del canal
+        # correcto (cada canal tiene su propio token_<account>.json, ver youtube_api.py).
+        "account": account,
     }
 
     is_new = not LOG_PATH.exists()
@@ -110,16 +145,26 @@ def log_video(output_dir: str | Path, video_id: str, privacy: str = "unlisted",
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         epilog="Si video_id empieza con '-' (ej. -abc123), antepone '--' para que "
-               "argparse no lo interprete como flag: py track_video.py <dir> -- -abc123")
+        "argparse no lo interprete como flag: py track_video.py <dir> -- -abc123"
+    )
     parser.add_argument("output_dir")
     parser.add_argument("video_id")
     parser.add_argument("--privacy", default="unlisted")
     parser.add_argument("--keyword-score", type=float, default=None)
     parser.add_argument("--title-score", type=float, default=None)
     parser.add_argument("--outlier-ref", default=None)
-    parser.add_argument("--account", default="default",
-                         help="'default' = HiddenFacts (con playlists), 'impixxel' = sin playlists")
+    parser.add_argument(
+        "--account",
+        default="default",
+        help="'default' = HiddenFacts (con playlists), 'impixxel' = sin playlists",
+    )
     args = parser.parse_args()
-    log_video(args.output_dir, args.video_id, args.privacy,
-              keyword_score=args.keyword_score, title_score=args.title_score,
-              outlier_reference=args.outlier_ref, account=args.account)
+    log_video(
+        args.output_dir,
+        args.video_id,
+        args.privacy,
+        keyword_score=args.keyword_score,
+        title_score=args.title_score,
+        outlier_reference=args.outlier_ref,
+        account=args.account,
+    )

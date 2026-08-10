@@ -1,0 +1,44 @@
+{
+  "tadeo": {
+    "asombro": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_3.png"
+    },
+    "estafado": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_8.png"
+    },
+    "senalando": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_9.png"
+    },
+    "confundido": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_12.png"
+    },
+    "picaro": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_14.png"
+    },
+    "grito": {
+      "prompt": "A single cartoon character: Tadeo, screaming with mouth wide open, both arms raised up in panic, eyes wide, leaning back slightly, whole body visible and correctly proportioned. FULL BODY unless the pose says close-up, centered, facing the camera, on a PLAIN SOLID WHITE background with no floor, no shadow, no props beyond the ones named, no text, no letters, no numbers. The character must be fully inside the frame with clear margin on every side.",
+      "style": "1930s rubber-hose cartoon in the style of early Disney/Fleischer animation, black and white. HAND-INKED look: thick confident brush outlines with varying line weight, soft pencil-like grey shading and light cross-hatching, subtle aged paper texture and faint film grain, vintage animation cel feeling. White four-fingered gloves. NOT flat vector art, NOT clean digital illustration, NOT modern cartoon style"
+    },
+    "orgulloso": {
+      "prompt": "A single cartoon character: Tadeo, standing proud, chest out, hands on hips, smug clown-like grin. FULL BODY unless the pose says close-up, centered, facing the camera, on a PLAIN SOLID WHITE background with no floor, no shadow, no props beyond the ones named, no text, no letters, no numbers. The character must be fully inside the frame with clear margin on every side.",
+      "style": "1930s rubber-hose cartoon in the style of early Disney/Fleischer animation, black and white. HAND-INKED look: thick confident brush outlines with varying line weight, soft pencil-like grey shading and light cross-hatching, subtle aged paper texture and faint film grain, vintage animation cel feeling. White four-fingered gloves. NOT flat vector art, NOT clean digital illustration, NOT modern cartoon style"
+    },
+    "decidido": {
+      "prompt": "A single cartoon character: Tadeo, standing firm with one clenched fist raised chest-high, jaw set, determined frown, mouth CLOSED, calm and resolute, no shouting, no money, whole body visible. FULL BODY unless the pose says close-up, centered, facing the camera, on a PLAIN SOLID WHITE background with no floor, no shadow, no props beyond the ones named, no text, no letters, no numbers. The character must be fully inside the frame with clear margin on every side.",
+      "style": "1930s rubber-hose cartoon in the style of early Disney/Fleischer animation, black and white. HAND-INKED look: thick confident brush outlines with varying line weight, soft pencil-like grey shading and light cross-hatching, subtle aged paper texture and faint film grain, vintage animation cel feeling. White four-fingered gloves. NOT flat vector art, NOT clean digital illustration, NOT modern cartoon style"
+    },
+    "triunfo": {
+      "prompt": "A single cartoon character: Tadeo, arms firmly crossed over the chest, EMPTY hands tucked under the arms, satisfied smirk, chin slightly raised, holding NOTHING at all, no money, no objects, whole body visible. FULL BODY unless the pose says close-up, centered, facing the camera, on a PLAIN SOLID WHITE background with no floor, no shadow, no props beyond the ones named, no text, no letters, no numbers. The character must be fully inside the frame with clear margin on every side.",
+      "style": "1930s rubber-hose cartoon in the style of early Disney/Fleischer animation, black and white. HAND-INKED look: thick confident brush outlines with varying line weight, soft pencil-like grey shading and light cross-hatching, subtle aged paper texture and faint film grain, vintage animation cel feeling. White four-fingered gloves. NOT flat vector art, NOT clean digital illustration, NOT modern cartoon style"
+    },
+    "codicia": {
+      "prompt": "A single cartoon character: Tadeo, holding a stack of bills with both hands, greedy wide-eyed grin. FULL BODY unless the pose says close-up, centered, facing the camera, on a PLAIN SOLID WHITE background with no floor, no shadow, no props beyond the ones named, no text, no letters, no numbers. The character must be fully inside the frame with clear margin on every side.",
+      "style": "1930s rubber-hose cartoon in the style of early Disney/Fleischer animation, black and white. HAND-INKED look: thick confident brush outlines with varying line weight, soft pencil-like grey shading and light cross-hatching, subtle aged paper texture and faint film grain, vintage animation cel feeling. White four-fingered gloves. NOT flat vector art, NOT clean digital illustration, NOT modern cartoon style"
+    }
+  },
+  "bruja": {
+    "malvada": {
+      "adopted_from": "output\\2026-08-03-como-sobrevivirias-a-una-tarjeta-de-cred-2\\clips\\ch_11.png"
+    }
+  }
+}

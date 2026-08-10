@@ -1,0 +1,49 @@
+{
+  "script": "In the summer of 1942, Stalin signed an order so brutal that Soviet soldiers feared it more than the Germans. The Nazis were racing toward the oil fields of the Caucasus, and the Red Army kept falling back. So on July 28, Stalin issued Order Number 227, and its message was four words long: not one step back. Any soldier who retreated without orders would be treated as a traitor to the motherland. Blocking detachments took position behind the front lines, with orders to shoot their own retreating men. Deserters were thrown into penal battalions and handed the most suicidal missions of the entire war. But here is the part nobody agrees on, some historians say the order actually worked. Panic retreats slowed, the line at Stalingrad held, and the war began to turn. Others say it worked for a darker reason, soldiers simply learned that going back was more deadly than going forward. Stalin never apologized for Order 227, because for him fear was not a side effect, it was the strategy, and his own soldiers feared him to the very end.",
+  "search_terms": [
+    "a terrified young soldier's face in extreme close-up inside a trench, somber vintage documentary style",
+    "tanks racing across a burning steppe toward distant oil derricks, dramatic vintage documentary style",
+    "a dictator signing a document at a desk under a single lamp, dark vintage documentary style",
+    "a soldier branded as traitor dragged away by two guards, somber vintage documentary style",
+    "a line of machine gunners positioned behind their own trenches facing forward, tense vintage documentary style",
+    "ragged soldiers charging into smoke across open ground, dramatic vintage documentary style",
+    "two historians arguing over documents at a cluttered archive table, vintage documentary style",
+    "soldiers holding a rubble barricade in a destroyed city street, dramatic vintage documentary style",
+    "a lone soldier looking back over his shoulder caught between two dangers, somber tense vintage documentary style",
+    "the terrified young soldier's face in the trench again, echoing the opening, somber vintage documentary style"
+  ],
+  "hook_card": "One order made retreating deadlier than the enemy.",
+  "title": "Stalin's Order 227: Not One Step Back | WWII Secrets",
+  "description": "July 28, 1942: Stalin issued Order No. 227. Retreat without orders meant a penal battalion, the Gulag, or a bullet from your own side. Blocking detachments stood behind the front lines. And historians still argue whether it saved the Soviet Union or simply terrorized it.\n\nDid Order 227 save the USSR or just terrorize its own men? SAVED IT or PURE TERROR. Say your pick below.\n\nA new historical secret every day. Subscribe so you don't miss tomorrow's.\n\n#history #wwii #stalin #truestory #hiddenfacts #shorts",
+  "case_no": 1,
+  "share_card": {
+    "line1": "Stalin's soldiers feared him",
+    "line2": "more than the enemy."
+  },
+  "visual_beats": {
+    "2": {
+      "typewriter": {
+        "text": "NOT ONE STEP BACK.",
+        "at": 16,
+        "x": 110,
+        "y": 190
+      }
+    },
+    "4": {
+      "censor": {
+        "x": 190,
+        "y": 620,
+        "w": 700,
+        "h": 170,
+        "at": 6,
+        "reveal": 58,
+        "label": "CLASSIFIED"
+      }
+    }
+  },
+  "music_mood": "dark relentless slow-building tension ambient, low ominous strings and sparse deep percussion swelling toward the end, grave documentary tone, low volume drone",
+  "style": "1990s Nickelodeon rubber-hose cartoon style, exaggerated comic-book expressions with big unsettling eyes, thick wobbly hand-drawn black outlines, snappy low-frame animation feel. Color palette: sepia, dusty burnt yellow, aged parchment, dark brown shadows instead of pure black. Heavy vintage film grain and scratched-film texture overlaid, retro documentary aesthetic, slightly distorted, high contrast, hand-drawn sketch look. No bright saturated colors. Only human characters, never humanoid animals.",
+  "force_photo": [
+    3
+  ]
+}

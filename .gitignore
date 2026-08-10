@@ -6,6 +6,9 @@ token*.json
 # Datos generados / estado de runtime (no es código)
 output/
 logs/
+# Material de terceros descargado solo para revisar en local (nunca se publica
+# ni se commitea: es contenido con copyright ajeno) + pruebas de edición
+tmp_local_review/
 gemini_usage.json
 used_topics.json
 video_log.csv
@@ -17,6 +20,14 @@ assets/lol_db/
 assets/characters/
 assets/skick/
 assets/creator_reference/
+assets/stickers/
+# Gameplay CC-BY para el panel inferior del split: son >1h de vídeo cada uno.
+# Se ignoran los .mp4 pero NO ATRIBUCION.md, que es donde vive el crédito
+# obligatorio de la licencia y sí debe versionarse.
+assets/gameplay/*
+!assets/gameplay/ATRIBUCION.md
+assets/satisfying_cc/*
+!assets/satisfying_cc/ATRIBUCION.md
 *.mp4
 *.mp3
 *.wav
@@ -33,8 +44,61 @@ venv/
 # Herramienta embebida con su propio repo git anidado (Kokoro TTS) — no la trackeamos
 tools/kokoro_tts/
 
+# Herramientas de animacion (28 jul 2026): repos clonados + venv propio + pesos
+# preentrenados. momask trae los checkpoints de HumanML3D (~190MB) dentro del
+# propio clon; animated_drawings clona mmpose completo; depthflow arrastra
+# PyTorch+CUDA en su venv. Mismo patron que tools/kokoro_tts/: el codigo que
+# los invoca (animate_engine.py) SI se trackea, el repo/venv no.
+tools/momask/
+tools/animated_drawings/
+tools/depthflow/
+
 # Remotion (motion_graphics/): node_modules se regenera con npm install, no se trackea
 motion_graphics/node_modules/
 motion_graphics/out/
 motion_graphics/public/collage_photo.png
 motion_graphics/public/scene_sticker_*.png
+motion_graphics/public/sticker_*.png
+# assets generados por video (fondos, recortes, fx, clips animados) --
+# datos de runtime, no codigo. *.png/*.mp4 ya los cubren en parte; esto anade
+# los formatos con alfa real (.mov ProRes, .webm) que no estaban cubiertos.
+motion_graphics/public/archivo/
+*.mov
+*.webm
+
+# backups y reportes runtime (no codigo)
+*.bak
+performance_report.csv
+vidiq_key.txt
+assets/cache/
+assets/image_cache/
+assets/sticker_library/
+
+# clips de terceros descargados por viral_lab.py (nunca al repo)
+viral/
+
+# ComfyUI: repo clonado + pesos de FLUX/Wan (38GB). Mismo patron que
+# tools/kokoro_tts/ -- el codigo que lo usa (comfy_client.py) si va al repo.
+tools/comfyui/
+
+# EXCEPCIONES a los *.png / *.wav globales de arriba: estos no son assets
+# generados por video, son la MATERIA PRIMA del canal y rehacerlos cuesta
+# trabajo manual (curar salidas de Flow) o define como suena el canal.
+!assets/kx_cast/**/*.png
+!assets/kx_sets/**/*.png
+!assets/voice_refs/*.wav
+# ...menos los originales sin recortar, que son derivables de nuevo desde Flow
+assets/kx_cast/**/_originales/
+
+# temporales de analisis
+_tmp_shorts.json
+_tmp_shorts_metrics.json
+
+# Sesion de Google Flow (cookies de la cuenta) y volcados de su DOM. Lo primero
+# NUNCA debe entrar al repo; lo segundo es diagnostico regenerable con
+# `py flow_automation.py --inspect`.
+.flow_profile/
+.flow_inspect/
+
+# mapa guion -> proyecto de Flow (estado de ejecucion, no codigo)
+flow_projects.json

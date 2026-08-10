@@ -23,7 +23,7 @@ Tema → YouTube Short vertical (1080x1920 @ 30fps) listo para subir, sin interv
 py pipeline.py "why the 50/30/20 rule fails at low income"
 
 # Sin clave de Anthropic (guion pre-escrito)
-py pipeline.py --script-file sample_script.json
+py pipeline.py --script-file scripts/sample_script.json
 
 # Sin Pexels (fondos de gradiente)
 py pipeline.py "topic" --no-pexels
@@ -37,6 +37,46 @@ py pipeline.py --auto
 
 # Opciones: --voice en-US-AriaNeural --rate "+5%" --clips 6
 ```
+
+## Libreria de stickers (generar una sola vez)
+
+`sticker_library.py` genera 200 stickers con IA (Nano Banana) para las
+palabras clave que mas se repiten en los guiones de los tres canales
+(finanzas, gamer/Skick, gethiddenfacts) y los guarda en `assets/stickers/`
+para reusar en todos los videos futuros, sin regenerar ni pagar el mismo
+icono dos veces.
+
+```powershell
+py -m pip install rembg onnxruntime   # opcional: recorta el fondo a transparente
+py sticker_library.py --list          # ver el catalogo y que falta generar
+py sticker_library.py --generate      # genera los que faltan (tarda por el delay entre llamadas)
+```
+
+El pipeline los usa automaticamente: cada vez que el guion narra una palabra
+clave del catalogo (ej. "money", "lag", "nivel", "explosion"), aparece ese
+sticker en el timestamp exacto donde se dice, no solo una vez por escena.
+Las escenas sin ninguna keyword narrada siguen usando el fallback anterior
+(foto real recortada de Wikimedia o emoji).
+
+## Estudiar que funciono (reporte de rendimiento)
+
+`performance_report.py` cruza `video_log.csv` (topic, estilo, duracion,
+keyword_score/title_score de research -- ya se guarda solo al subir cada
+video) con las metricas REALES de YouTube Analytics (vistas, retencion,
+likes) via API, y exporta un CSV para analizar en Excel/Sheets. Es lo mismo
+que bajar el reporte avanzado a mano desde YouTube Studio (Analytics >
+Overview > Ver mas > modo avanzado > Descargar), pero automatico y ya
+cruzado con los datos de produccion de cada video.
+
+```powershell
+py performance_report.py                       # todas las cuentas del log
+py performance_report.py --account impixxel    # solo un canal
+```
+
+Ademas de generar el CSV, imprime un resumen: retencion alta vs baja, videos
+cortos vs largos, y si el keyword_score/title_score de la fase de research
+(vidIQ) predijo algo real -- para no tener que armar esas comparaciones a
+mano en la planilla cada vez.
 
 ## Generar un video con un clic
 

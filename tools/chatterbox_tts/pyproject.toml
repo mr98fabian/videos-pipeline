@@ -1,0 +1,16 @@
+[project]
+name = "chatterbox-tts-tool"
+version = "0.1.0"
+description = "Voz TTS con Chatterbox (Resemble AI, MIT) para viral_lab"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "chatterbox-tts>=0.1.2",
+    "soundfile>=0.13.0",
+    "numpy>=1.26",
+    # perth (el marcador de agua que chatterbox instancia al cargar el modelo)
+    # importa pkg_resources; uv no trae setuptools por defecto y sin esto el
+    # import falla en silencio y el modelo revienta con "NoneType is not callable"
+    # ojo con la version: setuptools 81+ ya no trae pkg_resources, que es justo
+    # lo que perth importa. Hay que quedarse por debajo.
+    "setuptools>=70,<81",
+]

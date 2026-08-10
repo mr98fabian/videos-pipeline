@@ -52,10 +52,13 @@ def _yt_execute(request, tries: int = 3, delay: float = 5.0):
             last_exc = e
             if not transient or attempt == tries:
                 raise
-            print(f"[retry] YouTube API {status} (intento {attempt}/{tries}), "
-                  f"reintento en {delay:.0f}s...")
+            print(
+                f"[retry] YouTube API {status} (intento {attempt}/{tries}), "
+                f"reintento en {delay:.0f}s..."
+            )
             time.sleep(delay)
     raise last_exc
+
 
 SCOPES = [
     "https://www.googleapis.com/auth/youtube",
@@ -89,7 +92,9 @@ def _get_credentials(account: str = "default") -> Credentials:
                     f"Falta {CLIENT_SECRET_PATH}. Descargalo desde Google Cloud Console "
                     "(Credenciales > ID de cliente OAuth > Descargar JSON)."
                 )
-            flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_SECRET_PATH), SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(
+                str(CLIENT_SECRET_PATH), SCOPES
+            )
             creds = flow.run_local_server(port=0)
         token_path.write_text(creds.to_json(), encoding="utf-8")
     return creds
@@ -123,8 +128,32 @@ MIN_PUBLISH_GAP_MINUTES = 3 * 60  # 3h. Historial de cambios (19 jul 2026):
 # (574 vistas) -- el cap nunca fue real, estaba confundido con la franja horaria (ver
 # GOOD_WINDOW_* abajo). Los primeros datos (7/14, 7/15) coincidian con "primeros 3 del dia"
 # Y "dentro de la franja" al mismo tiempo, sin que hubieramos separado las dos variables.
-GOOD_WINDOW_START_HOUR = 1   # UTC -- franja donde HiddenFacts arranca fuerte (~1000+ vistas)
-GOOD_WINDOW_END_HOUR = 13    # UTC -- fuera de este rango, arranque lento (recuperable en 24-48h)
+GOOD_WINDOW_START_HOUR = (
+    1  # UTC -- franja donde HiddenFacts arranca fuerte (~1000+ vistas)
+)
+GOOD_WINDOW_END_HOUR = (
+    13  # UTC -- fuera de este rango, arranque lento (recuperable en 24-48h)
+)
+# Mejor hora MEDIDA con los propios datos del canal (26 jul 2026, periodo sano
+# previo al derrumbe): mediana de vistas por hora de publicacion. 05:00-07:00 es
+# el unico bloque de tres horas seguidas por encima de 1.190; 20:00 da 158.
+BEST_HOUR = 6
+
+# ===================== METRICAS QUE MANDAN (Shorts 2026) =====================
+# Investigado 26 jul 2026. Hardcodeado para no volver a salirnos de lo que el
+# algoritmo premia de verdad:
+#   - El WATCH TIME sustituyo al swipe rate como factor principal: pesa el tiempo
+#     ABSOLUTO visto, no solo el porcentaje.
+#   - Los Shorts de MENOS DE 15s se hundieron en alcance en 2026: no superan el
+#     umbral de tiempo absoluto ni con 100% de retencion. Por eso los ultracortos
+#     de este canal daban vistas pero CERO suscriptores.
+#   - Punto dulce 30-45s. Retencion >70% dispara reparto amplio, >75% triplica la
+#     probabilidad de llegar a audiencias nuevas.
+#   - Swipe-away en los 3 primeros segundos: <25% sano, >40% gancho roto.
+SHORTS_HARD_MIN = 15.0  # por debajo, YouTube directamente no reparte
+SHORTS_SWEET_MIN = 30.0  # por debajo del punto dulce: aviso
+SHORTS_SWEET_MAX = 45.0
+RETENTION_WIDE_DISTRIBUTION = 0.70  # el umbral que dispara reparto amplio
 
 
 def _effective_publish_times(youtube) -> list[datetime]:
@@ -137,9 +166,16 @@ def _effective_publish_times(youtube) -> list[datetime]:
     en un canal con >50 videos historicos puede devolver los mas VIEJOS y
     omitir los ultimos subidos -- justo los que este chequeo necesita ver
     (bug real detectado: Yasuo/Darius/Ping9 no aparecian en la lista)."""
-    resp = _yt_execute(youtube.search().list(part="id", forMine=True, type="video",
-                                              order="date", maxResults=50))
-    ids = [it["id"]["videoId"] for it in resp.get("items", []) if "videoId" in it.get("id", {})]
+    resp = _yt_execute(
+        youtube.search().list(
+            part="id", forMine=True, type="video", order="date", maxResults=50
+        )
+    )
+    ids = [
+        it["id"]["videoId"]
+        for it in resp.get("items", [])
+        if "videoId" in it.get("id", {})
+    ]
     if not ids:
         return []
     resp = _yt_execute(youtube.videos().list(part="snippet,status", id=",".join(ids)))
@@ -179,11 +215,59 @@ def _check_publish_window(target_time: datetime) -> None:
     (algunos videos fuera de franja igual arrancan bien) -- ver memoria
     espaciado-publicacion-shorts."""
     hour = target_time.hour
+    if hour != BEST_HOUR:
+        print(
+            f"[aviso] la mejor hora medida del canal es {BEST_HOUR:02d}:00 UTC "
+            f"(mediana ~1.234 vistas); 20:00 UTC da ~158. Estas publicando a las "
+            f"{hour:02d}:00."
+        )
     if not (GOOD_WINDOW_START_HOUR <= hour < GOOD_WINDOW_END_HOUR):
-        print(f"[aviso] {target_time.isoformat()} cae fuera de la franja buena "
-              f"({GOOD_WINDOW_START_HOUR:02d}:00-{GOOD_WINDOW_END_HOUR:02d}:00 UTC) -- "
-              "arranque probablemente mas lento (ver memoria espaciado-publicacion-shorts). "
-              "No es un bloqueo, solo una advertencia.")
+        print(
+            f"[aviso] {target_time.isoformat()} cae fuera de la franja buena "
+            f"({GOOD_WINDOW_START_HOUR:02d}:00-{GOOD_WINDOW_END_HOUR:02d}:00 UTC) -- "
+            "arranque probablemente mas lento (ver memoria espaciado-publicacion-shorts). "
+            "No es un bloqueo, solo una advertencia."
+        )
+
+
+def _check_duplicate_title(youtube, title: str) -> None:
+    """Bloquea subir un video cuyo titulo YA existe en el canal.
+
+    Nace de un caso real (jul 2026): el mismo short acabo subido CUATRO veces y
+    otros tres por duplicado, repartiendo entre copias las vistas de lo que mas
+    traccion tenia. Es un error silencioso -- YouTube deja subirlo sin avisar --
+    asi que el control tiene que estar aqui."""
+    norm = " ".join(title.lower().split())
+    try:
+        ch = _yt_execute(youtube.channels().list(part="contentDetails", mine=True))
+        up = ch["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
+        ids, tok = [], None
+        while True:
+            r = _yt_execute(
+                youtube.playlistItems().list(
+                    part="contentDetails", playlistId=up, maxResults=50, pageToken=tok
+                )
+            )
+            ids += [i["contentDetails"]["videoId"] for i in r["items"]]
+            tok = r.get("nextPageToken")
+            if not tok:
+                break
+        ids = list(dict.fromkeys(ids))
+        for i in range(0, len(ids), 50):
+            d = _yt_execute(
+                youtube.videos().list(part="snippet", id=",".join(ids[i : i + 50]))
+            )
+            for v in d["items"]:
+                if " ".join(v["snippet"]["title"].lower().split()) == norm:
+                    raise SystemExit(
+                        f"ERROR: ya existe un video con ese titulo en el canal "
+                        f"(https://youtu.be/{v['id']}). Subirlo otra vez parte las "
+                        f"vistas entre copias. Cambia el titulo o borra/oculta el otro."
+                    )
+    except SystemExit:
+        raise
+    except Exception as e:  # una comprobacion no debe impedir una subida legitima
+        print(f"[aviso] no pude comprobar duplicados ({e})")
 
 
 def next_available_slot(youtube, after: datetime | None = None) -> datetime:
@@ -196,19 +280,60 @@ def next_available_slot(youtube, after: datetime | None = None) -> datetime:
     existing = _effective_publish_times(youtube)
     candidate = after
     for _ in range(1000):  # tope de seguridad, nunca deberia iterar tanto
-        conflict = next((t for t in existing
-                          if abs((candidate - t).total_seconds()) / 60 < MIN_PUBLISH_GAP_MINUTES),
-                         None)
+        conflict = next(
+            (
+                t
+                for t in existing
+                if abs((candidate - t).total_seconds()) / 60 < MIN_PUBLISH_GAP_MINUTES
+            ),
+            None,
+        )
         if conflict is None:
             return candidate
         candidate = conflict + timedelta(minutes=MIN_PUBLISH_GAP_MINUTES)
     raise RuntimeError("no se encontro horario disponible")
 
 
-def upload_video(video_path: str | Path, title: str, description: str,
-                  tags: list[str] | None = None, category_id: str = "27",
-                  privacy_status: str = "unlisted", account: str = "default",
-                  publish_at: str | None = None, default_language: str | None = None) -> str:
+def _video_duration_seconds(video_path: str | Path) -> float | None:
+    """Duracion real del archivo via ffprobe, o None si ffprobe no esta
+    disponible/falla (nunca bloquea la subida por un problema de tooling,
+    solo por una duracion realmente corta)."""
+    import subprocess
+
+    try:
+        out = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(video_path),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        ).stdout.strip()
+        return float(out)
+    except Exception:
+        return None
+
+
+def upload_video(
+    video_path: str | Path,
+    title: str,
+    description: str,
+    tags: list[str] | None = None,
+    category_id: str = "27",
+    privacy_status: str = "unlisted",
+    account: str = "default",
+    publish_at: str | None = None,
+    default_language: str | None = None,
+    min_duration: float | None = 58.0,
+) -> str:
     """Sube un video. privacy_status: 'private' | 'unlisted' | 'public'.
     publish_at: timestamp ISO 8601 UTC (ej. '2026-07-16T23:00:00Z') para publicacion
     programada -- YouTube exige privacyStatus='private' cuando se usa publishAt;
@@ -220,17 +345,57 @@ def upload_video(video_path: str | Path, title: str, description: str,
     jul 2026): el default de idioma del CANAL HiddenFacts en Studio estaba en
     'es-US' pese a ser 100% ingles, y como el video nunca mandaba defaultLanguage
     explicito, cada subida heredaba ese default incorrecto silenciosamente.
-    Fijarlo aca por video evita depender de la configuracion del canal en Studio."""
+    Fijarlo aca por video evita depender de la configuracion del canal en Studio.
+    min_duration: bloquea la subida si el video final mide MENOS que esto en
+    segundos (default 58s, la regla dura del canal). Bug real (22 jul 2026):
+    12 videos con guiones de ~15 palabras (en vez de ~150) se generaron y
+    publicaron con 5-7s de duracion real -- nada verificaba el VIDEO FINAL
+    antes de subir, solo `_check_pacing()` avisaba sobre el guion antes de
+    generar el TTS. Pasar min_duration=None o 0 para formatos cortos
+    legitimos (ultrashort/silent_card_mode/readcard), nunca por default."""
+    if min_duration:
+        dur = _video_duration_seconds(video_path)
+        if dur is not None and dur < min_duration:
+            raise ValueError(
+                f"Video de {dur:.1f}s, por debajo del minimo de {min_duration:.0f}s -- "
+                f"subida BLOQUEADA (bug real 22 jul 2026: guiones truncados generaron "
+                f"12 videos de 5-7s que se publicaron sin que nada los detectara). "
+                f"Si este video es un formato corto INTENCIONAL (ultrashort/silent_card/"
+                f"readcard), volve a llamar con min_duration=None."
+            )
+    # SUELO ABSOLUTO, sin escape posible ni con min_duration=None ni --allow-short.
+    # En 2026 los Shorts por debajo de 15s dejaron de repartirse: no superan el
+    # umbral de tiempo absoluto ni con retencion del 100%. Los ultracortos de este
+    # canal lo confirman -- 1.400 vistas y CERO suscriptores cada uno.
+    _dur = _video_duration_seconds(video_path)
+    if _dur is not None and _dur < SHORTS_HARD_MIN:
+        raise ValueError(
+            f"Video de {_dur:.1f}s: por debajo de {SHORTS_HARD_MIN:.0f}s YouTube ya no "
+            f"reparte Shorts (2026). Subirlo es quemar el hueco del dia. Alarga el guion "
+            f"o descarta el clip."
+        )
+    if _dur is not None and _dur < SHORTS_SWEET_MIN:
+        print(
+            f"[aviso] {_dur:.1f}s esta por debajo del punto dulce "
+            f"({SHORTS_SWEET_MIN:.0f}-{SHORTS_SWEET_MAX:.0f}s). Reparte, pero con menos "
+            f"alcance que un video del doble de largo con la misma retencion."
+        )
     if default_language is None:
-        default_language = "es" if account == "impixxel" else "en"
+        default_language = "es" if account in ("impixxel", "korex") else "en"
     youtube = get_youtube_client(account)
+    _check_duplicate_title(youtube, title)
     if publish_at or privacy_status == "public":
-        target = (datetime.fromisoformat(publish_at.replace("Z", "+00:00"))
-                  if publish_at else datetime.now(timezone.utc))
+        target = (
+            datetime.fromisoformat(publish_at.replace("Z", "+00:00"))
+            if publish_at
+            else datetime.now(timezone.utc)
+        )
         _check_publish_spacing(youtube, target)
         _check_publish_window(target)
-    video_status = {"privacyStatus": "private" if publish_at else privacy_status,
-                     "selfDeclaredMadeForKids": False}
+    video_status = {
+        "privacyStatus": "private" if publish_at else privacy_status,
+        "selfDeclaredMadeForKids": False,
+    }
     if publish_at:
         video_status["publishAt"] = publish_at
     # si se olvida --tags, no dejar el video sin NINGUNA tag (bug real: 8 videos
@@ -249,8 +414,12 @@ def upload_video(video_path: str | Path, title: str, description: str,
         },
         "status": video_status,
     }
-    media = MediaFileUpload(str(video_path), chunksize=-1, resumable=True, mimetype="video/mp4")
-    request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+    media = MediaFileUpload(
+        str(video_path), chunksize=-1, resumable=True, mimetype="video/mp4"
+    )
+    request = youtube.videos().insert(
+        part="snippet,status", body=body, media_body=media
+    )
     response = None
     upload_retries = 0
     while response is None:
@@ -261,29 +430,42 @@ def upload_video(video_path: str | Path, title: str, description: str,
             upload_retries += 1
             if status not in (403, 429, 500, 503) or upload_retries > 3:
                 raise
-            print(f"[retry] upload chunk fallo ({status}), reintento {upload_retries}/3...")
+            print(
+                f"[retry] upload chunk fallo ({status}), reintento {upload_retries}/3..."
+            )
             time.sleep(5)
             continue
         if progress:
             print(f"[upload] {int(progress.progress() * 100)}%")
     video_id = response["id"]
     if publish_at:
-        print(f"[upload] listo: https://youtube.com/watch?v={video_id} "
-              f"(programado para {publish_at}, privado hasta entonces)")
+        print(
+            f"[upload] listo: https://youtube.com/watch?v={video_id} "
+            f"(programado para {publish_at}, privado hasta entonces)"
+        )
     else:
-        print(f"[upload] listo: https://youtube.com/watch?v={video_id} (privacy={privacy_status})")
+        print(
+            f"[upload] listo: https://youtube.com/watch?v={video_id} (privacy={privacy_status})"
+        )
     return video_id
 
 
-def update_video(video_id: str, title: str | None = None, description: str | None = None,
-                  tags: list[str] | None = None, account: str = "default") -> None:
+def update_video(
+    video_id: str,
+    title: str | None = None,
+    description: str | None = None,
+    tags: list[str] | None = None,
+    account: str = "default",
+) -> None:
     """Actualiza titulo/descripcion/tags de un video ya subido (ej. tras afinar
     con vidIQ despues de la subida)."""
     youtube = get_youtube_client(account)
     resp = _yt_execute(youtube.videos().list(part="snippet", id=video_id))
     items = resp.get("items", [])
     if not items:
-        raise SystemExit(f"No se encontro el video {video_id} (id invalido o sin permisos)")
+        raise SystemExit(
+            f"No se encontro el video {video_id} (id invalido o sin permisos)"
+        )
     current = items[0]["snippet"]
     if title is not None:
         current["title"] = title[:100]
@@ -291,12 +473,20 @@ def update_video(video_id: str, title: str | None = None, description: str | Non
         current["description"] = description
     if tags is not None:
         current["tags"] = tags
-    _yt_execute(youtube.videos().update(part="snippet", body={"id": video_id, "snippet": current}))
+    _yt_execute(
+        youtube.videos().update(
+            part="snippet", body={"id": video_id, "snippet": current}
+        )
+    )
     print(f"[update] listo: https://youtube.com/watch?v={video_id}")
 
 
-def create_playlist(title: str, description: str = "", privacy_status: str = "public",
-                     account: str = "default") -> str:
+def create_playlist(
+    title: str,
+    description: str = "",
+    privacy_status: str = "public",
+    account: str = "default",
+) -> str:
     """Crea una playlist vacia y devuelve su playlist_id."""
     youtube = get_youtube_client(account)
     body = {
@@ -308,7 +498,9 @@ def create_playlist(title: str, description: str = "", privacy_status: str = "pu
     return resp["id"]
 
 
-def add_video_to_playlist(playlist_id: str, video_id: str, account: str = "default") -> None:
+def add_video_to_playlist(
+    playlist_id: str, video_id: str, account: str = "default"
+) -> None:
     youtube = get_youtube_client(account)
     body = {
         "snippet": {
@@ -324,43 +516,58 @@ def get_channel_id(account: str = "default") -> str:
     resp = _yt_execute(youtube.channels().list(part="id", mine=True))
     items = resp.get("items", [])
     if not items:
-        raise SystemExit(f"Cuenta '{account}' sin canal asociado (revisar autorizacion)")
+        raise SystemExit(
+            f"Cuenta '{account}' sin canal asociado (revisar autorizacion)"
+        )
     return items[0]["id"]
 
 
-def channel_report(start_date: str, end_date: str, channel_id: str | None = None,
-                    account: str = "default") -> dict:
+def channel_report(
+    start_date: str,
+    end_date: str,
+    channel_id: str | None = None,
+    account: str = "default",
+) -> dict:
     """Metricas agregadas del canal entre dos fechas YYYY-MM-DD:
     views, estimatedMinutesWatched, averageViewDuration, subscribersGained,
     likes, comments, shares."""
     analytics = get_analytics_client(account)
     cid = channel_id or get_channel_id(account)
-    resp = _yt_execute(analytics.reports().query(
-        ids=f"channel=={cid}",
-        startDate=start_date,
-        endDate=end_date,
-        metrics="views,estimatedMinutesWatched,averageViewDuration,"
-                "subscribersGained,likes,comments,shares",
-    ))
+    resp = _yt_execute(
+        analytics.reports().query(
+            ids=f"channel=={cid}",
+            startDate=start_date,
+            endDate=end_date,
+            metrics="views,estimatedMinutesWatched,averageViewDuration,"
+            "subscribersGained,likes,comments,shares",
+        )
+    )
     headers = [h["name"] for h in resp.get("columnHeaders", [])]
     row = resp.get("rows", [[0] * len(headers)])[0]
     return dict(zip(headers, row))
 
 
-def top_videos(start_date: str, end_date: str, max_results: int = 10,
-                channel_id: str | None = None, account: str = "default") -> list[dict]:
+def top_videos(
+    start_date: str,
+    end_date: str,
+    max_results: int = 10,
+    channel_id: str | None = None,
+    account: str = "default",
+) -> list[dict]:
     """Videos ordenados por views en el rango de fechas, con retencion promedio."""
     analytics = get_analytics_client(account)
     cid = channel_id or get_channel_id(account)
-    resp = _yt_execute(analytics.reports().query(
-        ids=f"channel=={cid}",
-        startDate=start_date,
-        endDate=end_date,
-        metrics="views,averageViewDuration,averageViewPercentage,likes,subscribersGained",
-        dimensions="video",
-        sort="-views",
-        maxResults=max_results,
-    ))
+    resp = _yt_execute(
+        analytics.reports().query(
+            ids=f"channel=={cid}",
+            startDate=start_date,
+            endDate=end_date,
+            metrics="views,averageViewDuration,averageViewPercentage,likes,subscribersGained",
+            dimensions="video",
+            sort="-views",
+            maxResults=max_results,
+        )
+    )
     headers = [h["name"] for h in resp.get("columnHeaders", [])]
     return [dict(zip(headers, row)) for row in resp.get("rows", [])]
 
@@ -371,28 +578,73 @@ def top_videos(start_date: str, end_date: str, max_results: int = 10,
 # ninguna).
 PLAYLIST_KEYWORDS: dict[str, list[str]] = {
     "PLRizVB4PvxnQ": [  # Space Race Secrets
-        "space", "nasa", "soviet space", "laika", "moon landing", "apollo", "cosmonaut",
+        "space",
+        "nasa",
+        "soviet space",
+        "laika",
+        "moon landing",
+        "apollo",
+        "cosmonaut",
     ],
     "PLTV_oX18Ko_k": [  # WWII Secrets & Spies
-        "nazi", "hitler", "wwii", "world war ii", "d-day", "codebreak", "bletchley",
-        "rommel", "commando", "turing", "ghost army", "gestapo",
+        "nazi",
+        "hitler",
+        "wwii",
+        "world war ii",
+        "d-day",
+        "codebreak",
+        "bletchley",
+        "rommel",
+        "commando",
+        "turing",
+        "ghost army",
+        "gestapo",
     ],
     "PLT5eTA5TAYM0": [  # Cold War Secrets
-        "cold war", "soviet", "cia", "kgb", "stalin", "mkultra", "manhattan project",
-        "mafia", "northwoods", "cuba", "atomic", "nuclear",
+        "cold war",
+        "soviet",
+        "cia",
+        "kgb",
+        "stalin",
+        "mkultra",
+        "manhattan project",
+        "mafia",
+        "northwoods",
+        "cuba",
+        "atomic",
+        "nuclear",
     ],
     "PLeyjdSceljwo": [  # Silenced Truths & Hidden Heroes
-        "rejected", "sexis", "radium", "poisoning its workers", "just an actress",
-        "freed", "her own freedom",
+        "rejected",
+        "sexis",
+        "radium",
+        "poisoning its workers",
+        "just an actress",
+        "freed",
+        "her own freedom",
     ],
     "PLWJd-A6OnC_A": [  # American Heroes & Hidden Genius
-        "american soldier", "medal of honor", "american inventor", "american teenager",
-        "a company tried to steal", "farm boy",
+        "american soldier",
+        "medal of honor",
+        "american inventor",
+        "american teenager",
+        "a company tried to steal",
+        "farm boy",
     ],
     "PLKfjliWPUzKI": [  # Legendary Cons & Unsolved Mysteries
-        "con man", "hoax", "scam", "scandal", "mystery", "secret recipe",
-        "vikings", "myth", "fraud", "sold an entire country", "didn't exist",
-        "invented a scandal", "exposed him",
+        "con man",
+        "hoax",
+        "scam",
+        "scandal",
+        "mystery",
+        "secret recipe",
+        "vikings",
+        "myth",
+        "fraud",
+        "sold an entire country",
+        "didn't exist",
+        "invented a scandal",
+        "exposed him",
     ],
 }
 
@@ -407,22 +659,98 @@ def classify_playlist(title: str, description: str = "") -> str | None:
     return None
 
 
-def auto_add_to_playlist(video_id: str, title: str, description: str = "",
-                          account: str = "default") -> str | None:
+def auto_add_to_playlist(
+    video_id: str, title: str, description: str = "", account: str = "default"
+) -> str | None:
     """Clasifica por keywords y agrega el video a la playlist que matchea.
     Devuelve el playlist_id usado, o None si no matcheo ninguna (queda para
     asignacion manual)."""
     playlist_id = classify_playlist(title, description)
     if playlist_id is None:
-        print(f"[playlist] AVISO: '{title[:50]}...' no matcheo ninguna playlist -- asignar manual")
+        print(
+            f"[playlist] AVISO: '{title[:50]}...' no matcheo ninguna playlist -- asignar manual"
+        )
         return None
     add_video_to_playlist(playlist_id, video_id, account=account)
     print(f"[playlist] agregado a {playlist_id}")
     return playlist_id
 
 
-def search_terms(start_date: str, end_date: str, video_id: str | None = None,
-                  max_results: int = 15, account: str = "default") -> list[list]:
+def video_metrics_batch(
+    video_ids: list[str],
+    start_date: str = "2015-01-01",
+    end_date: str | None = None,
+    account: str = "default",
+) -> dict[str, dict]:
+    """Metricas por video para una lista puntual de video_ids (a diferencia de
+    top_videos, que trae el ranking de TODO el canal) -- pensado para cruzar
+    contra video_log.csv en performance_report.py: cada video ya tiene su
+    topic/estilo/keyword_score guardado, esto le suma como le fue de verdad.
+    Devuelve {video_id: {metric: valor}}; video sin datos (muy nuevo, sin
+    vistas) simplemente no aparece en el dict.
+
+    Tambien intenta impressions/impressionsClickThroughRate (aproximacion mas
+    cercana a 'viewed vs swiped away' de Shorts que expone la API publica --
+    Studio muestra VVSA pero esa metrica puntual NO esta documentada en la
+    Analytics API; si el pedido falla se sigue sin esas 2 columnas en vez de
+    frenar todo el reporte)."""
+    from datetime import date
+
+    if not video_ids:
+        return {}
+    analytics = get_analytics_client(account)
+    cid = get_channel_id(account)
+    end = end_date or date.today().isoformat()
+    base_metrics = (
+        "views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,"
+        "likes,comments,subscribersGained,shares"
+    )
+
+    out: dict[str, dict] = {}
+    batch_size = 200  # limite prudente para el valor de filters=video==... (no documentado con precision)
+    for i in range(0, len(video_ids), batch_size):
+        batch = video_ids[i : i + batch_size]
+        try:
+            resp = _yt_execute(
+                analytics.reports().query(
+                    ids=f"channel=={cid}",
+                    startDate=start_date,
+                    endDate=end,
+                    metrics=base_metrics + ",impressions,impressionsClickThroughRate",
+                    dimensions="video",
+                    filters=f"video=={','.join(batch)}",
+                    maxResults=len(batch),
+                )
+            )
+        except HttpError as e:
+            print(
+                f"[metrics] impressions no disponible para esta cuenta/rango ({e}), sigo sin esa columna"
+            )
+            resp = _yt_execute(
+                analytics.reports().query(
+                    ids=f"channel=={cid}",
+                    startDate=start_date,
+                    endDate=end,
+                    metrics=base_metrics,
+                    dimensions="video",
+                    filters=f"video=={','.join(batch)}",
+                    maxResults=len(batch),
+                )
+            )
+        headers = [h["name"] for h in resp.get("columnHeaders", [])]
+        for row in resp.get("rows", []):
+            data = dict(zip(headers, row))
+            out[data["video"]] = data
+    return out
+
+
+def search_terms(
+    start_date: str,
+    end_date: str,
+    video_id: str | None = None,
+    max_results: int = 15,
+    account: str = "default",
+) -> list[list]:
     """Terminos de busqueda de YouTube que generaron vistas (canal completo, o
     de UN video si se pasa video_id). No existe metrica de impresiones/CTR en
     la Analytics API publica (confirmado con error 400 'Unknown identifier'),
@@ -433,16 +761,27 @@ def search_terms(start_date: str, end_date: str, video_id: str | None = None,
     filters = "insightTrafficSourceType==YT_SEARCH"
     if video_id:
         filters += f";video=={video_id}"
-    resp = _yt_execute(analytics.reports().query(
-        ids=f"channel=={cid}", startDate=start_date, endDate=end_date,
-        metrics="views", dimensions="insightTrafficSourceDetail",
-        filters=filters, sort="-views", maxResults=max_results,
-    ))
+    resp = _yt_execute(
+        analytics.reports().query(
+            ids=f"channel=={cid}",
+            startDate=start_date,
+            endDate=end_date,
+            metrics="views",
+            dimensions="insightTrafficSourceDetail",
+            filters=filters,
+            sort="-views",
+            maxResults=max_results,
+        )
+    )
     return resp.get("rows", [])
 
 
-def retention_curve(video_id: str, start_date: str = "2020-01-01",
-                     end_date: str | None = None, account: str = "default") -> dict:
+def retention_curve(
+    video_id: str,
+    start_date: str = "2020-01-01",
+    end_date: str | None = None,
+    account: str = "default",
+) -> dict:
     """Curva de retencion de audiencia de UN video: para cada punto del video
     (elapsedVideoTimeRatio 0..1) devuelve audienceWatchRatio (>1 = re-watch de
     ese tramo). Detecta la caida mas fuerte y el punto donde cruza 0.6, mapeado
@@ -450,20 +789,26 @@ def retention_curve(video_id: str, start_date: str = "2020-01-01",
     watch-time suficiente: en videos nuevos/pocas vistas devuelve {'rows': []}.
     """
     from datetime import date
+
     analytics = get_analytics_client(account)
     cid = get_channel_id(account)
-    resp = _yt_execute(analytics.reports().query(
-        ids=f"channel=={cid}",
-        startDate=start_date,
-        endDate=end_date or date.today().isoformat(),
-        metrics="audienceWatchRatio,relativeRetentionPerformance",
-        dimensions="elapsedVideoTimeRatio",
-        filters=f"video=={video_id}",
-    ))
+    resp = _yt_execute(
+        analytics.reports().query(
+            ids=f"channel=={cid}",
+            startDate=start_date,
+            endDate=end_date or date.today().isoformat(),
+            metrics="audienceWatchRatio,relativeRetentionPerformance",
+            dimensions="elapsedVideoTimeRatio",
+            filters=f"video=={video_id}",
+        )
+    )
     headers = [h["name"] for h in resp.get("columnHeaders", [])]
     rows = [dict(zip(headers, r)) for r in resp.get("rows", [])]
     if not rows:
-        return {"rows": [], "note": "sin datos de retencion (video nuevo o pocas vistas)"}
+        return {
+            "rows": [],
+            "note": "sin datos de retencion (video nuevo o pocas vistas)",
+        }
 
     ratios = [(r["elapsedVideoTimeRatio"], r["audienceWatchRatio"]) for r in rows]
     ratios.sort(key=lambda x: x[0])
@@ -480,8 +825,8 @@ def retention_curve(video_id: str, start_date: str = "2020-01-01",
         "biggest_drop": biggest_drop,
         "first_below_0.6": below_60,
         "hint": "multiplica los ratios por la duracion del video (seg) para el "
-                "timestamp; el beat/frase del guion en ese segundo es el que hay "
-                "que reescribir o acortar.",
+        "timestamp; el beat/frase del guion en ese segundo es el que hay "
+        "que reescribir o acortar.",
     }
 
 
@@ -506,10 +851,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="YouTube upload / analytics",
         epilog="Si un video_id empieza con '-', antepone '--' antes: "
-               "py youtube_api.py update -- -abc123 --title '...'")
-    parser.add_argument("--account", default="default",
-                         help="'default' = HiddenFacts, 'impixxel' = canal ImPixxel "
-                              "(usa su propio token_<account>.json)")
+        "py youtube_api.py update -- -abc123 --title '...'",
+    )
+    parser.add_argument(
+        "--account",
+        default="default",
+        help="'default' = HiddenFacts, 'impixxel' = canal ImPixxel, "
+        "'mindcheckpoint' = canal MindCheckpoint, 'korex' = canal "
+        "KoreX (finanzas, es) -- cada uno usa su propio "
+        "token_<account>.json",
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_upload = sub.add_parser("upload")
@@ -517,11 +868,22 @@ if __name__ == "__main__":
     p_upload.add_argument("--title", required=True)
     p_upload.add_argument("--description", default="")
     p_upload.add_argument("--tags", default="")
-    p_upload.add_argument("--privacy", default="unlisted",
-                           choices=["private", "unlisted", "public"])
-    p_upload.add_argument("--publish-at", default=None,
-                           help="ISO 8601 UTC ej. 2026-07-16T23:00:00Z -- programa la "
-                                "publicacion; el video queda privado hasta esa hora")
+    p_upload.add_argument(
+        "--privacy", default="unlisted", choices=["private", "unlisted", "public"]
+    )
+    p_upload.add_argument(
+        "--publish-at",
+        default=None,
+        help="ISO 8601 UTC ej. 2026-07-16T23:00:00Z -- programa la "
+        "publicacion; el video queda privado hasta esa hora",
+    )
+    p_upload.add_argument(
+        "--allow-short",
+        action="store_true",
+        help="Desactiva el bloqueo de duracion minima (58s) -- usar SOLO "
+        "para formatos cortos intencionales (ultrashort/silent_card/"
+        "readcard), nunca por defecto.",
+    )
 
     p_update = sub.add_parser("update")
     p_update.add_argument("video_id")
@@ -544,9 +906,17 @@ if __name__ == "__main__":
     p_st = sub.add_parser("search-terms")
     p_st.add_argument("--start", required=True, help="YYYY-MM-DD")
     p_st.add_argument("--end", required=True, help="YYYY-MM-DD")
-    p_st.add_argument("--video-id", default=None,
-                       help="Limita a un video; sin esto es el canal completo")
+    p_st.add_argument(
+        "--video-id",
+        default=None,
+        help="Limita a un video; sin esto es el canal completo",
+    )
     p_st.add_argument("--n", type=int, default=15)
+
+    p_vm = sub.add_parser("video-metrics")
+    p_vm.add_argument("video_ids", help="separados por coma, ej: abc123,def456")
+    p_vm.add_argument("--start", default="2015-01-01")
+    p_vm.add_argument("--end", default=None)
 
     p_com = sub.add_parser("comment")
     p_com.add_argument("video_id")
@@ -556,24 +926,71 @@ if __name__ == "__main__":
 
     if args.cmd == "upload":
         tags = [t.strip() for t in args.tags.split(",") if t.strip()]
-        upload_video(args.video_path, args.title, args.description, tags,
-                      privacy_status=args.privacy, account=args.account,
-                      publish_at=args.publish_at)
+        upload_video(
+            args.video_path,
+            args.title,
+            args.description,
+            tags,
+            privacy_status=args.privacy,
+            account=args.account,
+            publish_at=args.publish_at,
+            min_duration=None if args.allow_short else 58.0,
+        )
     elif args.cmd == "update":
-        tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags is not None else None
-        update_video(args.video_id, args.title, args.description, tags, account=args.account)
+        tags = (
+            [t.strip() for t in args.tags.split(",") if t.strip()]
+            if args.tags is not None
+            else None
+        )
+        update_video(
+            args.video_id, args.title, args.description, tags, account=args.account
+        )
     elif args.cmd == "report":
-        print(json.dumps(channel_report(args.start, args.end, account=args.account),
-                          indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                channel_report(args.start, args.end, account=args.account),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
     elif args.cmd == "top":
-        print(json.dumps(top_videos(args.start, args.end, args.n, account=args.account),
-                          indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                top_videos(args.start, args.end, args.n, account=args.account),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
     elif args.cmd == "retention":
-        print(json.dumps(retention_curve(args.video_id, account=args.account),
-                          indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                retention_curve(args.video_id, account=args.account),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
     elif args.cmd == "search-terms":
-        print(json.dumps(search_terms(args.start, args.end, video_id=args.video_id,
-                                       max_results=args.n, account=args.account),
-                          indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                search_terms(
+                    args.start,
+                    args.end,
+                    video_id=args.video_id,
+                    max_results=args.n,
+                    account=args.account,
+                ),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+    elif args.cmd == "video-metrics":
+        ids = [v.strip() for v in args.video_ids.split(",") if v.strip()]
+        print(
+            json.dumps(
+                video_metrics_batch(ids, args.start, args.end, account=args.account),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
     elif args.cmd == "comment":
         add_comment(args.video_id, args.text, account=args.account)

@@ -1,0 +1,42 @@
+{
+  "script": "En mil novecientos veinticinco, un estafador vendio la Torre Eiffel como chatarra. Y la vendio dos veces. Miren a Tadeo, con una chatarreria y mas deudas que hierro. Le llega una carta con sello del gobierno. La torre esta oxidada, mantenerla cuesta una fortuna, y el gobierno la va a desarmar en secreto antes de que se caiga sola. Hotel caro, champan, un funcionario con maletin: todo parece oficial porque todo suena oficial. Tadeo ofrece mas que los otros chatarreros. Y encima paga un soborno para asegurarse el trato, y se lleva el papel. Firmado y sellado. El funcionario se lleva el dinero y un tren a Viena. Cuando Tadeo llega con los camiones, la torre sigue ahi, entera, y ningun funcionario existe. Hoy la Torre Eiffel sigue en pie, y cada tanto alguien vuelve a comprar algo que nunca estuvo en venta.",
+  "payoffs": [
+    "s2: la vendio DOS veces",
+    "s5: el motivo suena razonable (la torre esta oxidada)",
+    "s8: el soborno, que es lo que convence a Tadeo de que es real",
+    "s11: los camiones llegan y la torre sigue entera"
+  ],
+  "search_terms": [
+    "Tadeo character: la Torre Eiffel de noche vista desde abajo con un cartel de SE VENDE colgando, Tadeo mirandola diminuto",
+    "Tadeo character: Tadeo sostiene dos dedos en alto frente a la Torre Eiffel, gesto de dos veces, fondo blanco limpio",
+    "Tadeo character: Tadeo en un patio de chatarra con montanas de hierro oxidado y una pila de facturas vencidas",
+    "Tadeo character: Tadeo abriendo un sobre elegante con un sello oficial enorme, close-up de sus manos y su cara",
+    "Tadeo character: plano de la Torre Eiffel con manchas de oxido y andamios, papeles de mantenimiento volando",
+    "Tadeo character: salon de hotel lujoso, un hombre de maletin sirve champan a Tadeo sentado en un sillon",
+    "Tadeo character: Tadeo levantando la mano en una subasta frente a otros chatarreros con cara de sorpresa",
+    "Tadeo character: Tadeo deslizando un sobre con dinero por debajo de la mesa hacia el hombre del maletin",
+    "Tadeo character: close-up de un documento con firma y un sello de lacre rojo, las manos de Tadeo sujetandolo",
+    "Tadeo character: el hombre del maletin subiendo a un tren antiguo con una maleta llena, de espaldas",
+    "Tadeo character: Tadeo con dos camiones de mudanza al pie de la Torre Eiffel intacta, cara de panico",
+    "Tadeo character: la Torre Eiffel entera de dia y Tadeo diminuto mirandola desde abajo, hombros caidos"
+  ],
+  "character_terms": [
+    "tadeo/confundido",
+    "tadeo/senalando",
+    "tadeo/bolsillos",
+    "tadeo/confundido",
+    "tadeo/explicando",
+    "tadeo/triunfo",
+    "tadeo/decidido",
+    "tadeo/codicia",
+    "tadeo/picaro",
+    "tadeo/confundido",
+    "tadeo/grito",
+    "tadeo/estafado"
+  ],
+  "title": "El hombre que vendio la Torre Eiffel como chatarra (dos veces)",
+  "hook_card": "En 1925 un estafador vendio la Torre Eiffel como chatarra.",
+  "description": "Victor Lustig convencio a los chatarreros de Paris de que el gobierno iba a desarmar la Torre Eiffel. Y lo hizo dos veces. #historia #estafas",
+  "music_mood": "comedic_tense",
+  "style": "Animacion vectorial plana estilo 'rubber hose' anos 30, ESTRICTAMENTE en blanco y negro puro con grises neutros: cero sepia, cero tono crema, cero papel amarillento, cero color de ningun tipo. Grano de film vintage y parpadeo sutil. Protagonista Tadeo el mapache con guantes blancos de boton. Formato VERTICAL 9:16."
+}

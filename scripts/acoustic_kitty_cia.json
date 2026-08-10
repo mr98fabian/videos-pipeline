@@ -1,0 +1,54 @@
+{
+  "script": "In 1961, the CIA spent twenty million dollars turning a live cat into a spy, and the mission lasted four minutes. The file was called Acoustic Kitty, and it was exactly as stupid as it sounds. Surgeons put a microphone in the cat's ear, a transmitter at the base of its skull, and an antenna down its tail, which the report calls a minor modification. The plan was to walk this animal past Soviet diplomats in a Washington park and record every word. Trainers spent five years teaching a cat to walk in a straight line toward a target. Nobody in that building ever asked the one question a child could have answered. On the first mission, agents opened the van door, and the cat walked straight into a passing taxi. That is case two forty one in an archive that never runs out, and there is a new one here tomorrow. The internal review called the project a success in principle, which is the most government sentence ever written. Then they classified the whole thing for thirty six years. Send this to whoever still believes your tax money is being watched carefully. Twenty million dollars, five years, one cat: mistake, or just a Tuesday?",
+  "search_terms": [
+    "a stern CIA officer's face in extreme close-up, cold unblinking expression, somber vintage documentary style",
+    "a manila case folder stamped ACOUSTIC KITTY lying open on a bare desk, vintage documentary style",
+    "two surgeons in masks standing clearly apart on either side of a small operating table, full figures, not touching, tense vintage documentary style",
+    "two soviet diplomats in heavy coats standing clearly apart on a park path, full figures, not touching, vintage documentary style",
+    "a trainer crouching at one side of an empty room and a cat sitting at the far other side, both full figures clearly apart, vintage documentary style",
+    "three officials in suits standing clearly apart around a briefing table, full figures, not touching, vintage documentary style",
+    "a cat stepping off a curb toward an oncoming taxi on a city street, full figure, dramatic vintage documentary style",
+    "a wall of numbered archive drawers with one drawer pulled wide open, vintage documentary style",
+    "a bureaucrat stamping a thick document at a desk, full figure, vintage documentary style",
+    "a heavy filing cabinet drawer closing on a folder marked CLASSIFIED, vintage documentary style",
+    "a taxpayer handing a stack of banknotes across a counter to a clerk, both full figures standing clearly apart, vintage documentary style",
+    "the CIA officer's face again in close-up, echoing the opening, somber vintage documentary style"
+  ],
+  "hook_card": "The CIA spent $20 million on a spy cat. It lasted four minutes.",
+  "title": "The CIA Turned a Cat Into a Spy and It Lasted 4 Minutes #ColdWarSecrets #Insane",
+  "description": "1961: Project Acoustic Kitty. The CIA surgically implanted a microphone, a transmitter and an antenna into a live cat, trained it for five years, and sent it to eavesdrop on Soviet diplomats in Washington. On its first mission it walked into a taxi. The internal review called it a success 'in principle'. Declassified in 2001.\n\nWas that a mistake, or just a Tuesday at the CIA? MISTAKE or TUESDAY. Say your pick below.\n\nA new historical secret every day. Subscribe so you don't miss tomorrow's.\n\n#history #coldwar #cia #declassified #historyfacts #shorts",
+  "case_no": 241,
+  "share_card": {
+    "line1": "The CIA spent $20 million",
+    "line2": "on a cat. It lasted 4 minutes."
+  },
+  "force_photo": [1, 12],
+  "visual_beats": {
+    "1": {
+      "typewriter": {
+        "text": "ACOUSTIC KITTY — 1961",
+        "at": 20,
+        "x": 110,
+        "y": 190
+      }
+    },
+    "5": {
+      "censor": {
+        "x": 190,
+        "y": 640,
+        "w": 700,
+        "h": 160,
+        "at": 6,
+        "reveal": 46,
+        "label": "DO CATS OBEY?"
+      }
+    }
+  },
+  "real_photo": {
+    "query": "",
+    "scenes": [],
+    "year": "1961"
+  },
+  "music_mood": "dry cold-war spy ambient with a faint absurd wink, low pulsing bass and sparse ticking clock, deadpan documentary tone, low volume",
+  "style": "1990s Nickelodeon rubber-hose cartoon style, exaggerated comic-book expressions with big unsettling eyes, thick wobbly hand-drawn black outlines, snappy low-frame animation feel. Color palette: sepia, dusty burnt yellow, aged parchment, dark brown shadows instead of pure black. Heavy vintage film grain and scratched-film texture overlaid, retro documentary aesthetic, slightly distorted, high contrast, hand-drawn sketch look. No bright saturated colors. Only human characters, never humanoid animals."
+}
