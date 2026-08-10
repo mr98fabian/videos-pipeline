@@ -899,15 +899,28 @@ def _worker() -> _Worker:
     return _WORKER
 
 
-def _shared_session(aspect_ratio: str = "9:16") -> FlowSession:
+def _shared_session(aspect_ratio: str = "9:16", count: int = 1) -> FlowSession:
+    """count POR DEFECTO 1 EN ESCENAS (9 ago 2026). El x4 tiene sentido cuando
+    se siembra una pose de biblioteca (se generan cuatro, se elige la buena y se
+    guarda de por vida), pero en una escena de video se usa UNA y las otras tres
+    quedan sueltas en la grilla. Esas huerfanas son la causa de que el video se
+    desincronizara: se cargan tarde y la escena siguiente las toma por suyas.
+    Con una salida por prompt no hay sobrantes que confundir. kx_cast sigue
+    pidiendo 4 explicitamente."""
     global _SHARED
     if _SHARED is None:
         import atexit
 
-        s = FlowSession(aspect_ratio=aspect_ratio)
+        s = FlowSession(aspect_ratio=aspect_ratio, count=count)
         s.__enter__()
         _SHARED = s
         atexit.register(close_session)
+    elif _SHARED.count != count:
+        _SHARED.count = count
+        try:
+            _SHARED._configure(_SHARED.mode)
+        except Exception as e:
+            _log(f"no pude cambiar el numero de salidas a x{count}: {e}")
     return _SHARED
 
 
@@ -937,6 +950,7 @@ def generate_image(
     style_directive: str | None = None,
     aspect_ratio: str = "9:16",
     timeout_s: int = 300,
+    count: int = 1,
 ) -> bool:
     """Genera una escena en Flow. `reference_image`/`reference_images` son las
     laminas del personaje (assets/kx_cast/tadeo/...) y del set: van como
@@ -950,7 +964,7 @@ def generate_image(
     full = f"{prompt}. {style_directive}" if style_directive else prompt
 
     def _job() -> bool:
-        s = _shared_session(aspect_ratio)
+        s = _shared_session(aspect_ratio, count)
         ok = s.generate(full, Path(path), references=refs or None, timeout_s=timeout_s)
         if not ok and s.last_refusal:
             print(f"[flow] RECHAZO por contenido, no timeout: {s.last_refusal}")

@@ -5344,12 +5344,17 @@ def main() -> int:
                 audio_path, words = trim_silence_inplace(
                     audio_path, words, keep=args.trim_keep
                 )
+            # `caption_margin` en el guion: pixeles desde abajo. HiddenFacts va
+            # centrado (960) porque son fotos; KOREX pone 380 -- con un
+            # personaje en cuadro, el centro le tapa la cara, que es justo lo
+            # que se mira en cada plano.
             ass_path = generate_subtitles(
                 words,
                 out_dir,
                 lead_ms=subs_lead,
                 offset_ms=subs_offset,
                 keywords=data.get("caption_keywords"),
+                margin_v=int(data.get("caption_margin") or 960),
             )
 
             audio_dur = ffprobe_duration(audio_path)

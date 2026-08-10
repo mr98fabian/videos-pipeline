@@ -213,6 +213,11 @@ def get_pose(character: str, pose: str, description: str = "") -> Path | None:
             dest,
             reference_image=sheet,
             style_directive=CAST_STYLE,
+            # x4 SOLO aqui: una pose se dibuja una vez en la vida y conviene
+            # tener cuatro para quedarse con la buena. En una escena de video el
+            # x4 deja tres tiles huerfanos que descuadran la escena siguiente
+            # (ver _shared_session en flow_automation).
+            count=4,
         )
     elif piapi and sheet:
         # con referencia: mantiene la identidad ya establecida del personaje
