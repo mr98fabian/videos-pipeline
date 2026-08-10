@@ -28,6 +28,7 @@ Presets: `narrador` (por defecto, seco y presente), `intimo` (mas cuerpo y mas
 compresion, para historias en primera persona), `crudo` (solo loudnorm, para
 comparar A/B y comprobar que la cadena aporta algo).
 """
+
 import argparse
 import shutil
 import subprocess
@@ -39,8 +40,8 @@ sys.stdout.reconfigure(encoding="utf-8")
 PRESETS = {
     # (shelf graves dB, presencia dB, ratio compresor, umbral compresor)
     "narrador": (2.5, 3.0, 4.0, 0.05),
-    "intimo":   (4.0, 2.5, 6.0, 0.035),
-    "crudo":    (0.0, 0.0, 1.0, 1.0),
+    "intimo": (4.0, 2.5, 6.0, 0.035),
+    "crudo": (0.0, 0.0, 1.0, 1.0),
 }
 
 
@@ -49,10 +50,23 @@ def sample_rate(p: Path) -> int:
     valor supuesto, en vez de bajar el tono lo SUBE y ademas cambia la duracion.
     Bug real del 1 ago 2026 -- se asumio 44100 sobre un fichero de 24 kHz y la
     voz salio mas aguda y a la mitad de largo."""
-    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0",
-                        "-show_entries", "stream=sample_rate", "-of",
-                        "default=nk=1:nw=1", str(p)],
-                       capture_output=True, text=True, timeout=60)
+    r = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "stream=sample_rate",
+            "-of",
+            "default=nk=1:nw=1",
+            str(p),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     return int(r.stdout.strip() or 44100)
 
 
@@ -66,29 +80,40 @@ def cadena(preset: str, semitonos: float = 0.0, sr: int = 44100) -> str:
         # ("voz de pozo"); este suena a otra persona.
         # Por encima de ~4 semitonos empieza a arrastrar y se nota el proceso.
         r = 2 ** (-semitonos / 12)
-        f += [f"asetrate={int(sr * r)}", f"aresample={sr}",
-              f"atempo={1/r:.6f}"]               # devuelve la duracion original
-    f.append("highpass=f=80")                    # fuera rumble y pops
+        f += [
+            f"asetrate={int(sr * r)}",
+            f"aresample={sr}",
+            f"atempo={1 / r:.6f}",
+        ]  # devuelve la duracion original
+    f.append("highpass=f=80")  # fuera rumble y pops
     if graves:
-        f.append(f"equalizer=f=160:t=q:w=0.9:g={graves}")     # proximidad
+        f.append(f"equalizer=f=160:t=q:w=0.9:g={graves}")  # proximidad
     if preset != "crudo":
-        f.append("equalizer=f=300:t=q:w=1.2:g=-2")            # quita el barro
-        f.append(f"equalizer=f=3500:t=q:w=1.4:g={presencia}") # inteligibilidad
-        f.append("equalizer=f=7200:t=q:w=2.0:g=-3")           # de-ess aproximado
-        f.append(f"acompressor=threshold={umbral}:ratio={ratio}:"
-                 f"attack=5:release=120:makeup=2")
-    f.append("loudnorm=I=-14:TP=-1.5:LRA=11")    # objetivo de YouTube
+        f.append("equalizer=f=300:t=q:w=1.2:g=-2")  # quita el barro
+        f.append(f"equalizer=f=3500:t=q:w=1.4:g={presencia}")  # inteligibilidad
+        f.append("equalizer=f=7200:t=q:w=2.0:g=-3")  # de-ess aproximado
+        f.append(
+            f"acompressor=threshold={umbral}:ratio={ratio}:"
+            f"attack=5:release=120:makeup=2"
+        )
+    f.append("loudnorm=I=-14:TP=-1.5:LRA=11")  # objetivo de YouTube
     return ",".join(f)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("audio")
-    ap.add_argument("--out", help="por defecto sobrescribe, guardando el crudo como *_pre")
+    ap.add_argument(
+        "--out", help="por defecto sobrescribe, guardando el crudo como *_pre"
+    )
     ap.add_argument("--preset", choices=list(PRESETS), default="narrador")
-    ap.add_argument("--grave", type=float, default=0.0,
-                    help="semitonos a bajar tono Y formantes; 2-3 masculiniza, "
-                         ">4 empieza a sonar procesado")
+    ap.add_argument(
+        "--grave",
+        type=float,
+        default=0.0,
+        help="semitonos a bajar tono Y formantes; 2-3 masculiniza, "
+        ">4 empieza a sonar procesado",
+    )
     a = ap.parse_args()
 
     src = Path(a.audio)
@@ -101,9 +126,25 @@ def main() -> None:
         dst = src
 
     tmp = dst.with_name(f"_tmp_{dst.name}")
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(crudo),
-                    "-af", cadena(a.preset, a.grave, sample_rate(crudo)), "-ar", "44100", "-b:a", "192k",
-                    str(tmp)], check=True, timeout=900)
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-i",
+            str(crudo),
+            "-af",
+            cadena(a.preset, a.grave, sample_rate(crudo)),
+            "-ar",
+            "44100",
+            "-b:a",
+            "192k",
+            str(tmp),
+        ],
+        check=True,
+        timeout=900,
+    )
     tmp.replace(dst)
     extra = f" -{a.grave:g} semitonos" if a.grave else ""
     print(f"{a.preset}{extra}: {crudo.name} -> {dst.name}")

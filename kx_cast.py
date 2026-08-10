@@ -21,9 +21,11 @@ Estructura: assets/kx_cast/<personaje>/<pose>.png (con alfa ya recortado).
 El guion referencia "tadeo/grito" en character_terms; si esa pose no existe, se
 genera a partir de la hoja canonica del personaje y queda cacheada.
 """
+
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -36,13 +38,19 @@ MANIFEST = CAST_DIR / "cast.json"
 # Vocabulario de poses. Un motor de recortes no necesita cientos: necesita las
 # que la narracion realmente usa, y que se repitan es parte del lenguaje visual.
 POSES = {
-    "grito": "screaming directly at the camera, both arms up, intense eye contact, extreme close-up of the face",
+    # SIN "extreme close-up" (3 ago 2026): chocaba con el FULL BODY de
+    # _CAST_RULES y el modelo obedecia a las dos ordenes a la vez -- salio una
+    # cabeza enorme con un cuerpo diminuto ("se ve mal proporcionado"). La pose
+    # se describe entera y el encuadre lo decide el motor al componer.
+    "grito": "screaming with mouth wide open, both arms raised up in panic, eyes wide, leaning back slightly, whole body visible and correctly proportioned",
     "orgulloso": "standing proud, chest out, hands on hips, smug clown-like grin",
     "confundido": "shrugging with both palms up, eyebrows raised, puzzled expression",
     "estafado": "slumped shoulders, comic teary eyes, mouth open in disbelief",
     "senalando": "pointing forward at something off-frame with one arm fully extended",
-    "decidido": "fist slammed down, leaning forward, determined frown",
-    "triunfo": "arms crossed, satisfied smirk, chin slightly raised",
+    # separadas a proposito de "grito" y de "codicia": las tres se contaminaban
+    # entre si (decidido salia gritando; triunfo salia con billetes como codicia)
+    "decidido": "standing firm with one clenched fist raised chest-high, jaw set, determined frown, mouth CLOSED, calm and resolute, no shouting, no money, whole body visible",
+    "triunfo": "arms firmly crossed over the chest, EMPTY hands tucked under the arms, satisfied smirk, chin slightly raised, holding NOTHING at all, no money, no objects, whole body visible",
     "codicia": "holding a stack of bills with both hands, greedy wide-eyed grin",
     "asombro": "both hands on cheeks, mouth wide open in naive amazement",
     "picaro": "winking at the camera, one eyebrow raised, sly half-smile",
@@ -50,10 +58,41 @@ POSES = {
 
 # Estilo del reparto. Igual que SET_STYLE en kx_assets: vive en el codigo, no en
 # el guion, para que el personaje no derive de un video a otro.
+# OJO CON "FLAT VECTOR" (3 ago 2026): la version anterior empezaba asi y era la
+# causa de que las poses salieran como ilustracion vectorial moderna y limpia --
+# "se ve de otro canal", dijo Fabian. El estilo aprobado es el del buho de
+# prueba: dibujo ENTINTADO A MANO, con sombreado de lapiz y textura de papel
+# viejo, no vectorial. Si alguien vuelve a meter "flat"/"vector" aqui, vuelve el
+# look que se rechazo.
 CAST_STYLE = (
-    "Flat vector 1930s rubber-hose cartoon character (early Disney/Fleischer style), "
-    "black and white with soft grey wash, thick confident ink outlines, white "
-    "four-fingered gloves, simple geometric construction"
+    "1930s rubber-hose cartoon in the style of early Disney/Fleischer animation, "
+    "black and white. HAND-INKED look: thick confident brush outlines with "
+    "varying line weight, soft pencil-like grey shading and light cross-hatching, "
+    "subtle aged paper texture and faint film grain, vintage animation cel "
+    "feeling. White four-fingered gloves. NOT flat vector art, NOT clean digital "
+    "illustration, NOT modern cartoon style"
+)
+# BLOQUE DE IDENTIDAD. Se pega TAL CUAL, palabra por palabra, en el prompt de
+# TODA escena que lleve a Tadeo -- no se reformula por escena. Es la practica que
+# mas repiten las guias de consistencia de personaje (2026): un identity block
+# corto y literalmente identico en cada generacion; reescribirlo con otras
+# palabras es justo lo que hace derivar el diseño. Se combina con la lamina de
+# referencia, porque una sola referencia no basta cuando cambia la escena.
+CHARACTER_LOCK = (
+    "CHARACTER LOCK — the raccoon in the reference image is Tadeo and he must "
+    "look EXACTLY the same here: same head shape, same big round white eyes with "
+    "black pupils, same dark bandit mask across the eyes, same rounded muzzle, "
+    "same grey body with cream chest and belly, same ringed striped tail, same "
+    "white four-fingered gloves. Same line weight and same flat grey shading as "
+    "the reference. Keep the character identical and change ONLY the pose and "
+    "the background. Do not redesign him, do not restyle him, do not make him "
+    "realistic or furry, do not add or remove clothing that the reference does "
+    "not have. Draw ONE single character in a real scene: never a character "
+    "sheet, never a turnaround, no rows of extra heads or faces, no floating "
+    "detached hands, gloves or tails anywhere in the frame. "
+    "ANATOMY: exactly two arms and two gloved hands, one head, one tail. If he "
+    "needs to hold two objects, he holds one per hand or rests one on a "
+    "surface — never grow a third arm or a third hand to hold something."
 )
 _CAST_RULES = (
     "FULL BODY unless the pose says close-up, centered, facing the camera, on a "
@@ -141,22 +180,41 @@ def get_pose(character: str, pose: str, description: str = "") -> Path | None:
     import pipeline as pl
 
     sheet = _canonical_sheet(character)
-    prompt = (f"A single cartoon character: {character.capitalize()}, {desc}. "
-              f"{_CAST_RULES}")
+    prompt = (
+        f"A single cartoon character: {character.capitalize()}, {desc}. {_CAST_RULES}"
+    )
 
     piapi = pl.os.environ.get("PIAPI_API_KEY", "")
-    if piapi and sheet:
+    # FLOW PRIMERO (3 ago 2026). Es gratis con el plan Pro, acepta la lamina
+    # canonica como INGREDIENTE de verdad -- que es lo unico que mantiene a
+    # Tadeo reconocible -- y desde el 3 ago genera en x4, asi que una pose
+    # nueva sale con cuatro opciones para quedarse con la buena. Seedream queda
+    # de respaldo (ademas lleva tiempo sin credito).
+    use_flow = os.environ.get("KX_CAST_GEN", "flow").lower() == "flow"
+    if use_flow:
+        import flow_automation
+
+        gen = lambda: flow_automation.generate_image(
+            f"{prompt} {CHARACTER_LOCK}" if sheet else prompt,
+            dest,
+            reference_image=sheet,
+            style_directive=CAST_STYLE,
+        )
+    elif piapi and sheet:
         # con referencia: mantiene la identidad ya establecida del personaje
-        gen = lambda: pl._seedream_generate_image(prompt, dest, piapi,
-                                                   reference_image=sheet,
-                                                   style_directive=CAST_STYLE)
+        gen = lambda: pl._seedream_generate_image(
+            prompt, dest, piapi, reference_image=sheet, style_directive=CAST_STYLE
+        )
     elif piapi:
-        gen = lambda: pl._seedream_generate_image(prompt, dest, piapi,
-                                                   style_directive=CAST_STYLE)
+        gen = lambda: pl._seedream_generate_image(
+            prompt, dest, piapi, style_directive=CAST_STYLE
+        )
     else:
         import comfy_client
-        gen = lambda: comfy_client.generate_image(prompt, dest,
-                                                   style_directive=CAST_STYLE)
+
+        gen = lambda: comfy_client.generate_image(
+            prompt, dest, style_directive=CAST_STYLE
+        )
 
     dest.parent.mkdir(parents=True, exist_ok=True)
     print(f"[kx_cast] generando pose '{character}/{pose}' (una sola vez en la vida)...")
@@ -167,9 +225,11 @@ def get_pose(character: str, pose: str, description: str = "") -> Path | None:
     # recorte a alfa real, una sola vez, sobre el archivo cacheado
     try:
         from visual_cache import plate_cutout
+
         cut = plate_cutout(dest)
         if cut and Path(cut).exists():
             import shutil
+
             shutil.copyfile(cut, dest)
     except Exception as e:
         print(f"[kx_cast] recorte omitido ({type(e).__name__}: {e})")
@@ -192,10 +252,12 @@ def adopt(character: str, pose: str, source: Path) -> Path | None:
         return None
     dest.parent.mkdir(parents=True, exist_ok=True)
     import shutil
+
     shutil.copyfile(source, dest)
     # se recorta aca y no en cada render: el alfa es deterministico
     try:
         from visual_cache import plate_cutout
+
         cut = plate_cutout(dest)
         if cut and Path(cut).exists():
             shutil.copyfile(cut, dest)
@@ -205,6 +267,7 @@ def adopt(character: str, pose: str, source: Path) -> Path | None:
     man.setdefault(_slug(character), {})[_slug(pose)] = {"adopted_from": str(source)}
     sys.path.insert(0, str(ROOT))
     import pipeline as pl
+
     pl._atomic_write_json(MANIFEST, man)
     return dest
 

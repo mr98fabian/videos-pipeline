@@ -19,6 +19,7 @@ Tres etapas, cada una guarda en disco para no repetir llamadas caras:
 por video). Comprueba el saldo ANTES y se niega a empezar si no llega, para no
 gastar la mitad y quedarse a medias.
 """
+
 import argparse
 import json
 import re
@@ -35,7 +36,7 @@ import pipeline as P  # noqa: E402
 
 CORPUS = ROOT / "assets" / "hook_corpus.json"
 COSTE_POR_LLAMADA = 5
-HOOK_PALABRAS = 45   # ~10s de narracion: la ventana donde se decide el scroll
+HOOK_PALABRAS = 45  # ~10s de narracion: la ventana donde se decide el scroll
 
 
 # ---------------------------------------------------------------- medidas
@@ -44,13 +45,22 @@ HOOK_PALABRAS = 45   # ~10s de narracion: la ventana donde se decide el scroll
 # sobre uno. Varias corresponden 1:1 con una regla del SCRIPT_PROMPT, para
 # que el informe diga si esa regla la cumplen los que ganan o no.
 
-_NUM = re.compile(r"\b\d+\b|\b(one|two|three|four|five|six|seven|eight|nine|ten|"
-                  r"eleven|twelve|twenty|thirty|forty|fifty|hundred|thousand)\b", re.I)
+_NUM = re.compile(
+    r"\b\d+\b|\b(one|two|three|four|five|six|seven|eight|nine|ten|"
+    r"eleven|twelve|twenty|thirty|forty|fifty|hundred|thousand)\b",
+    re.I,
+)
 _DIALOGO = re.compile(r'["“]|\bsaid\b|\bscreamed\b|\btold me\b', re.I)
-_TIEMPO = re.compile(r"\b(years?|months?|weeks?|days?|hours?|minutes?|later|"
-                     r"before|since|ago|until)\b", re.I)
-_ACCION = re.compile(r"\b(slapped|threw|shattered|walked|stood|grabbed|slammed|"
-                     r"hit|pushed|dropped|screamed|ran)\b", re.I)
+_TIEMPO = re.compile(
+    r"\b(years?|months?|weeks?|days?|hours?|minutes?|later|"
+    r"before|since|ago|until)\b",
+    re.I,
+)
+_ACCION = re.compile(
+    r"\b(slapped|threw|shattered|walked|stood|grabbed|slammed|"
+    r"hit|pushed|dropped|screamed|ran)\b",
+    re.I,
+)
 
 
 def primera_frase(texto: str) -> str:
@@ -79,17 +89,24 @@ def medir(hook: str) -> dict:
 
 # ---------------------------------------------------------------- etapas
 
+
 def cmd_collect(a) -> int:
     saldo = V.call_json("vidiq_balance", {}).get("totalCredits", 0)
     hacen_falta = COSTE_POR_LLAMADA * (a.n + 1)
     print(f"saldo {saldo} creditos | esta recogida cuesta ~{hacen_falta}")
     if saldo < hacen_falta:
-        print(f"ABORTADO: faltan {hacen_falta - saldo}. No empiezo para no gastar "
-              f"la mitad y quedarme a medias. Los renovables entran el 15 ago.")
+        print(
+            f"ABORTADO: faltan {hacen_falta - saldo}. No empiezo para no gastar "
+            f"la mitad y quedarme a medias. Los renovables entran el 15 ago."
+        )
         return 1
 
-    args = {"contentType": "short", "limit": a.n, "minViews": a.min_views,
-            "publishedWithin": "sixMonths"}
+    args = {
+        "contentType": "short",
+        "limit": a.n,
+        "minViews": a.min_views,
+        "publishedWithin": "sixMonths",
+    }
     if a.canal:
         args["channelIds"] = [a.canal]
     if a.keyword:
@@ -111,18 +128,25 @@ def cmd_collect(a) -> int:
             continue
         if len(texto.split()) < HOOK_PALABRAS:
             continue
-        corpus.append({
-            "videoId": v["videoId"], "titulo": v.get("videoTitle"),
-            "canal": v.get("channelTitle"), "subs": v.get("subscriberCount"),
-            "vistas": v.get("viewCount"), "outlier": v.get("breakoutScore"),
-            "duracion_s": v.get("videoDuration"),
-            "hook": " ".join(texto.split()[:HOOK_PALABRAS]),
-        })
+        corpus.append(
+            {
+                "videoId": v["videoId"],
+                "titulo": v.get("videoTitle"),
+                "canal": v.get("channelTitle"),
+                "subs": v.get("subscriberCount"),
+                "vistas": v.get("viewCount"),
+                "outlier": v.get("breakoutScore"),
+                "duracion_s": v.get("videoDuration"),
+                "hook": " ".join(texto.split()[:HOOK_PALABRAS]),
+            }
+        )
         nuevos += 1
         print(f"  + {v.get('channelTitle')} | {v.get('viewCount'):,} vistas")
 
     CORPUS.parent.mkdir(parents=True, exist_ok=True)
-    CORPUS.write_text(json.dumps(corpus, ensure_ascii=False, indent=2), encoding="utf-8")
+    CORPUS.write_text(
+        json.dumps(corpus, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print(f"\n{nuevos} ganchos nuevos, {len(corpus)} en total -> {CORPUS}")
     return 0
 
@@ -133,13 +157,17 @@ def cmd_rubric(_a) -> int:
         return 1
     corpus = json.loads(CORPUS.read_text(encoding="utf-8"))
     if len(corpus) < 5:
-        print(f"solo {len(corpus)} ganchos. Por debajo de ~15 la distribucion no "
-              f"dice nada; sigue recogiendo antes de sacar conclusiones.")
+        print(
+            f"solo {len(corpus)} ganchos. Por debajo de ~15 la distribucion no "
+            f"dice nada; sigue recogiendo antes de sacar conclusiones."
+        )
     medidas = [medir(c["hook"]) for c in corpus]
     n = len(medidas)
 
     print(f"\nRUBRICA DERIVADA DE {n} GANADORES REALES")
-    print(f"(mediana de vistas: {statistics.median(c['vistas'] for c in corpus):,.0f})\n")
+    print(
+        f"(mediana de vistas: {statistics.median(c['vistas'] for c in corpus):,.0f})\n"
+    )
 
     reglas = {
         "abre_con_pregunta": "regla 9 dice NO. Si aqui sale alto, la regla 9 esta mal",
@@ -157,12 +185,16 @@ def cmd_rubric(_a) -> int:
     print()
     for k in ("palabras_frase_1", "frases_en_10s", "cifras_en_10s"):
         vals = [m[k] for m in medidas]
-        print(f"      {k:<20} mediana {statistics.median(vals):5.1f}   "
-              f"rango {min(vals)}-{max(vals)}")
+        print(
+            f"      {k:<20} mediana {statistics.median(vals):5.1f}   "
+            f"rango {min(vals)}-{max(vals)}"
+        )
 
-    print("\n  ### = lo hacen 7 de cada 10 o mas -> es regla\n"
-          "  --- = lo hacen 3 de cada 10 o menos -> es antipatron\n"
-          "  (en medio = no discrimina, no lo conviertas en regla)")
+    print(
+        "\n  ### = lo hacen 7 de cada 10 o mas -> es regla\n"
+        "  --- = lo hacen 3 de cada 10 o menos -> es antipatron\n"
+        "  (en medio = no discrimina, no lo conviertas en regla)"
+    )
     return 0
 
 
@@ -177,11 +209,19 @@ def cmd_score(a) -> int:
 
     print(f"\nTU GANCHO vs {n} ganadores\n")
     puntos = total = 0
-    for k in ("abre_con_pregunta", "se_autoresuelve", "lleva_cifra",
-              "lleva_2o_tiempo", "lleva_dialogo", "abre_en_accion"):
+    for k in (
+        "abre_con_pregunta",
+        "se_autoresuelve",
+        "lleva_cifra",
+        "lleva_2o_tiempo",
+        "lleva_dialogo",
+        "abre_en_accion",
+    ):
         pct = sum(m[k] for m in medidas) / n
         if 0.3 < pct < 0.7:
-            print(f"      {k:<20} {pct:5.0%} en los ganadores -- no discrimina, ignorado")
+            print(
+                f"      {k:<20} {pct:5.0%} en los ganadores -- no discrimina, ignorado"
+            )
             continue
         quieren = pct >= 0.7
         ok = mio[k] == quieren
@@ -190,8 +230,10 @@ def cmd_score(a) -> int:
         print(f"  {'OK ' if ok else 'NO '} {k:<20} ganadores {pct:5.0%} | tu {mio[k]}")
 
     mediana = statistics.median(m["palabras_frase_1"] for m in medidas)
-    print(f"\n      1a frase: {mio['palabras_frase_1']} palabras "
-          f"(mediana de los ganadores {mediana:.0f})")
+    print(
+        f"\n      1a frase: {mio['palabras_frase_1']} palabras "
+        f"(mediana de los ganadores {mediana:.0f})"
+    )
     print(f"\n  {puntos}/{total} criterios que SI discriminan")
     return 0
 

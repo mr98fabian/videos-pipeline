@@ -16,6 +16,17 @@ Formato por entrada:
 
 ---
 
+## 2026-08-09 — Regla 11 (ingeniería de compartir) + ducking/loudnorm según investigación multiidioma
+**Investigación/fuente:** corpus de 8 investigaciones multiidioma (EN/ES/ZH/JA/KO) del 9 ago 2026 — `PSICOLOGIA_COMPARTIR.md` (Berger STEPPS; Dobele 2007: la sorpresa es el disparador #1 de shares; solo las emociones de ALTA activación se comparten), `SOUND_DESIGN_RETENCION.md` (tabla de ducking por tipo de contenido, -14 LUFS / -1.0 dBTP), `COMENTARIOS_ENGAGEMENT.md` (CTA con elección "A o B" > pregunta abierta), y el dato propio de `ANALISIS_OUTLIERS_PROPIOS.md`: **mediana de shares = 0 en 51 vídeos medidos** — la señal más fuerte de 2026 estaba sin explotar
+**Cambio aplicado:**
+- `SCRIPT_SCHEMA` exige 3 campos nuevos: `target_emotion` (awe/surprise/humor/outrage), `twist_phrase` (4-8 palabras literales de la frase del giro) y `comment_cta` (pregunta de elección para el comentario fijado, NUNCA hablada)
+- Regla 11 en `SCRIPT_PROMPT`: emoción objetivo obligatoria, giro inequívoco al 30-60% del guion, dato reenarrable en ≤15 palabras (moneda social / boca a boca offline), CTA de comentario con elección, humor que golpea hacia arriba (violación benigna)
+- Nuevo lint `_check_giro_posicion` (avisa, no bloquea): emoción no declarada o inválida, giro no literal en el guion, giro fuera de la banda 25-75% (ideal 30-60%)
+- Ducking: `sidechaincompress` attack 20→50ms / release 400→300ms (fila "contenido rápido" de la tabla investigada — la música vuelve rápido entre frases staccato); `loudnorm` TP -1.5→-1.0 dBTP (estándar de plataformas)
+- El guion completo se guarda como `guion.json` en el output; `post_question_comment.py` lee `comment_cta` de ahí (fallback: parsear la descripción como antes, para vídeos anteriores)
+**Dónde se publicó:** pendiente, aplica desde el próximo guion
+**Qué esperamos ver:** mediana de shares > 0 en la próxima tanda; comentarios/1000 vistas subiendo desde la línea base; retención igual o mejor con release 300ms (validar contra el 70,9% medido en la banda de 80-120 palabras)
+
 ## 2026-07-31 (tarde) — Auditoría del líder del formato: 175s, título = primera línea, y registro cálido
 **Investigación/fuente:** los 50 vídeos más recientes de **Reddit Gossipz** (`@reddit_gossipz`, 196k subs, 416M vistas, mediana de **233.371 vistas por vídeo**), más el transcript completo de su vídeo #1 (1,66M). Es el líder medible de nuestro formato exacto
 **Hallazgos medidos (no impresiones):**
@@ -382,3 +393,14 @@ PiAPI sin saldo), no por el motor. La voz de 63s si quedo, cacheada por hash.
 la puerta al nivel 5 del "dopamine ladder" (afecto por el mensajero) que un canal
 faceless no alcanza — la explicacion mecanica del cuello medido el 22 jul: 0,12%
 de vista->sub con retencion sana. Sin datos aun; es oficio, no dato.
+
+## 2026-08-04 — Google Flow cableado al pipeline: referencia de personaje y animacion escena a escena
+**Investigacion/fuente:** peticion directa de Fabian. KOREX se habia quedado sin generador con imagen de referencia (Gemini borrado del repo, PiAPI/Seedream sin saldo, FLUX schnell no acepta referencia), asi que la consistencia de Tadeo dependia de reusar poses ya dibujadas. Flow (cuenta Pro) si acepta referencia, pero `flow_automation.py` era solo texto->imagen y sus selectores eran del 20 jul
+**Cambio aplicado:** `flow_automation.py` reescrito sobre el DOM real (subcomando `--inspect`, que vuelca botones/inputs/menus a `.flow_inspect/`): `generate(prompt, path, references=[...])` y `animate(imagen, prompt, path)`, mas el adaptador `generate_image`/`animate_image` con la misma firma que `comfy_client` y una sola sesion de navegador por corrida. En `pipeline.py`: flags `--flow` y `--flow-animate`, y un `character_term` con forma `tadeo/<pose>` ahora resuelve la lamina de `assets/kx_cast/` y la pasa como referencia de la escena (antes solo la leia el motor, al renderizar)
+**Tres cosas que costaron una vuelta cada una y estan comentadas en el codigo:**
+- la caja de prompt no es un `<textarea>` con placeholder sino un `div[role=textbox]`, y los botones llevan la ligadura del icono pegada al texto (`arrow_forward\nCrear`) — por eso todo se busca por subcadena
+- **el `input[type=file]` oculto solo sube el archivo a la biblioteca del proyecto; el modelo no lo mira.** La referencia solo cuenta si se engancha por el selector `+` -> *Agregar a la instruccion*. Con la version anterior el "video animado" salio un mapache fotorrealista en un bosque
+- el resultado se baja por la URL directa del tile (`media.getMediaUrlRedirect`) con las cookies de la sesion, verificando `Content-Type`: Flow sirve el poster JPEG de un video por una URL casi identica, y sin ese control quedaba un JPEG dentro de un `.mp4`
+**De paso:** `alt_key`/`alt_fn` en el fallback de la placa de personaje eran nombres inexistentes desde que se borro Nano Banana — cualquier fallo de placa habria tirado `NameError` en vez de seguir sin personaje. Retirado
+**Donde se publico:** pendiente. Probado end-to-end con `scripts/korex-interbolsa.json` (cuyos `character_terms` pasaron de descripciones a claves `tadeo/<pose>`)
+**Que esperamos ver:** el disenio de Tadeo deja de variar entre escenas sin depender de pegar la misma lamina recortada, asi que el personaje puede actuar dentro del plano (no solo estar troquelado encima). La animacion es la que hay que mirar con lupa: 8s por escena a varios minutos de espera, y todavia sin medir si el movimiento real retiene mejor que el Ken Burns

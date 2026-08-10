@@ -38,18 +38,45 @@ if hasattr(sys.stdout, "reconfigure"):
 
 def ffprobe_duration(path: Path) -> float:
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
-        capture_output=True, text=True, check=True, timeout=60)
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60,
+    )
     return float(out.stdout.strip())
 
 
-def detect_silences(audio: Path, noise_db: float, min_silence: float) -> list[tuple[float, float]]:
+def detect_silences(
+    audio: Path, noise_db: float, min_silence: float
+) -> list[tuple[float, float]]:
     """Lista de (inicio, fin) de cada silencio, via el filtro silencedetect."""
     proc = subprocess.run(
-        ["ffmpeg", "-v", "info", "-i", str(audio),
-         "-af", f"silencedetect=noise={noise_db}dB:d={min_silence}", "-f", "null", "-"],
-        capture_output=True, text=True, timeout=300)
+        [
+            "ffmpeg",
+            "-v",
+            "info",
+            "-i",
+            str(audio),
+            "-af",
+            f"silencedetect=noise={noise_db}dB:d={min_silence}",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
     log = proc.stderr
     starts = [float(m) for m in re.findall(r"silence_start:\s*([0-9.]+)", log)]
     ends = [float(m) for m in re.findall(r"silence_end:\s*([0-9.]+)", log)]
@@ -59,7 +86,9 @@ def detect_silences(audio: Path, noise_db: float, min_silence: float) -> list[tu
     return list(zip(starts, ends))
 
 
-def removal_intervals(silences: list[tuple[float, float]], keep: float) -> list[tuple[float, float]]:
+def removal_intervals(
+    silences: list[tuple[float, float]], keep: float
+) -> list[tuple[float, float]]:
     """Trozos a ELIMINAR: de cada silencio se quita todo menos `keep` segundos."""
     out = []
     for s, e in silences:
@@ -68,7 +97,9 @@ def removal_intervals(silences: list[tuple[float, float]], keep: float) -> list[
     return out
 
 
-def keep_segments(removals: list[tuple[float, float]], total: float) -> list[tuple[float, float]]:
+def keep_segments(
+    removals: list[tuple[float, float]], total: float
+) -> list[tuple[float, float]]:
     """Complemento de los intervalos eliminados: lo que se conserva."""
     segs, cursor = [], 0.0
     for s, e in removals:
@@ -103,14 +134,31 @@ def build_audio(src: Path, dst: Path, segs: list[tuple[float, float]]) -> None:
     """
     parts = "".join(
         f"[0:a]atrim=start={s:.4f}:end={e:.4f},asetpts=PTS-STARTPTS[a{i}];"
-        for i, (s, e) in enumerate(segs))
+        for i, (s, e) in enumerate(segs)
+    )
     joins = "".join(f"[a{i}]" for i in range(len(segs)))
     fc = f"{parts}{joins}concat=n={len(segs)}:v=0:a=1[out]"
     subprocess.run(
-        ["ffmpeg", "-y", "-v", "error", "-i", str(src),
-         "-filter_complex", fc, "-map", "[out]",
-         "-c:a", "libmp3lame", "-q:a", "2", str(dst)],
-        check=True, timeout=600)
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-i",
+            str(src),
+            "-filter_complex",
+            fc,
+            "-map",
+            "[out]",
+            "-c:a",
+            "libmp3lame",
+            "-q:a",
+            "2",
+            str(dst),
+        ],
+        check=True,
+        timeout=600,
+    )
 
 
 _TS = re.compile(r"^(\d):(\d{2}):(\d{2}\.\d{2})$")
@@ -131,8 +179,9 @@ def _fmt_ts(t: float) -> str:
     return f"{h}:{mi:02d}:{s:05.2f}"
 
 
-def remap_ass(src: Path, dst: Path, removals: list[tuple[float, float]],
-              offset: float) -> int:
+def remap_ass(
+    src: Path, dst: Path, removals: list[tuple[float, float]], offset: float
+) -> int:
     """Reescribe los tiempos del .ass al eje del audio recortado.
 
     `offset` se resta ANTES de remapear: pipeline.py genera los subs con
@@ -158,19 +207,36 @@ def remap_ass(src: Path, dst: Path, removals: list[tuple[float, float]],
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("out_dir", help="carpeta de output del video")
-    ap.add_argument("--keep", type=float, default=0.10,
-                    help="hueco a conservar en cada silencio, en segundos (default 0.10). "
-                         "A 0 las palabras se pisan y suena peor que el original.")
-    ap.add_argument("--noise", type=float, default=-35,
-                    help="umbral de silencio en dB (default -35)")
-    ap.add_argument("--min-silence", type=float, default=0.20,
-                    help="duracion minima para considerarlo silencio (default 0.20s)")
-    ap.add_argument("--subs-offset", type=float, default=1.0,
-                    help="segundos de offset que el .ass trae de mas respecto a la voz "
-                         "(pipeline usa 1.0 cuando hay hook_card; 0 si no)")
+    ap.add_argument(
+        "--keep",
+        type=float,
+        default=0.10,
+        help="hueco a conservar en cada silencio, en segundos (default 0.10). "
+        "A 0 las palabras se pisan y suena peor que el original.",
+    )
+    ap.add_argument(
+        "--noise",
+        type=float,
+        default=-35,
+        help="umbral de silencio en dB (default -35)",
+    )
+    ap.add_argument(
+        "--min-silence",
+        type=float,
+        default=0.20,
+        help="duracion minima para considerarlo silencio (default 0.20s)",
+    )
+    ap.add_argument(
+        "--subs-offset",
+        type=float,
+        default=1.0,
+        help="segundos de offset que el .ass trae de mas respecto a la voz "
+        "(pipeline usa 1.0 cuando hay hook_card; 0 si no)",
+    )
     ap.add_argument("--dry-run", action="store_true", help="solo medir, no escribir")
     args = ap.parse_args()
 

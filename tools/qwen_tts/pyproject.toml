@@ -1,0 +1,41 @@
+[project]
+name = "qwen-tts-tool"
+version = "0.1.0"
+description = "Voz TTS con Qwen3-TTS VoiceDesign (Alibaba, Apache 2.0) para KOREX"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "qwen-tts>=0.1.1",
+    "soundfile>=0.13.0",
+    "numpy>=1.26",
+    # qwen-tts -> librosa -> numba. Sin fijar suelo, el resolver se va a
+    # numba 0.53.1 (de 2021), que arrastra llvmlite 0.36 y ese SOLO compila en
+    # Python <3.10: la instalacion muere pidiendo un Python que este proyecto
+    # no usa. numba 0.61 ya trae ruedas para 3.12.
+    "numba>=0.61",
+    "librosa>=0.11",
+    # torch/torchaudio van DECLARADOS aunque ya vengan de qwen-tts:
+    # [tool.uv.sources] solo redirige dependencias DIRECTAS, asi que como
+    # transitivas se seguian bajando de PyPI (rueda +cpu) por mucho que el
+    # indice cu130 estuviera configurado.
+    "torch>=2.13",
+    "torchaudio>=2.11",
+]
+
+# El modelo se descarga solo de HuggingFace la primera vez (~3,4 GB en bf16
+# para el 1.7B). flash-attn NO se lista a proposito: en Windows su rueda casi
+# nunca compila y el modelo corre sin el, solo gastando algo mas de VRAM.
+
+# TORCH CON CUDA, NO EL DE PyPI. En Windows la rueda por defecto de PyPI es
+# `+cpu`: el 1.7B corre igual pero tarda una eternidad y deja la RTX 4080 sin
+# usar. Estas dos secciones apuntan torch/torchaudio al indice CUDA de PyTorch.
+# OJO CON LA VERSION DEL INDICE: torch 2.13 SOLO existe en cu130. Apuntando
+# a cu128 (que se queda en 2.11) uv no falla -- cae en silencio a la rueda
+# `+cpu` de PyPI y todo 'funciona' sin GPU. Driver 610.62 soporta CUDA 13.
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }
+torchaudio = { index = "pytorch-cu130" }

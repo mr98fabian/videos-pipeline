@@ -23,7 +23,7 @@ Tema → YouTube Short vertical (1080x1920 @ 30fps) listo para subir, sin interv
 py pipeline.py "why the 50/30/20 rule fails at low income"
 
 # Sin clave de Anthropic (guion pre-escrito)
-py pipeline.py --script-file sample_script.json
+py pipeline.py --script-file scripts/sample_script.json
 
 # Sin Pexels (fondos de gradiente)
 py pipeline.py "topic" --no-pexels

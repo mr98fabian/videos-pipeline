@@ -9,6 +9,7 @@ se publico sin que quedara registrado en la conversacion.
 
 No inventa nada: si la API todavia no tiene la curva, queda "sin datos aun".
 """
+
 import argparse
 import re
 import sys
@@ -37,16 +38,31 @@ EXITO_MAX_CAIDA = 20.0
 
 
 def curva(an, vid, dur):
-    r = an.reports().query(
-        ids="channel==MINE", startDate="2026-07-01", endDate="2026-08-05",
-        metrics="views,engagedViews,averageViewPercentage", filters=f"video=={vid}",
-    ).execute()
+    r = (
+        an.reports()
+        .query(
+            ids="channel==MINE",
+            startDate="2026-07-01",
+            endDate="2026-08-05",
+            metrics="views,engagedViews,averageViewPercentage",
+            filters=f"video=={vid}",
+        )
+        .execute()
+    )
     resumen = r.get("rows", [[0, 0, 0]])[0]
-    c = an.reports().query(
-        ids="channel==MINE", startDate="2026-07-01", endDate="2026-08-05",
-        metrics="audienceWatchRatio", dimensions="elapsedVideoTimeRatio",
-        filters=f"video=={vid}", sort="elapsedVideoTimeRatio",
-    ).execute()
+    c = (
+        an.reports()
+        .query(
+            ids="channel==MINE",
+            startDate="2026-07-01",
+            endDate="2026-08-05",
+            metrics="audienceWatchRatio",
+            dimensions="elapsedVideoTimeRatio",
+            filters=f"video=={vid}",
+            sort="elapsedVideoTimeRatio",
+        )
+        .execute()
+    )
     puntos = [(t * dur, w * 100) for t, w in c.get("rows", [])]
     return resumen, puntos
 
@@ -65,20 +81,34 @@ def main() -> None:
     yt = Y.get_youtube_client("mindcheckpoint")
     an = Y.get_analytics_client("mindcheckpoint")
     ids = list(TRACKEADOS)
-    meta = {v["id"]: v for v in yt.videos().list(
-        part="snippet,contentDetails,status", id=",".join(ids)).execute()["items"]}
+    meta = {
+        v["id"]: v
+        for v in yt.videos()
+        .list(part="snippet,contentDetails,status", id=",".join(ids))
+        .execute()["items"]
+    }
 
     filas = {}
-    print(f"{'video':<28} {'estado':<10} {'vistas':>7} {'%visto':>7} {'caida 5,5-10s':>14}")
+    print(
+        f"{'video':<28} {'estado':<10} {'vistas':>7} {'%visto':>7} {'caida 5,5-10s':>14}"
+    )
     for vid, (nombre, estructuras) in TRACKEADOS.items():
         m = meta.get(vid)
         if not m:
             filas[nombre] = "no encontrado en el canal"
             continue
         priv = m["status"]["privacyStatus"]
-        dur_s = int(re.match(r"PT(?:(\d+)M)?(?:(\d+)S)?", m["contentDetails"]["duration"])
-                    .group(1) or 0) * 60 + int(re.match(r"PT(?:(\d+)M)?(?:(\d+)S)?",
-                    m["contentDetails"]["duration"]).group(2) or 0)
+        dur_s = int(
+            re.match(
+                r"PT(?:(\d+)M)?(?:(\d+)S)?", m["contentDetails"]["duration"]
+            ).group(1)
+            or 0
+        ) * 60 + int(
+            re.match(
+                r"PT(?:(\d+)M)?(?:(\d+)S)?", m["contentDetails"]["duration"]
+            ).group(2)
+            or 0
+        )
         if priv != "public":
             print(f"{nombre:<28} {priv:<10} {'—':>7} {'—':>7} {'—':>14}")
             filas[nombre] = f"{priv}, sin datos publicos"
@@ -87,7 +117,9 @@ def main() -> None:
         resumen, puntos = curva(an, vid, dur_s)
         v = resumen[0]
         if not v:
-            print(f"{nombre:<28} {'public':<10} {'—':>7}   Analytics aun no procesa esto")
+            print(
+                f"{nombre:<28} {'public':<10} {'—':>7}   Analytics aun no procesa esto"
+            )
             filas[nombre] = "publico, Analytics sin procesar aun"
             continue
 
@@ -98,34 +130,52 @@ def main() -> None:
             caida = a - b
             veredicto = "OK (<20)" if caida < EXITO_MAX_CAIDA else "SIGUE ROTA"
             caida_txt = f"{caida:+.1f}pts {veredicto}"
-            filas[nombre] = (f"publicado, {int(v)} vistas, {avp:.1f}% visto, "
-                             f"caida 5,5-10s: {caida:.1f}pts ({veredicto})")
+            filas[nombre] = (
+                f"publicado, {int(v)} vistas, {avp:.1f}% visto, "
+                f"caida 5,5-10s: {caida:.1f}pts ({veredicto})"
+            )
         else:
-            filas[nombre] = f"publicado, {int(v)} vistas, {avp:.1f}% visto, sin curva por segundo"
+            filas[nombre] = (
+                f"publicado, {int(v)} vistas, {avp:.1f}% visto, sin curva por segundo"
+            )
         print(f"{nombre:<28} {'public':<10} {int(v):>7} {avp:>6.1f}% {caida_txt:>14}")
 
     filas.setdefault("wedding-photos-father", "sin publicar")
 
     if not args.escribir:
-        print("\n(solo lectura -- pasa --escribir para volcar esto a giros_ganadores.md)")
+        print(
+            "\n(solo lectura -- pasa --escribir para volcar esto a giros_ganadores.md)"
+        )
         return
 
-    orden = ["christening-announcement", "family-group-chat", "storage-unit-headstone",
-             "wedding-photos-father", "the-visitor-log"]
+    orden = [
+        "christening-announcement",
+        "family-group-chat",
+        "storage-unit-headstone",
+        "wedding-photos-father",
+        "the-visitor-log",
+    ]
     estructuras_por_nombre = {n: e for _id, (n, e) in TRACKEADOS.items()}
     estructuras_por_nombre["wedding-photos-father"] = "G1, G2, G6"
 
     filas_md = ["| Vídeo | Estructura(s) | Estado |", "|---|---|---|"]
     for n in orden:
-        filas_md.append(f"| `{n}` | {estructuras_por_nombre.get(n, '?')} | {filas.get(n, 'sin dato')} |")
+        filas_md.append(
+            f"| `{n}` | {estructuras_por_nombre.get(n, '?')} | {filas.get(n, 'sin dato')} |"
+        )
     tabla_nueva = "\n".join(filas_md)
 
     p = ROOT / "giros_ganadores.md"
     texto = p.read_text(encoding="utf-8")
-    patron = re.compile(r"\| Vídeo \| Estructura\(s\) \| Estado \|\n\|---\|---\|---\|\n"
-                        r"(?:\|.*\|\n?)*", re.MULTILINE)
+    patron = re.compile(
+        r"\| Vídeo \| Estructura\(s\) \| Estado \|\n\|---\|---\|---\|\n"
+        r"(?:\|.*\|\n?)*",
+        re.MULTILINE,
+    )
     if not patron.search(texto):
-        print("\nAVISO: no encontre la tabla en giros_ganadores.md, no se escribio nada.")
+        print(
+            "\nAVISO: no encontre la tabla en giros_ganadores.md, no se escribio nada."
+        )
         return
     texto = patron.sub(tabla_nueva + "\n", texto)
     p.write_text(texto, encoding="utf-8")

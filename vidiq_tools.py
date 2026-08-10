@@ -16,6 +16,7 @@ Subcomandos (cada llamada gasta ~5 creditos; `balance` es gratis):
   py vidiq_tools.py radar-terms                      # titulos de outliers del nicho, 1/linea
                                                      #   (formato que consume topic_radar --outliers)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,6 +31,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv(Path(__file__).resolve().parent / ".env")
 except Exception:
     pass
@@ -58,8 +60,11 @@ def _key() -> str:
 
 def _post(payload: dict):
     global _sid
-    h = {"Authorization": f"Bearer {_key()}", "Content-Type": "application/json",
-         "Accept": "application/json, text/event-stream"}
+    h = {
+        "Authorization": f"Bearer {_key()}",
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+    }
     if _sid:
         h["Mcp-Session-Id"] = _sid
     req = urllib.request.Request(URL, json.dumps(payload).encode(), h)
@@ -67,7 +72,9 @@ def _post(payload: dict):
         _sid = r.headers.get("Mcp-Session-Id", _sid)
         body = r.read().decode("utf-8", "replace")
     datas = [ln[5:].strip() for ln in body.splitlines() if ln.startswith("data:")]
-    return json.loads(datas[-1]) if datas else (json.loads(body) if body.strip() else None)
+    return (
+        json.loads(datas[-1]) if datas else (json.loads(body) if body.strip() else None)
+    )
 
 
 def _rpc(method: str, params: dict | None = None, notify: bool = False):
@@ -79,8 +86,14 @@ def _rpc(method: str, params: dict | None = None, notify: bool = False):
 
 
 def _init():
-    _rpc("initialize", {"protocolVersion": "2024-11-05", "capabilities": {},
-                        "clientInfo": {"name": "vidiq-tools", "version": "1.0"}})
+    _rpc(
+        "initialize",
+        {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {"name": "vidiq-tools", "version": "1.0"},
+        },
+    )
     _rpc("notifications/initialized", notify=True)
 
 
@@ -99,34 +112,55 @@ def call_json(name: str, args: dict):
 
 # ---------------------------------------------------------------- subcomandos
 
+
 def cmd_balance(_a) -> int:
     d = call_json("vidiq_balance", {})
-    print(f"creditos: {d.get('totalCredits')} (renovables {d.get('renewableCredits')}, "
-          f"extra {d.get('addOnCredits')}; renuevan {d.get('renewableResetsAt', '?')[:10]})")
+    print(
+        f"creditos: {d.get('totalCredits')} (renovables {d.get('renewableCredits')}, "
+        f"extra {d.get('addOnCredits')}; renuevan {d.get('renewableResetsAt', '?')[:10]})"
+    )
     return 0
 
 
 def cmd_outliers(a) -> int:
-    d = call_json("vidiq_outliers", {
-        "keyword": a.query, "contentType": "short", "publishedWithin": "threeMonths",
-        "limit": a.limit})
+    d = call_json(
+        "vidiq_outliers",
+        {
+            "keyword": a.query,
+            "contentType": "short",
+            "publishedWithin": "threeMonths",
+            "limit": a.limit,
+        },
+    )
     for v in d.get("videos", d.get("results", [])):
         if isinstance(v, dict):
-            print(f"x{v.get('breakoutScore', '?'):>6} | {v.get('viewCount', '?'):>9} vistas | "
-                  f"{v.get('vph', '?'):>5} vph | {str(v.get('channelTitle', ''))[:20]:20} | "
-                  f"{str(v.get('videoTitle', ''))[:60]}")
+            print(
+                f"x{v.get('breakoutScore', '?'):>6} | {v.get('viewCount', '?'):>9} vistas | "
+                f"{v.get('vph', '?'):>5} vph | {str(v.get('channelTitle', ''))[:20]:20} | "
+                f"{str(v.get('videoTitle', ''))[:60]}"
+            )
     return 0
 
 
 def cmd_xoutliers(a) -> int:
-    d = call_json("vidiq_instagram_tiktok_outlier_search", {
-        "query": a.query, "audienceQuery": XPLATFORM_AUDIENCE,
-        "resultsPerPlatform": a.limit, "collapseByCreator": True})
+    d = call_json(
+        "vidiq_instagram_tiktok_outlier_search",
+        {
+            "query": a.query,
+            "audienceQuery": XPLATFORM_AUDIENCE,
+            "resultsPerPlatform": a.limit,
+            "collapseByCreator": True,
+        },
+    )
     for plat in ("tiktok", "instagram"):
         for v in d.get(plat, d.get(f"{plat}Results", [])) or []:
             if isinstance(v, dict):
-                cap = str(v.get("caption", v.get("description", "")))[:80].replace("\n", " ")
-                print(f"[{plat}] {v.get('outlierScore', '?')} | {v.get('views', v.get('playCount', '?'))} vistas | {cap}")
+                cap = str(v.get("caption", v.get("description", "")))[:80].replace(
+                    "\n", " "
+                )
+                print(
+                    f"[{plat}] {v.get('outlierScore', '?')} | {v.get('views', v.get('playCount', '?'))} vistas | {cap}"
+                )
     return 0
 
 
@@ -142,8 +176,15 @@ def cmd_title_patterns(a) -> int:
     seen, hits = set(), []
     for q in queries:
         try:
-            d = call_json("vidiq_outliers", {"keyword": q, "contentType": "short",
-                                              "publishedWithin": "threeMonths", "limit": 15})
+            d = call_json(
+                "vidiq_outliers",
+                {
+                    "keyword": q,
+                    "contentType": "short",
+                    "publishedWithin": "threeMonths",
+                    "limit": 15,
+                },
+            )
         except Exception as e:
             print(f"[title-patterns] fallo '{q}': {e}", file=sys.stderr)
             continue
@@ -156,9 +197,11 @@ def cmd_title_patterns(a) -> int:
                 seen.add(t.lower())
                 hits.append((score, t))
     hits.sort(reverse=True)
-    top = hits[:a.top]
+    top = hits[: a.top]
     if not top:
-        print(f"[title-patterns] nada por encima de x{a.min_score}. Baja --min-score o prueba otras queries.")
+        print(
+            f"[title-patterns] nada por encima de x{a.min_score}. Baja --min-score o prueba otras queries."
+        )
         return 1
 
     print(f"[title-patterns] {len(top)} titulos (x{top[-1][0]}-x{top[0][0]}):")
@@ -179,8 +222,11 @@ def cmd_title_patterns(a) -> int:
         "sin copiar ningun titulo de la lista."
     )
     client = anthropic.Anthropic()
-    resp = client.messages.create(model="claude-opus-4-8", max_tokens=1200,
-                                   messages=[{"role": "user", "content": prompt}])
+    resp = client.messages.create(
+        model="claude-opus-4-8",
+        max_tokens=1200,
+        messages=[{"role": "user", "content": prompt}],
+    )
     txt = next((b.text for b in resp.content if b.type == "text"), "")
     print("\n" + txt)
     return 0
@@ -203,23 +249,35 @@ def cmd_transcript(a) -> int:
 
 
 def cmd_similar(a) -> int:
-    d = call_json("vidiq_similar_videos", {
-        "videoId": a.video_id, "contentType": "short",
-        "excludeSeedChannel": True, "limit": a.limit})
+    d = call_json(
+        "vidiq_similar_videos",
+        {
+            "videoId": a.video_id,
+            "contentType": "short",
+            "excludeSeedChannel": True,
+            "limit": a.limit,
+        },
+    )
     for v in d.get("videos", d.get("results", [])):
         if isinstance(v, dict):
-            print(f"{v.get('viewCount', '?'):>9} vistas | {str(v.get('channelTitle', ''))[:20]:20} | "
-                  f"{str(v.get('videoTitle', ''))[:60]}")
+            print(
+                f"{v.get('viewCount', '?'):>9} vistas | {str(v.get('channelTitle', ''))[:20]:20} | "
+                f"{str(v.get('videoTitle', ''))[:60]}"
+            )
     return 0
 
 
 def cmd_comments(a) -> int:
     key = "channelId" if a.target.startswith(("@", "UC")) else "videoId"
-    d = call_json("vidiq_video_comments", {key: a.target, "order": "relevance",
-                                            "maxResult": a.limit})
+    d = call_json(
+        "vidiq_video_comments",
+        {key: a.target, "order": "relevance", "maxResult": a.limit},
+    )
     for c in d.get("comments", d.get("threads", [])):
         if isinstance(c, dict):
-            txt = str(c.get("text", c.get("topLevelComment", "")))[:110].replace("\n", " ")
+            txt = str(c.get("text", c.get("topLevelComment", "")))[:110].replace(
+                "\n", " "
+            )
             print(f"{c.get('likeCount', 0):>5} likes | {txt}")
     return 0
 
@@ -230,8 +288,15 @@ def cmd_radar_terms(a) -> int:
     seen = set()
     for q in NICHE_QUERIES:
         try:
-            d = call_json("vidiq_outliers", {"keyword": q, "contentType": "short",
-                                              "publishedWithin": "threeMonths", "limit": 10})
+            d = call_json(
+                "vidiq_outliers",
+                {
+                    "keyword": q,
+                    "contentType": "short",
+                    "publishedWithin": "threeMonths",
+                    "limit": 10,
+                },
+            )
             for v in d.get("videos", d.get("results", [])):
                 t = (v.get("videoTitle") or "").strip() if isinstance(v, dict) else ""
                 if t and t.lower() not in seen:
@@ -242,11 +307,18 @@ def cmd_radar_terms(a) -> int:
     if a.cross_platform:
         for q in NICHE_QUERIES[:2]:  # limitar gasto
             try:
-                md = call("vidiq_instagram_tiktok_outlier_search", {
-                    "query": q, "audienceQuery": XPLATFORM_AUDIENCE,
-                    "resultsPerPlatform": 5, "collapseByCreator": True})
+                md = call(
+                    "vidiq_instagram_tiktok_outlier_search",
+                    {
+                        "query": q,
+                        "audienceQuery": XPLATFORM_AUDIENCE,
+                        "resultsPerPlatform": 5,
+                        "collapseByCreator": True,
+                    },
+                )
                 # markdown: lineas `**@handle** — "caption"`
                 import re as _re
+
                 for cap in _re.findall(r'\*\*@[\w.]+\*\* — "([^"]+)"', md):
                     line = cap.strip()[:120]
                     if line and line.lower() not in seen:
@@ -258,29 +330,54 @@ def cmd_radar_terms(a) -> int:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("balance")
-    p = sub.add_parser("outliers"); p.add_argument("query"); p.add_argument("--limit", type=int, default=15)
-    p = sub.add_parser("xoutliers"); p.add_argument("query"); p.add_argument("--limit", type=int, default=8)
-    p = sub.add_parser("watch"); p.add_argument("url")
-    p = sub.add_parser("transcript"); p.add_argument("video_ids", nargs="+")
-    p = sub.add_parser("similar"); p.add_argument("video_id"); p.add_argument("--limit", type=int, default=12)
-    p = sub.add_parser("comments"); p.add_argument("target"); p.add_argument("--limit", type=int, default=25)
-    p = sub.add_parser("radar-terms"); p.add_argument("--cross-platform", action="store_true")
-    p = sub.add_parser("title-patterns",
-                        help="titulos x100 del nicho -> Claude extrae la formula reutilizable")
+    p = sub.add_parser("outliers")
+    p.add_argument("query")
+    p.add_argument("--limit", type=int, default=15)
+    p = sub.add_parser("xoutliers")
+    p.add_argument("query")
+    p.add_argument("--limit", type=int, default=8)
+    p = sub.add_parser("watch")
+    p.add_argument("url")
+    p = sub.add_parser("transcript")
+    p.add_argument("video_ids", nargs="+")
+    p = sub.add_parser("similar")
+    p.add_argument("video_id")
+    p.add_argument("--limit", type=int, default=12)
+    p = sub.add_parser("comments")
+    p.add_argument("target")
+    p.add_argument("--limit", type=int, default=25)
+    p = sub.add_parser("radar-terms")
+    p.add_argument("--cross-platform", action="store_true")
+    p = sub.add_parser(
+        "title-patterns",
+        help="titulos x100 del nicho -> Claude extrae la formula reutilizable",
+    )
     p.add_argument("query", nargs="*", help="keywords (por defecto NICHE_QUERIES)")
     p.add_argument("--niche", default="historia oculta / WWII / espionaje")
-    p.add_argument("--min-score", type=float, default=40.0,
-                    help="outlier score minimo para entrar al analisis")
+    p.add_argument(
+        "--min-score",
+        type=float,
+        default=40.0,
+        help="outlier score minimo para entrar al analisis",
+    )
     p.add_argument("--top", type=int, default=20)
     a = ap.parse_args()
-    return {"balance": cmd_balance, "outliers": cmd_outliers, "xoutliers": cmd_xoutliers,
-            "watch": cmd_watch, "transcript": cmd_transcript, "similar": cmd_similar,
-            "comments": cmd_comments, "radar-terms": cmd_radar_terms,
-            "title-patterns": cmd_title_patterns}[a.cmd](a)
+    return {
+        "balance": cmd_balance,
+        "outliers": cmd_outliers,
+        "xoutliers": cmd_xoutliers,
+        "watch": cmd_watch,
+        "transcript": cmd_transcript,
+        "similar": cmd_similar,
+        "comments": cmd_comments,
+        "radar-terms": cmd_radar_terms,
+        "title-patterns": cmd_title_patterns,
+    }[a.cmd](a)
 
 
 if __name__ == "__main__":

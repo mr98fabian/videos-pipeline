@@ -29,9 +29,21 @@ GAMEPLAY_DIR = ROOT / "assets" / "gameplay"
 
 def ffprobe_duration(path: Path) -> float:
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
-        capture_output=True, text=True, check=True, timeout=60)
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60,
+    )
     return float(out.stdout.strip())
 
 
@@ -47,8 +59,9 @@ def pick_source(hint: str | None) -> Path:
     return vids[0]
 
 
-def build(source: Path, total: float, out: Path, seed: int,
-          lo: float, hi: float) -> list[float]:
+def build(
+    source: Path, total: float, out: Path, seed: int, lo: float, hi: float
+) -> list[float]:
     src_dur = ffprobe_duration(source)
     rng = random.Random(seed)
 
@@ -80,24 +93,66 @@ def build(source: Path, total: float, out: Path, seed: int,
         hi_b = max(lo_b + 1.0, band * (i + 1))
         start = rng.uniform(lo_b, hi_b)
         p = tmp_dir / f"gp_{i:02d}.mp4"
-        subprocess.run([
-            "ffmpeg", "-y", "-v", "error", "-ss", f"{start:.2f}", "-t", f"{d:.2f}",
-            "-i", str(source), "-an",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
-            "-pix_fmt", "yuv420p", str(p),
-        ], check=True, timeout=600)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                "-ss",
+                f"{start:.2f}",
+                "-t",
+                f"{d:.2f}",
+                "-i",
+                str(source),
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "20",
+                "-pix_fmt",
+                "yuv420p",
+                str(p),
+            ],
+            check=True,
+            timeout=600,
+        )
         parts.append(p)
 
     listing = tmp_dir / "concat.txt"
     listing.write_text("".join(f"file '{p.name}'\n" for p in parts), encoding="utf-8")
     # re-encode en el concat, nunca -c copy: sin keyframe garantizado en el corte
     # el concat trunca el video (bug real ya documentado en este repo)
-    subprocess.run([
-        "ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0",
-        "-i", str(listing), "-an",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
-        "-pix_fmt", "yuv420p", "-t", f"{total:.3f}", str(out),
-    ], check=True, timeout=900)
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(listing),
+            "-an",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "20",
+            "-pix_fmt",
+            "yuv420p",
+            "-t",
+            f"{total:.3f}",
+            str(out),
+        ],
+        check=True,
+        timeout=900,
+    )
 
     for p in parts:
         p.unlink(missing_ok=True)
@@ -107,11 +162,16 @@ def build(source: Path, total: float, out: Path, seed: int,
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--duration", type=float, required=True, help="duracion total a cubrir")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "--duration", type=float, required=True, help="duracion total a cubrir"
+    )
     ap.add_argument("--out", required=True)
-    ap.add_argument("--source", default=None, help="filtro por nombre (ej. 'minecraft', 'subway')")
+    ap.add_argument(
+        "--source", default=None, help="filtro por nombre (ej. 'minecraft', 'subway')"
+    )
     ap.add_argument("--min-cut", type=float, default=8.0)
     ap.add_argument("--max-cut", type=float, default=12.0)
     ap.add_argument("--seed", type=int, default=1)

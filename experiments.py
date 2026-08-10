@@ -37,8 +37,17 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT = Path(__file__).resolve().parent
 LOG_PATH = ROOT / "video_log.csv"
 
-_CONTRAST_OPENERS = ("but", "except", "yet", "although", "however",
-                     "pero", "salvo", "aunque", "sin embargo")
+_CONTRAST_OPENERS = (
+    "but",
+    "except",
+    "yet",
+    "although",
+    "however",
+    "pero",
+    "salvo",
+    "aunque",
+    "sin embargo",
+)
 
 
 def resolve_out_dir(value: str) -> Path:
@@ -58,6 +67,7 @@ def resolve_out_dir(value: str) -> Path:
 
 
 # --------------------------------------------------------------- deteccion
+
 
 def _sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text or "") if s.strip()]
@@ -119,22 +129,34 @@ def variant_label(f: dict) -> str:
     if not f.get("artifacts"):
         return "(sin script.json)"
     parts = []
-    parts.append("hook:3beat" if f.get("hook_3beat")
-                 else ("hook:why" if f.get("hook_why") else "hook:libre"))
+    parts.append(
+        "hook:3beat"
+        if f.get("hook_3beat")
+        else ("hook:why" if f.get("hook_why") else "hook:libre")
+    )
     parts.append("split" if f.get("split") else "single")
     return " + ".join(parts)
 
 
 # --------------------------------------------------------------- metricas
 
-METRIC_KEYS = ("views", "averageViewDuration", "averageViewPercentage",
-               "subscribersGained", "shares", "likes", "comments")
+METRIC_KEYS = (
+    "views",
+    "averageViewDuration",
+    "averageViewPercentage",
+    "subscribersGained",
+    "shares",
+    "likes",
+    "comments",
+)
 
 
 def load_rows(account: str | None) -> list[dict]:
     if not LOG_PATH.exists():
-        sys.exit(f"no existe {LOG_PATH} -- todavia no hay videos registrados "
-                 f"(se escribe con track_video.py tras cada subida)")
+        sys.exit(
+            f"no existe {LOG_PATH} -- todavia no hay videos registrados "
+            f"(se escribe con track_video.py tras cada subida)"
+        )
     with LOG_PATH.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
     if account:
@@ -148,14 +170,18 @@ def fetch_metrics(rows: list[dict], account: str) -> dict[str, dict]:
         return {}
     try:
         import youtube_api
+
         return youtube_api.video_metrics_batch(ids, account=account)
     except Exception as e:
-        print(f"[metrics] no se pudieron traer metricas reales ({type(e).__name__}: {e})")
+        print(
+            f"[metrics] no se pudieron traer metricas reales ({type(e).__name__}: {e})"
+        )
         print("[metrics] sigo mostrando solo el conteo de videos por variante\n")
         return {}
 
 
 # --------------------------------------------------------------- salida
+
 
 def _fmt(v, nd=1):
     if v is None:
@@ -163,7 +189,9 @@ def _fmt(v, nd=1):
     return f"{v:,.{nd}f}" if isinstance(v, float) else f"{v:,}"
 
 
-def print_by_variant(rows: list[dict], metrics: dict[str, dict], min_videos: int) -> None:
+def print_by_variant(
+    rows: list[dict], metrics: dict[str, dict], min_videos: int
+) -> None:
     groups: dict[str, list[dict]] = {}
     for r in rows:
         out_dir = resolve_out_dir(r["output_dir"])
@@ -172,8 +200,10 @@ def print_by_variant(rows: list[dict], metrics: dict[str, dict], min_videos: int
         m = metrics.get(r.get("video_id") or "", {})
         groups.setdefault(label, []).append({"row": r, "f": f, "m": m})
 
-    print(f"{'variante':<26} {'vids':>5} {'con datos':>10} {'vistas med':>12} "
-          f"{'seg vistos':>11} {'% visto':>9} {'subs':>6} {'shares':>7}")
+    print(
+        f"{'variante':<26} {'vids':>5} {'con datos':>10} {'vistas med':>12} "
+        f"{'seg vistos':>11} {'% visto':>9} {'subs':>6} {'shares':>7}"
+    )
     print("-" * 92)
 
     def sort_key(item):
@@ -190,17 +220,23 @@ def print_by_variant(rows: list[dict], metrics: dict[str, dict], min_videos: int
             vals = [e["m"].get(key) for e in withdata if e["m"].get(key) is not None]
             return statistics.median(vals) if vals else None
 
-        print(f"{label:<26} {len(entries):>5} {len(withdata):>10} "
-              f"{_fmt(med('views'), 0):>12} {_fmt(med('averageViewDuration'), 0):>11} "
-              f"{_fmt(med('averageViewPercentage')):>9} "
-              f"{_fmt(med('subscribersGained'), 0):>6} {_fmt(med('shares'), 0):>7}")
+        print(
+            f"{label:<26} {len(entries):>5} {len(withdata):>10} "
+            f"{_fmt(med('views'), 0):>12} {_fmt(med('averageViewDuration'), 0):>11} "
+            f"{_fmt(med('averageViewPercentage')):>9} "
+            f"{_fmt(med('subscribersGained'), 0):>6} {_fmt(med('shares'), 0):>7}"
+        )
 
     print()
-    print("Medianas, no promedios: con pocos videos un solo viral distorsiona el promedio.")
+    print(
+        "Medianas, no promedios: con pocos videos un solo viral distorsiona el promedio."
+    )
     n_nodata = sum(1 for e in (x for v in groups.values() for x in v) if not e["m"])
     if n_nodata:
-        print(f"{n_nodata} video(s) sin metricas todavia (recien subidos o privados): "
-              f"no cuentan en las medianas.")
+        print(
+            f"{n_nodata} video(s) sin metricas todavia (recien subidos o privados): "
+            f"no cuentan en las medianas."
+        )
 
 
 def print_by_video(rows: list[dict], metrics: dict[str, dict]) -> None:
@@ -210,22 +246,38 @@ def print_by_video(rows: list[dict], metrics: dict[str, dict]) -> None:
         out_dir = resolve_out_dir(r["output_dir"])
         f = detect_features(out_dir)
         m = metrics.get(r.get("video_id") or "", {})
-        print(f"{(r.get('logged_at') or '')[:10]:<11} {variant_label(f):<26} "
-              f"{_fmt(m.get('views'), 0):>8} {_fmt(m.get('averageViewDuration'), 0):>5} "
-              f"{_fmt(m.get('averageViewPercentage')):>6}  {(r.get('title') or '')[:44]}")
+        print(
+            f"{(r.get('logged_at') or '')[:10]:<11} {variant_label(f):<26} "
+            f"{_fmt(m.get('views'), 0):>8} {_fmt(m.get('averageViewDuration'), 0):>5} "
+            f"{_fmt(m.get('averageViewPercentage')):>6}  {(r.get('title') or '')[:44]}"
+        )
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--account", default=None,
-                    help="filtra por cuenta (default / impixxel). Sin esto, todas.")
-    ap.add_argument("--min-videos", type=int, default=1,
-                    help="oculta variantes con menos de N videos (default 1)")
-    ap.add_argument("--videos", action="store_true",
-                    help="listado por video en vez de agregado por variante")
-    ap.add_argument("--no-api", action="store_true",
-                    help="no llamar a YouTube Analytics (solo conteo por variante)")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "--account",
+        default=None,
+        help="filtra por cuenta (default / impixxel). Sin esto, todas.",
+    )
+    ap.add_argument(
+        "--min-videos",
+        type=int,
+        default=1,
+        help="oculta variantes con menos de N videos (default 1)",
+    )
+    ap.add_argument(
+        "--videos",
+        action="store_true",
+        help="listado por video en vez de agregado por variante",
+    )
+    ap.add_argument(
+        "--no-api",
+        action="store_true",
+        help="no llamar a YouTube Analytics (solo conteo por variante)",
+    )
     args = ap.parse_args()
 
     rows = load_rows(args.account)
@@ -234,8 +286,10 @@ def main() -> None:
 
     metrics = {} if args.no_api else fetch_metrics(rows, args.account or "default")
 
-    print(f"\n{len(rows)} video(s) en video_log.csv"
-          f"{f' (cuenta {args.account})' if args.account else ''}\n")
+    print(
+        f"\n{len(rows)} video(s) en video_log.csv"
+        f"{f' (cuenta {args.account})' if args.account else ''}\n"
+    )
 
     if args.videos:
         print_by_video(rows, metrics)

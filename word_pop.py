@@ -41,12 +41,25 @@ def ensure_pop_asset(force: bool = False) -> Path:
     rapido sigue leyendose como una serie de clics."""
     if POP_PATH.exists() and not force:
         return POP_PATH
-    subprocess.run([
-        "ffmpeg", "-y", "-v", "error",
-        "-f", "lavfi", "-i", "anoisesrc=color=white:duration=0.018:amplitude=1.0",
-        "-af", "highpass=f=3000,afade=t=out:st=0.004:d=0.014,volume=2.2",
-        "-ar", "44100", str(POP_PATH),
-    ], check=True, timeout=30)
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "anoisesrc=color=white:duration=0.018:amplitude=1.0",
+            "-af",
+            "highpass=f=3000,afade=t=out:st=0.004:d=0.014,volume=2.2",
+            "-ar",
+            "44100",
+            str(POP_PATH),
+        ],
+        check=True,
+        timeout=30,
+    )
     return POP_PATH
 
 
@@ -100,13 +113,27 @@ def keyword_onsets(ass_path: Path, keywords: list[str]) -> list[float]:
 
 def ffprobe_duration(path: Path) -> float:
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
-        capture_output=True, text=True, check=True, timeout=60)
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60,
+    )
     return float(out.stdout.strip())
 
 
-def build_pop_track(onsets: list[float], total: float, volume: float, out_path: Path) -> None:
+def build_pop_track(
+    onsets: list[float], total: float, volume: float, out_path: Path
+) -> None:
     pop = ensure_pop_asset()
     if not onsets:
         sys.exit("no hay onsets de palabra (subs.ass vacio o sin eventos)")
@@ -116,37 +143,90 @@ def build_pop_track(onsets: list[float], total: float, volume: float, out_path: 
         lbl = f"p{i}"
         filters.append(f"[0:a]adelay={ms}|{ms},volume={volume}[{lbl}];")
         labels.append(f"[{lbl}]")
-    mix = "".join(filters) + "".join(labels) + f"amix=inputs={len(labels)}:duration=longest:dropout_transition=0[out]"
-    subprocess.run([
-        "ffmpeg", "-y", "-v", "error", "-stream_loop", str(len(onsets) - 1), "-i", str(pop),
-        "-filter_complex", mix, "-map", "[out]", "-t", f"{total:.3f}",
-        "-c:a", "libmp3lame", "-q:a", "2", str(out_path),
-    ], check=True, timeout=600)
+    mix = (
+        "".join(filters)
+        + "".join(labels)
+        + f"amix=inputs={len(labels)}:duration=longest:dropout_transition=0[out]"
+    )
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-stream_loop",
+            str(len(onsets) - 1),
+            "-i",
+            str(pop),
+            "-filter_complex",
+            mix,
+            "-map",
+            "[out]",
+            "-t",
+            f"{total:.3f}",
+            "-c:a",
+            "libmp3lame",
+            "-q:a",
+            "2",
+            str(out_path),
+        ],
+        check=True,
+        timeout=600,
+    )
     print(f"{len(onsets)} pops colocados -> {out_path.name}")
 
 
 def mux(base_video: Path, pop_track: Path, dst: Path) -> None:
-    subprocess.run([
-        "ffmpeg", "-y", "-v", "error",
-        "-i", str(base_video), "-i", str(pop_track),
-        "-filter_complex", "[0:a][1:a]amix=inputs=2:duration=first:dropout_transition=0[a]",
-        "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", str(dst),
-    ], check=True, timeout=600)
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-i",
+            str(base_video),
+            "-i",
+            str(pop_track),
+            "-filter_complex",
+            "[0:a][1:a]amix=inputs=2:duration=first:dropout_transition=0[a]",
+            "-map",
+            "0:v",
+            "-map",
+            "[a]",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(dst),
+        ],
+        check=True,
+        timeout=600,
+    )
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("out_dir")
-    ap.add_argument("--ass", default="subs.ass", help="archivo .ass a usar (default subs.ass)")
-    ap.add_argument("--video", default="video.mp4", help="video base sobre el que mezclar")
+    ap.add_argument(
+        "--ass", default="subs.ass", help="archivo .ass a usar (default subs.ass)"
+    )
+    ap.add_argument(
+        "--video", default="video.mp4", help="video base sobre el que mezclar"
+    )
     ap.add_argument("--volume", type=float, default=0.25)
     ap.add_argument("--out-name", default="video_with_pop.mp4")
-    ap.add_argument("--keywords", default=None,
-                    help="lista separada por comas de palabras clave del guion "
-                         "(ej. 'FUNERAL,MONEY,ALIVE,PREGNANT'). Sin esto, pop en "
-                         "CADA palabra -- eso fue lo que sono a pitido sostenido "
-                         "(reportado 30 jul 2026), usar --keywords para evitarlo.")
+    ap.add_argument(
+        "--keywords",
+        default=None,
+        help="lista separada por comas de palabras clave del guion "
+        "(ej. 'FUNERAL,MONEY,ALIVE,PREGNANT'). Sin esto, pop en "
+        "CADA palabra -- eso fue lo que sono a pitido sostenido "
+        "(reportado 30 jul 2026), usar --keywords para evitarlo.",
+    )
     args = ap.parse_args()
 
     d = Path(args.out_dir)
@@ -159,10 +239,16 @@ def main() -> None:
     if args.keywords:
         onsets = keyword_onsets(ass, args.keywords.split(","))
         if not onsets:
-            sys.exit(f"ninguna de estas palabras aparece en {ass.name}: {args.keywords}")
+            sys.exit(
+                f"ninguna de estas palabras aparece en {ass.name}: {args.keywords}"
+            )
     else:
         onsets = word_onsets(ass)
-    total = ffprobe_duration(d / "voice.mp3") if (d / "voice.mp3").exists() else max(onsets) + 1
+    total = (
+        ffprobe_duration(d / "voice.mp3")
+        if (d / "voice.mp3").exists()
+        else max(onsets) + 1
+    )
     pop_track = d / "pop_track.mp3"
     build_pop_track(onsets, total, args.volume, pop_track)
 

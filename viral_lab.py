@@ -24,6 +24,7 @@ te cuento lo que ya ves, te vale mas ver el video en silencio).
 
 Requiere GEMINI_API_KEY (la misma de Nano Banana) y FFmpeg en el PATH.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -56,6 +57,7 @@ def _load_env() -> None:
     la clave y revienta con un TypeError poco claro."""
     try:
         from dotenv import load_dotenv
+
         load_dotenv(ROOT / ".env")
     except Exception:
         pass
@@ -72,8 +74,14 @@ def _key() -> str:
 def _run(cmd: list[str], timeout: int = 300) -> subprocess.CompletedProcess:
     """Subprocess SIEMPRE con timeout: una corrida desatendida no puede colgarse
     para siempre en un ffmpeg atascado (misma regla que pipeline.py)."""
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
-                          encoding="utf-8", errors="replace")
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        encoding="utf-8",
+        errors="replace",
+    )
 
 
 def _write_json(path: Path, data) -> None:
@@ -84,6 +92,7 @@ def _write_json(path: Path, data) -> None:
 
 # ---------------------------------------------------------------------- GET
 
+
 def cmd_get(a) -> int:
     import yt_dlp
 
@@ -91,7 +100,9 @@ def cmd_get(a) -> int:
     base.mkdir(parents=True, exist_ok=True)
 
     # primero solo metadata: asi sabemos la carpeta destino antes de bajar nada
-    with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "skip_download": True}) as y:
+    with yt_dlp.YoutubeDL(
+        {"quiet": True, "no_warnings": True, "skip_download": True}
+    ) as y:
         info = y.extract_info(a.url, download=False)
 
     slug = f"{info.get('extractor_key', 'web').lower()}-{info.get('id', 'x')}"
@@ -103,7 +114,8 @@ def cmd_get(a) -> int:
     out.mkdir(parents=True, exist_ok=True)
 
     opts = {
-        "quiet": True, "no_warnings": True,
+        "quiet": True,
+        "no_warnings": True,
         # mp4 hasta 1080p: es la fuente de un vertical, no hace falta mas
         "format": "bestvideo[height<=1920][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "merge_output_format": "mp4",
@@ -144,9 +156,12 @@ def cmd_get(a) -> int:
     w, h, br = _video_quality(video)
     src["quality"] = {"width": w, "height": h, "bitrate": br}
     if not a.force and (h < MIN_HEIGHT or br < MIN_BITRATE):
-        print(f"[get] DESCARTADO por calidad: {w}x{h} a {br // 1000} kbps "
-              f"(minimo {MIN_HEIGHT}px y {MIN_BITRATE // 1000} kbps)")
+        print(
+            f"[get] DESCARTADO por calidad: {w}x{h} a {br // 1000} kbps "
+            f"(minimo {MIN_HEIGHT}px y {MIN_BITRATE // 1000} kbps)"
+        )
         import shutil as _sh
+
         _sh.rmtree(out, ignore_errors=True)
         return 1
     _write_json(out / "source.json", src)
@@ -201,11 +216,27 @@ def _transcribe(video: Path, model_size: str) -> dict:
     Falla suave: un clip sin voz o sin pista de audio no debe tumbar el analisis."""
     wav = video.with_name("audio.wav")
     try:
-        r = _run(["ffmpeg", "-y", "-v", "error", "-i", str(video),
-                  "-vn", "-ac", "1", "-ar", "16000", str(wav)], timeout=180)
+        r = _run(
+            [
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                "-i",
+                str(video),
+                "-vn",
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                str(wav),
+            ],
+            timeout=180,
+        )
         if r.returncode != 0 or not wav.exists():
             return {"text": "", "note": "sin pista de audio"}
         from faster_whisper import WhisperModel
+
         m = WhisperModel(model_size, device="cpu", compute_type="int8")
         segs, info = m.transcribe(str(wav), vad_filter=True)
         segs = list(segs)
@@ -220,7 +251,9 @@ def _transcribe(video: Path, model_size: str) -> dict:
         return {
             "language": info.language,
             "text": " ".join(s.text.strip() for s in segs).strip(),
-            "segments": [{"t": round(s.start, 2), "text": s.text.strip()} for s in segs],
+            "segments": [
+                {"t": round(s.start, 2), "text": s.text.strip()} for s in segs
+            ],
         }
     except Exception as e:
         return {"text": "", "note": f"transcripcion fallida: {e}"}
@@ -233,7 +266,10 @@ def _scenes(video: Path) -> list[float]:
     omite y no pasa nada (Gemini ya da los beats)."""
     try:
         from scenedetect import detect, ContentDetector
-        return [round(s.get_seconds(), 2) for s, _ in detect(str(video), ContentDetector())]
+
+        return [
+            round(s.get_seconds(), 2) for s, _ in detect(str(video), ContentDetector())
+        ]
     except ImportError:
         return []
     except Exception as e:
@@ -258,8 +294,10 @@ def _gemini_read(video: Path, model: str) -> dict:
         f = client.files.get(name=f.name)
     print(f"[read] analizando con {model}...")
     resp = client.models.generate_content(
-        model=model, contents=[f, ANALYSIS_PROMPT],
-        config={"response_mime_type": "application/json"})
+        model=model,
+        contents=[f, ANALYSIS_PROMPT],
+        config={"response_mime_type": "application/json"},
+    )
     txt = (resp.text or "").strip()
     try:
         client.files.delete(name=f.name)  # no dejar basura en la cuota
@@ -273,9 +311,21 @@ def _gemini_read(video: Path, model: str) -> dict:
 def _video_quality(video: Path) -> tuple[int, int, int]:
     """(ancho, alto, bitrate) del clip. El bitrate del stream a veces viene vacio
     en los mp4 de Instagram, asi que se cae al del contenedor."""
-    r = _run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
-              "stream=width,height,bit_rate:format=bit_rate", "-of",
-              "default=nw=1:nk=1", str(video)], timeout=60)
+    r = _run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height,bit_rate:format=bit_rate",
+            "-of",
+            "default=nw=1:nk=1",
+            str(video),
+        ],
+        timeout=60,
+    )
     vals = [x.strip() for x in (r.stdout or "").splitlines() if x.strip()]
     nums = [int(v) for v in vals if v.isdigit()]
     if len(nums) < 2:
@@ -286,23 +336,54 @@ def _video_quality(video: Path) -> tuple[int, int, int]:
 
 
 def _duration(video: Path) -> float:
-    r = _run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-              "-of", "csv=p=0", str(video)], timeout=60)
+    r = _run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "csv=p=0",
+            str(video),
+        ],
+        timeout=60,
+    )
     try:
         return float((r.stdout or "0").strip() or 0)
     except ValueError:
         return 0.0
 
 
-def _frames_at(video: Path, times: list[float], width: int = 512) -> list[tuple[float, Path]]:
+def _frames_at(
+    video: Path, times: list[float], width: int = 512
+) -> list[tuple[float, Path]]:
     """Extrae un fotograma en cada instante pedido."""
     out = []
     tmp = video.parent / "_frames"
     tmp.mkdir(exist_ok=True)
     for i, t in enumerate(times):
         f = tmp / f"f{i:02d}.jpg"
-        _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", str(video),
-              "-frames:v", "1", "-vf", f"scale={width}:-1", "-q:v", "4", str(f)], timeout=90)
+        _run(
+            [
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                "-ss",
+                f"{t:.2f}",
+                "-i",
+                str(video),
+                "-frames:v",
+                "1",
+                "-vf",
+                f"scale={width}:-1",
+                "-q:v",
+                "4",
+                str(f),
+            ],
+            timeout=90,
+        )
         if f.exists():
             out.append((round(t, 2), f))
     return out
@@ -342,24 +423,38 @@ def _claude_read(video: Path, tr: dict, scenes: list[float]) -> dict:
     content = []
     for t, f in frames:
         content.append({"type": "text", "text": f"--- t={t}s"})
-        content.append({"type": "image", "source": {
-            "type": "base64", "media_type": "image/jpeg",
-            "data": base64.b64encode(f.read_bytes()).decode()}})
+        content.append(
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": base64.b64encode(f.read_bytes()).decode(),
+                },
+            }
+        )
     extra = ""
     if tr.get("text"):
         extra += f"\n\nAudio original transcrito: {tr['text'][:1500]}"
     if scenes:
         extra += f"\n\nCortes detectados en: {', '.join(str(s) for s in scenes[:40])}"
-    content.append({"type": "text", "text": ANALYSIS_PROMPT +
-                    "\n\nSolo tienes fotogramas muestreados, no el video completo: "
-                    "infiere el movimiento entre ellos y di en `beats` lo que se ve "
-                    "en cada fotograma con su timestamp." + extra})
+    content.append(
+        {
+            "type": "text",
+            "text": ANALYSIS_PROMPT
+            + "\n\nSolo tienes fotogramas muestreados, no el video completo: "
+            "infiere el movimiento entre ellos y di en `beats` lo que se ve "
+            "en cada fotograma con su timestamp." + extra,
+        }
+    )
 
     client = anthropic.Anthropic()
     resp = client.messages.create(
         model=os.environ.get("VIRAL_CLAUDE_MODEL", "claude-opus-4-8"),
-        max_tokens=4000, thinking={"type": "adaptive"},
-        messages=[{"role": "user", "content": content}])
+        max_tokens=4000,
+        thinking={"type": "adaptive"},
+        messages=[{"role": "user", "content": content}],
+    )
     txt = next((b.text for b in resp.content if b.type == "text"), None)
     _drop_frames(frames)
     if not txt:
@@ -367,14 +462,16 @@ def _claude_read(video: Path, tr: dict, scenes: list[float]) -> dict:
     txt = txt.strip()
     if txt.startswith("```"):
         txt = txt.split("```")[1].lstrip("json").strip()
-    return json.loads(txt[txt.find("{"):txt.rfind("}") + 1])
+    return json.loads(txt[txt.find("{") : txt.rfind("}") + 1])
 
 
 def _markdown(src: dict, an: dict, tr: dict, scenes: list[float]) -> str:
     L = [f"# {src.get('title') or src.get('id')}", ""]
     L.append(f"**Origen**: {src.get('credit')}")
-    L.append(f"**Metricas**: {src.get('view_count')} vistas · {src.get('like_count')} likes "
-             f"· {src.get('comment_count')} comentarios · {src.get('duration')}s")
+    L.append(
+        f"**Metricas**: {src.get('view_count')} vistas · {src.get('like_count')} likes "
+        f"· {src.get('comment_count')} comentarios · {src.get('duration')}s"
+    )
     L.append("")
     L.append(f"> {an.get('summary', '')}")
     L.append("")
@@ -382,8 +479,12 @@ def _markdown(src: dict, an: dict, tr: dict, scenes: list[float]) -> str:
     ok = "SI" if an.get("transformable") else "NO"
     L.append(f"## Veredicto: {ok} sirve como video base")
     L.append(f"- {an.get('transformable_reason', '')}")
-    L.append(f"- Payout: {'si, en ' + str(p.get('t')) + 's — ' + str(p.get('what')) if p.get('exists') else 'NO HAY'}")
-    L.append(f"- Gente hablando: {'si (mala senal)' if an.get('people_talking') else 'no'}")
+    L.append(
+        f"- Payout: {'si, en ' + str(p.get('t')) + 's — ' + str(p.get('what')) if p.get('exists') else 'NO HAY'}"
+    )
+    L.append(
+        f"- Gente hablando: {'si (mala senal)' if an.get('people_talking') else 'no'}"
+    )
     if an.get("risk_flags"):
         L.append(f"- **Riesgos**: {', '.join(an['risk_flags'])}")
     w = an.get("watermark") or {}
@@ -423,9 +524,15 @@ def cmd_read(a) -> int:
         if cmd_get(g) != 0:
             return 1
         import yt_dlp
-        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "skip_download": True}) as y:
+
+        with yt_dlp.YoutubeDL(
+            {"quiet": True, "no_warnings": True, "skip_download": True}
+        ) as y:
             info = y.extract_info(a.target, download=False)
-        target = Path(a.dir) / f"{info.get('extractor_key', 'web').lower()}-{info.get('id', 'x')}"
+        target = (
+            Path(a.dir)
+            / f"{info.get('extractor_key', 'web').lower()}-{info.get('id', 'x')}"
+        )
 
     video = target / "video.mp4"
     if not video.exists():
@@ -436,8 +543,11 @@ def cmd_read(a) -> int:
         print(f"[read] ya analizado: {out_json} (usa --force para rehacer)")
         return 0
 
-    src = json.loads((target / "source.json").read_text(encoding="utf-8")) \
-        if (target / "source.json").exists() else {}
+    src = (
+        json.loads((target / "source.json").read_text(encoding="utf-8"))
+        if (target / "source.json").exists()
+        else {}
+    )
     # el audio y los cortes van primero: alimentan al motor de fotogramas si toca
     tr = _transcribe(video, a.whisper)
     scenes = _scenes(video)
@@ -452,15 +562,21 @@ def cmd_read(a) -> int:
             if a.engine == "gemini":
                 raise
             # cuota agotada / modelo caido -> no bloquear el analisis, hay plan B
-            print(f"[read] Gemini no disponible ({str(e)[:90]}); paso a fotogramas + Claude")
+            print(
+                f"[read] Gemini no disponible ({str(e)[:90]}); paso a fotogramas + Claude"
+            )
             an = None
     if an is None:
         an = _claude_read(video, tr, scenes)
         engine = "claude-frames"
     an["_engine"] = engine
 
-    _write_json(out_json, {"source": src, "analysis": an, "transcript": tr, "scenes": scenes})
-    (target / "analysis.md").write_text(_markdown(src, an, tr, scenes), encoding="utf-8")
+    _write_json(
+        out_json, {"source": src, "analysis": an, "transcript": tr, "scenes": scenes}
+    )
+    (target / "analysis.md").write_text(
+        _markdown(src, an, tr, scenes), encoding="utf-8"
+    )
     verdict = "SIRVE" if an.get("transformable") else "DESCARTAR"
     print(f"[read] {verdict} — {an.get('summary', '')[:80]}")
     print(f"[read] {target / 'analysis.md'}")
@@ -484,8 +600,17 @@ AUDIENCE = "Culture/Region: US/Western Europe; Global: true"
 
 # senales de que el clip NO se puede transformar: alguien hablando a camara.
 # El formato necesita gente HACIENDO algo, la voz en off la ponemos nosotros.
-_TALKING = ("talking head", "voiceover", "voice-over", "speaking to camera",
-            "dialogue", "narration", "interview", "storytime", "podcast")
+_TALKING = (
+    "talking head",
+    "voiceover",
+    "voice-over",
+    "speaking to camera",
+    "dialogue",
+    "narration",
+    "interview",
+    "storytime",
+    "podcast",
+)
 _RISKY = ("blood", "fight", "firework", "gun", "weapon", "injury", "knockout")
 
 
@@ -504,6 +629,7 @@ def _parse_outliers(md: str) -> list[dict]:
     eso no se puede usar call_json). Se parsea por bloques: cada candidato
     empieza en una linea '**@handle** — "caption"'."""
     import re
+
     platform = "instagram"
     items, cur = [], None
     for raw in md.splitlines():
@@ -515,16 +641,27 @@ def _parse_outliers(md: str) -> list[dict]:
         if m:
             if cur:
                 items.append(cur)
-            cur = {"platform": platform, "handle": m.group(1),
-                   "caption": m.group(2).strip('"'), "fields": {}}
+            cur = {
+                "platform": platform,
+                "handle": m.group(1),
+                "caption": m.group(2).strip('"'),
+                "fields": {},
+            }
             continue
         if cur is None:
             continue
-        m = re.search(r"([\d.,]+[KMB]?)\s+views\s*\((\d+(?:\.\d+)?)x their median of ([\d.,]+[KMB]?)\)"
-                      r"(?:\s*·\s*([\d.,]+[KMB]?)\s+followers)?", ln)
+        m = re.search(
+            r"([\d.,]+[KMB]?)\s+views\s*\((\d+(?:\.\d+)?)x their median of ([\d.,]+[KMB]?)\)"
+            r"(?:\s*·\s*([\d.,]+[KMB]?)\s+followers)?",
+            ln,
+        )
         if m:
-            cur.update(views=_num(m.group(1)), multiplier=float(m.group(2)),
-                       median=_num(m.group(3)), followers=_num(m.group(4) or "0"))
+            cur.update(
+                views=_num(m.group(1)),
+                multiplier=float(m.group(2)),
+                median=_num(m.group(3)),
+                followers=_num(m.group(4) or "0"),
+            )
             continue
         m = re.match(r"\s*(reel|tiktok|post|video|short):\s*([\w\-]+)", ln)
         if m:
@@ -554,13 +691,47 @@ def _url_of(it: dict) -> str:
 # satura ese feed, la voz no anade nada que el espectador quiera, y otros
 # cincuenta canales van a subir el mismo clip esa semana. Lo que se puede narrar
 # es la TENSION: alguien intenta algo y puede fallar.
-_CONTRAST = ("fail", "fails", "failed", "attempt", "tries", "trying", "struggle",
-             "couldn't", "could not", "versus", " vs ", "comparison", "compare",
-             "before and after", "one of them", "some ", "others")
-_STAKES = ("challenge", "test", "bet", "dare", "competition", "contest", "record",
-           "who can", "first time", "experiment")
-_TWIST = ("reveal", "twist", "unexpected", "surprise", "shock", "turns out",
-          "nobody expected", "result")
+_CONTRAST = (
+    "fail",
+    "fails",
+    "failed",
+    "attempt",
+    "tries",
+    "trying",
+    "struggle",
+    "couldn't",
+    "could not",
+    "versus",
+    " vs ",
+    "comparison",
+    "compare",
+    "before and after",
+    "one of them",
+    "some ",
+    "others",
+)
+_STAKES = (
+    "challenge",
+    "test",
+    "bet",
+    "dare",
+    "competition",
+    "contest",
+    "record",
+    "who can",
+    "first time",
+    "experiment",
+)
+_TWIST = (
+    "reveal",
+    "twist",
+    "unexpected",
+    "surprise",
+    "shock",
+    "turns out",
+    "nobody expected",
+    "result",
+)
 
 
 def _tension(blob: str) -> tuple[float, list[str]]:
@@ -617,9 +788,15 @@ def cmd_find(a) -> int:
     seen, rows = set(), []
     for q in queries:
         try:
-            md = v.call("vidiq_instagram_tiktok_outlier_search", {
-                "query": q, "audienceQuery": AUDIENCE,
-                "resultsPerPlatform": a.limit, "collapseByCreator": True})
+            md = v.call(
+                "vidiq_instagram_tiktok_outlier_search",
+                {
+                    "query": q,
+                    "audienceQuery": AUDIENCE,
+                    "resultsPerPlatform": a.limit,
+                    "collapseByCreator": True,
+                },
+            )
         except Exception as e:
             print(f"[find] fallo '{q}': {e}")
             continue
@@ -631,7 +808,9 @@ def cmd_find(a) -> int:
             it["query"] = q
             it["score"], it["tension"], it["tags"], it["flags"] = _judge(it)
             # ya descargado en una corrida anterior -> no volver a proponerlo
-            it["done"] = (Path(a.dir) / f"{it['platform'].split()[0]}-{it['vid']}").exists()
+            it["done"] = (
+                Path(a.dir) / f"{it['platform'].split()[0]}-{it['vid']}"
+            ).exists()
             rows.append(it)
 
     rows.sort(key=lambda r: -r["score"])
@@ -639,20 +818,26 @@ def cmd_find(a) -> int:
     _write_json(Path(a.dir) / "queue.json", rows)
 
     print(f"\n{'score':>6} {'viral':>7} {'narr':>5} {'vistas':>9}  candidato")
-    for r in rows[:a.top]:
+    for r in rows[: a.top]:
         mark = "·" if r["done"] else " "
         note = " ".join(r.get("tags", []))
         if r["flags"]:
             note += " [" + ",".join(r["flags"]) + "]"
-        concept = (r["fields"].get("reel_concept") or r["caption"])[:64].replace("\n", " ")
-        print(f"{r['score']:>6} {r.get('multiplier', 0):>6}x {r.get('tension', 0):>5} "
-              f"{int(r.get('views', 0)):>9}{mark} @{r['handle'][:20]} {note}\n"
-              f"        {concept}\n        {r['url']}")
+        concept = (r["fields"].get("reel_concept") or r["caption"])[:64].replace(
+            "\n", " "
+        )
+        print(
+            f"{r['score']:>6} {r.get('multiplier', 0):>6}x {r.get('tension', 0):>5} "
+            f"{int(r.get('views', 0)):>9}{mark} @{r['handle'][:20]} {note}\n"
+            f"        {concept}\n        {r['url']}"
+        )
     good = [r for r in rows if not r["flags"] and not r["done"]]
-    print(f"\n[find] {len(rows)} candidatos, {len(good)} limpios sin procesar "
-          f"-> {Path(a.dir) / 'queue.json'}")
+    print(
+        f"\n[find] {len(rows)} candidatos, {len(good)} limpios sin procesar "
+        f"-> {Path(a.dir) / 'queue.json'}"
+    )
     if good:
-        print(f"[find] siguiente: py viral_lab.py read \"{good[0]['url']}\"")
+        print(f'[find] siguiente: py viral_lab.py read "{good[0]["url"]}"')
     return 0
 
 
@@ -675,33 +860,48 @@ WPS = 2.8  # palabras por segundo de una voz IA en ingles a ritmo natural
 #   - Retencion: >70% dispara reparto amplio; >75% triplica la probabilidad de
 #     salir a audiencias nuevas. En 30-60s el rango normal es 40-55%.
 #   - Swipe-away en los 3 primeros segundos: <25% sano, >40% gancho roto.
-MIN_SECONDS = 20        # bloqueo duro: por debajo no se produce, se descarta el clip
-TARGET_SECONDS = 34     # centro del punto dulce 30-45s
+MIN_SECONDS = 20  # bloqueo duro: por debajo no se produce, se descarta el clip
+TARGET_SECONDS = 34  # centro del punto dulce 30-45s
 MAX_SECONDS = 45
 
 SCRIPT_SCHEMA = {
     "type": "object",
     "properties": {
         "hook": {"type": "string", "description": "primera frase, <15 palabras, 0-3s"},
-        "script": {"type": "string", "description": "guion completo para TTS, sin markdown"},
+        "script": {
+            "type": "string",
+            "description": "guion completo para TTS, sin markdown",
+        },
         "lines": {
             "type": "array",
             "items": {
                 "type": "object",
                 "properties": {"t": {"type": "number"}, "text": {"type": "string"}},
-                "required": ["t", "text"], "additionalProperties": False,
+                "required": ["t", "text"],
+                "additionalProperties": False,
             },
             "description": "cada frase con el segundo del CLIP en que debe sonar",
         },
-        "invented": {"type": "array", "items": {"type": "string"},
-                      "description": "todo lo que no se puede verificar del clip"},
+        "invented": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "todo lo que no se puede verificar del clip",
+        },
         "title": {"type": "string"},
         "description": {"type": "string"},
         "tags": {"type": "array", "items": {"type": "string"}},
         "pinned_comment": {"type": "string"},
     },
-    "required": ["hook", "script", "lines", "invented", "title", "description",
-                  "tags", "pinned_comment"],
+    "required": [
+        "hook",
+        "script",
+        "lines",
+        "invented",
+        "title",
+        "description",
+        "tags",
+        "pinned_comment",
+    ],
     "additionalProperties": False,
 }
 
@@ -723,12 +923,16 @@ def cmd_script(a) -> int:
     d = json.loads(aj.read_text(encoding="utf-8"))
     an, src = d["analysis"], d.get("source", {})
     if not an.get("transformable"):
-        print(f"[script] OJO: el analisis descarto este clip ({an.get('transformable_reason', '')})")
+        print(
+            f"[script] OJO: el analisis descarto este clip ({an.get('transformable_reason', '')})"
+        )
     # sin payout el video no entrega lo que promete el hook: el guion acaba
     # convirtiendo el final abierto en una pregunta, que disimula pero no cumple
     if not (an.get("payout") or {}).get("exists"):
-        print("[script] AVISO: este clip NO tiene payout. El formato lo necesita: "
-              "el espectador se queda por el resultado. Considera descartarlo.")
+        print(
+            "[script] AVISO: este clip NO tiene payout. El formato lo necesita: "
+            "el espectador se queda por el resultado. Considera descartarlo."
+        )
 
     cut = an.get("best_cut") or {}
     payout_t = (an.get("payout") or {}).get("t") or 0
@@ -742,14 +946,18 @@ def cmd_script(a) -> int:
     # intento fallido que es lo que hace que el desenlace signifique algo.
     if 0 < full_dur <= 25 and cuts_n >= 2:
         if (cut.get("end") or 0) - (cut.get("start") or 0) < full_dur * 0.8:
-            print(f"[script] usando el clip ENTERO ({full_dur:.1f}s): tiene {cuts_n} planos "
-                  f"y el montaje completo cuenta la historia")
+            print(
+                f"[script] usando el clip ENTERO ({full_dur:.1f}s): tiene {cuts_n} planos "
+                f"y el montaje completo cuenta la historia"
+            )
             cut = {"start": 0.0, "end": round(full_dur, 2)}
     if payout_t and payout_t > (cut.get("end") or 0) - 0.5:
         full_dur = full_dur or payout_t + 2
         cut["end"] = min(payout_t + 1.5, full_dur)
-        print(f"[script] recorte extendido a {cut['end']:.1f}s para incluir el payout "
-              f"({payout_t:.1f}s)")
+        print(
+            f"[script] recorte extendido a {cut['end']:.1f}s para incluir el payout "
+            f"({payout_t:.1f}s)"
+        )
     clip_len = (cut.get("end") or src.get("duration") or 20) - (cut.get("start") or 0)
     # CUANTOS PLANOS TIENE EL ORIGINAL. Un clip de camara fija no aguanta una
     # narracion larga: por mucho que reencuadres, la imagen no cambia y el
@@ -759,28 +967,37 @@ def cmd_script(a) -> int:
     shots = len(d.get("scenes") or []) or len(_scenes(target / "video.mp4"))
     shots = max(shots, 1)
     stretch = 1.35 if shots <= 1 else (1.8 if shots <= 3 else 2.2)
-    seconds = a.seconds or int(min(max(clip_len * stretch, TARGET_SECONDS * 0.8), MAX_SECONDS))
+    seconds = a.seconds or int(
+        min(max(clip_len * stretch, TARGET_SECONDS * 0.8), MAX_SECONDS)
+    )
     if seconds < MIN_SECONDS:
-        print(f"[script] DESCARTADO: este clip solo da para {seconds}s y por debajo de "
-              f"{MIN_SECONDS}s los Shorts no reparten en 2026 (no superan el umbral de "
-              f"tiempo absoluto ni con retencion perfecta). Busca un clip mas largo o "
-              f"con mas planos.")
+        print(
+            f"[script] DESCARTADO: este clip solo da para {seconds}s y por debajo de "
+            f"{MIN_SECONDS}s los Shorts no reparten en 2026 (no superan el umbral de "
+            f"tiempo absoluto ni con retencion perfecta). Busca un clip mas largo o "
+            f"con mas planos."
+        )
         return 2
     print(f"[script] clip {clip_len:.1f}s con {shots} plano(s) -> objetivo {seconds}s")
     words = int(seconds * WPS)
     payout = an.get("payout") or {}
 
-    visible = "\n".join(f"- {b.get('t')}s: {b.get('visible')}" for b in an.get("beats", []))
+    visible = "\n".join(
+        f"- {b.get('t')}s: {b.get('visible')}" for b in an.get("beats", [])
+    )
     raw = "\n".join(f"- {x}" for x in an.get("not_visible", []))
-    bait = ("\n- Mete UN error factual pequeno y facil de detectar (un numero, un lugar) "
-            "para provocar correcciones en comentarios; listalo en `invented`."
-            if a.bait else "")
+    bait = (
+        "\n- Mete UN error factual pequeno y facil de detectar (un numero, un lugar) "
+        "para provocar correcciones en comentarios; listalo en `invented`."
+        if a.bait
+        else ""
+    )
 
     prompt = f"""Escribe la voz en off de un YouTube Short en INGLES sobre este clip.
 
-CLIP: {an.get('summary', '')}
-Duracion util: {clip_len:.1f}s (recorte {cut.get('start')}s a {cut.get('end')}s)
-Payout (el momento de resultado) en {payout.get('t')}s: {payout.get('what')}
+CLIP: {an.get("summary", "")}
+Duracion util: {clip_len:.1f}s (recorte {cut.get("start")}s a {cut.get("end")}s)
+Payout (el momento de resultado) en {payout.get("t")}s: {payout.get("what")}
 
 LO QUE SE VE — PROHIBIDO NARRAR ESTO:
 {visible}
@@ -817,7 +1034,7 @@ REGLAS DURAS:
 - Cuerpo: el POR QUE de la rareza — motivo, consecuencia, contexto que no se ve.
 - Si el guion pasa de 28s, mete UN rehook a mitad con un conector ("but",
   "though", "here is the thing") que reencuadre lo anterior.
-- El PAYOUT va al FINAL y cae justo cuando ocurre en el clip ({payout.get('t')}s).
+- El PAYOUT va al FINAL y cae justo cuando ocurre en el clip ({payout.get("t")}s).
   Despues del payout NO va nada explicativo: ni datos, ni contexto, ni resumen.
   Como mucho una frase corta y seca, o una pregunta.
 - MAXIMO {words} palabras ({seconds}s). Es un limite duro, no una guia: el clip
@@ -838,9 +1055,11 @@ estas seguro: un numero desmentido por la propia imagen quema credibilidad.
     client = anthropic.Anthropic()
     resp = client.messages.create(
         model=os.environ.get("VIRAL_CLAUDE_MODEL", "claude-opus-4-8"),
-        max_tokens=4000, thinking={"type": "adaptive"},
+        max_tokens=4000,
+        thinking={"type": "adaptive"},
         output_config={"format": {"type": "json_schema", "schema": SCRIPT_SCHEMA}},
-        messages=[{"role": "user", "content": prompt}])
+        messages=[{"role": "user", "content": prompt}],
+    )
     txt = next((b.text for b in resp.content if b.type == "text"), None)
     if not txt:
         print("ERROR: Claude no devolvio texto")
@@ -855,17 +1074,21 @@ estas seguro: un numero desmentido por la propia imagen quema credibilidad.
         print(f"[script] se paso un {int((over - 1) * 100)}%, pidiendo recorte...")
         resp = client.messages.create(
             model=os.environ.get("VIRAL_CLAUDE_MODEL", "claude-opus-4-8"),
-            max_tokens=4000, thinking={"type": "adaptive"},
+            max_tokens=4000,
+            thinking={"type": "adaptive"},
             output_config={"format": {"type": "json_schema", "schema": SCRIPT_SCHEMA}},
             messages=[
                 {"role": "user", "content": prompt},
                 {"role": "assistant", "content": txt},
-                {"role": "user", "content":
-                    f"Te has pasado: {len(sc['script'].split())} palabras cuando el maximo "
+                {
+                    "role": "user",
+                    "content": f"Te has pasado: {len(sc['script'].split())} palabras cuando el maximo "
                     f"son {words}. Reescribelo en {words} palabras o menos SIN perder el "
                     f"hook ni el payout: quita adjetivos, une frases, elimina el dato menos "
-                    f"sorprendente. Devuelve el JSON completo otra vez."},
-            ])
+                    f"sorprendente. Devuelve el JSON completo otra vez.",
+                },
+            ],
+        )
         t2 = next((b.text for b in resp.content if b.type == "text"), None)
         if t2:
             sc2 = json.loads(t2)
@@ -877,22 +1100,49 @@ estas seguro: un numero desmentido por la propia imagen quema credibilidad.
     _write_json(target / "script.json", sc)
 
     n = len(sc["script"].split())
-    md = [f"# Guion — {sc['title']}", "", f"**{n} palabras ≈ {n / WPS:.1f}s**  ·  "
-          f"recorte {cut.get('start')}s → {cut.get('end')}s", "",
-          "## Narracion", ""]
+    md = [
+        f"# Guion — {sc['title']}",
+        "",
+        f"**{n} palabras ≈ {n / WPS:.1f}s**  ·  "
+        f"recorte {cut.get('start')}s → {cut.get('end')}s",
+        "",
+        "## Narracion",
+        "",
+    ]
     for ln in sc["lines"]:
         md.append(f"- `{ln['t']}s` {ln['text']}")
-    md += ["", "## Texto seguido (TTS)", "", sc["script"], "",
-           "## Comentario para fijar", "", sc["pinned_comment"], "",
-           "## Inventado (revisar antes de publicar)", ""]
+    md += [
+        "",
+        "## Texto seguido (TTS)",
+        "",
+        sc["script"],
+        "",
+        "## Comentario para fijar",
+        "",
+        sc["pinned_comment"],
+        "",
+        "## Inventado (revisar antes de publicar)",
+        "",
+    ]
     md += [f"- {x}" for x in sc.get("invented", [])]
-    md += ["", "## Publicacion", "", f"**Titulo**: {sc['title']}", "",
-           sc["description"], "", f"`{', '.join(sc['tags'])}`", "",
-           f"**Credito**: {sc['source_credit']}"]
+    md += [
+        "",
+        "## Publicacion",
+        "",
+        f"**Titulo**: {sc['title']}",
+        "",
+        sc["description"],
+        "",
+        f"`{', '.join(sc['tags'])}`",
+        "",
+        f"**Credito**: {sc['source_credit']}",
+    ]
     (target / "script.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"[script] {n} palabras ({n / WPS:.1f}s) — {target / 'script.md'}")
     if sc.get("invented"):
-        print(f"[script] {len(sc['invented'])} datos inventados: revisalos antes de publicar")
+        print(
+            f"[script] {len(sc['invented'])} datos inventados: revisalos antes de publicar"
+        )
     return 0
 
 
@@ -928,7 +1178,9 @@ def cmd_voices(a) -> int:
                 except Exception as e:
                     print(f"[voices] referencia {v} fallo: {e}")
                     continue
-            variants.append((f"ref-{v}", str(ref), 0.45, f"--ref {ref} --exaggeration 0.45"))
+            variants.append(
+                (f"ref-{v}", str(ref), 0.45, f"--ref {ref} --exaggeration 0.45")
+            )
 
     made = []
     for vid, ref, ex, cmd in variants:
@@ -948,15 +1200,45 @@ def cmd_voices(a) -> int:
     # comparar es mucho mas facil escuchando una detras de otra que abriendo 7
     lst = out / "_concat.txt"
     sil = out / "_sil.wav"
-    _run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
-          "anullsrc=r=24000:cl=mono", "-t", "0.6", str(sil)], timeout=60)
+    _run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=24000:cl=mono",
+            "-t",
+            "0.6",
+            str(sil),
+        ],
+        timeout=60,
+    )
     lines = []
     for _, wav, _c in made:
         lines += [f"file '{wav.as_posix()}'", f"file '{sil.as_posix()}'"]
     lst.write_text("\n".join(lines), encoding="utf-8")
     comp = out / "comparativa.mp3"
-    _run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0",
-          "-i", str(lst), "-ar", "44100", str(comp)], timeout=300)
+    _run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(lst),
+            "-ar",
+            "44100",
+            str(comp),
+        ],
+        timeout=300,
+    )
     for f in (lst, sil, out / "_demo.txt"):
         f.unlink(missing_ok=True)
 
@@ -988,8 +1270,16 @@ _WM_BOXES = {
 # entre planos: alternar abierto (1.0, sin escalado) con cerrado (1.2+) golpea
 # mucho mas que subir todos un poco, y ademas deja la mitad de los planos a
 # resolucion nativa, sin ablandar.
-_MOVES = [(1.00, 0, 0), (1.22, -0.7, -0.4), (1.04, 0.4, 0.2), (1.26, 0.3, -0.7),
-          (1.00, 0, 0.3), (1.20, 0.7, 0.1), (1.06, -0.3, -0.4), (1.30, -0.2, 0.5)]
+_MOVES = [
+    (1.00, 0, 0),
+    (1.22, -0.7, -0.4),
+    (1.04, 0.4, 0.2),
+    (1.26, 0.3, -0.7),
+    (1.00, 0, 0.3),
+    (1.20, 0.7, 0.1),
+    (1.06, -0.3, -0.4),
+    (1.30, -0.2, 0.5),
+]
 MAX_SLOWDOWN = 2.2  # mas alla se ve a camara lenta obvia
 # el escalado (letterbox + zoom) ablanda el detalle; un unsharp suave al final
 # lo recupera sin que se note el filtro
@@ -1000,9 +1290,27 @@ def _letterbox(clip: Path, start: float, dur: float) -> str | None:
     """Detecta franjas negras del clip original. Muchos reels traen un video
     horizontal pegado en un lienzo vertical con barras: si no se quitan, el
     short final desperdicia media pantalla en negro."""
-    r = _run(["ffmpeg", "-v", "info", "-ss", f"{start:.2f}", "-t", f"{min(dur, 4):.2f}",
-              "-i", str(clip), "-vf", "cropdetect=24:2:0", "-f", "null", "-"], timeout=180)
+    r = _run(
+        [
+            "ffmpeg",
+            "-v",
+            "info",
+            "-ss",
+            f"{start:.2f}",
+            "-t",
+            f"{min(dur, 4):.2f}",
+            "-i",
+            str(clip),
+            "-vf",
+            "cropdetect=24:2:0",
+            "-f",
+            "null",
+            "-",
+        ],
+        timeout=180,
+    )
     import re
+
     hits = re.findall(r"crop=(\d+:\d+:\d+:\d+)", (r.stderr or ""))
     if not hits:
         return None
@@ -1028,13 +1336,32 @@ def _motion_centroid(video: Path, t: float) -> tuple[float, float] | None:
     ES el sujeto, y basta para colocar el circulo encima. Devuelve (x, y) en
     fraccion 0..1 del encuadre."""
     from PIL import Image
+
     tmp = video.parent / "_mc"
     tmp.mkdir(exist_ok=True)
     fs = []
     for k, dt in enumerate((0.0, 0.18)):
         f = tmp / f"m{k}.jpg"
-        _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{max(t + dt, 0):.2f}", "-i", str(video),
-              "-frames:v", "1", "-vf", "scale=192:-1", "-q:v", "5", str(f)], timeout=60)
+        _run(
+            [
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                "-ss",
+                f"{max(t + dt, 0):.2f}",
+                "-i",
+                str(video),
+                "-frames:v",
+                "1",
+                "-vf",
+                "scale=192:-1",
+                "-q:v",
+                "5",
+                str(f),
+            ],
+            timeout=60,
+        )
         if f.exists():
             fs.append(f)
     if len(fs) < 2:
@@ -1046,7 +1373,7 @@ def _motion_centroid(video: Path, t: float) -> tuple[float, float] | None:
     pa, pb = a_.tobytes(), b_.tobytes()
     diffs = [(abs(pa[i] - pb[i]), i) for i in range(0, len(pa))]
     diffs.sort(reverse=True)
-    top = diffs[:max(len(diffs) // 60, 40)]  # el 1.6% de pixeles que mas cambian
+    top = diffs[: max(len(diffs) // 60, 40)]  # el 1.6% de pixeles que mas cambian
     if not top or top[0][0] < 12:
         return None  # nada se movio: mejor no poner el circulo que ponerlo mal
     sx = sum(i % W for _, i in top) / len(top) / W
@@ -1063,6 +1390,7 @@ def _motion_centroid(video: Path, t: float) -> tuple[float, float] | None:
 def _circle_png(path: Path, size: int = 360) -> Path:
     """Anillo rojo troquelado, el senalador clasico del formato."""
     from PIL import Image, ImageDraw
+
     im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     d.ellipse([10, 10, size - 10, size - 10], outline=(255, 255, 255, 210), width=20)
@@ -1078,27 +1406,44 @@ CHATTERBOX_DIR = ROOT / "tools" / "chatterbox_tts"
 VOICE_REF = ROOT / "assets" / "voice" / "comentario_michael.wav"
 
 
-def _chatterbox(script: str, wav: Path, ref: str = "", exaggeration: float = 0.45,
-                lang: str = "en") -> Path:
+def _chatterbox(
+    script: str, wav: Path, ref: str = "", exaggeration: float = 0.45, lang: str = "en"
+) -> Path:
     """Voz con Chatterbox en su propio venv (arrastra torch; no se mezcla con el
     entorno principal, igual que Kokoro). Cacheada por hash de texto+parametros:
     en CPU tarda minutos, asi que re-renderizar el mismo guion no debe volver a
     sintetizar."""
     import hashlib
-    key = hashlib.sha1(f"{script}|{ref}|{exaggeration}|{lang}".encode()).hexdigest()[:16]
+
+    key = hashlib.sha1(f"{script}|{ref}|{exaggeration}|{lang}".encode()).hexdigest()[
+        :16
+    ]
     cache = ROOT / "assets" / "cache" / "voices"
     cache.mkdir(parents=True, exist_ok=True)
     cached = cache / f"{key}.wav"
     if cached.exists():
         import shutil as _sh
+
         _sh.copyfile(cached, wav)
         print("[edit] voz Chatterbox desde cache")
         return wav
     txt = wav.with_suffix(".txt")
     txt.write_text(script, encoding="utf-8")
-    cmd = ["uv", "run", "--directory", str(CHATTERBOX_DIR), "synth.py",
-           "--text-file", str(txt.resolve()), "--out", str(wav.resolve()),
-           "--exaggeration", str(exaggeration), "--lang", lang]
+    cmd = [
+        "uv",
+        "run",
+        "--directory",
+        str(CHATTERBOX_DIR),
+        "synth.py",
+        "--text-file",
+        str(txt.resolve()),
+        "--out",
+        str(wav.resolve()),
+        "--exaggeration",
+        str(exaggeration),
+        "--lang",
+        lang,
+    ]
     if ref:
         cmd += ["--ref", str(Path(ref).resolve())]
     print("[edit] sintetizando con Chatterbox (en CPU esto tarda unos minutos)...")
@@ -1107,6 +1452,7 @@ def _chatterbox(script: str, wav: Path, ref: str = "", exaggeration: float = 0.4
     if r.returncode != 0 or not wav.exists():
         raise RuntimeError(f"Chatterbox fallo: {(r.stderr or '')[-400:]}")
     import shutil as _sh
+
     _sh.copyfile(wav, cached)
     return wav
 
@@ -1118,11 +1464,12 @@ def _align_words(audio: Path) -> list[tuple[float, float, str]]:
     karaoke y los efectos caen fuera de sitio. Reconocer el propio audio con
     whisper da el timing acustico de verdad."""
     from faster_whisper import WhisperModel
+
     m = WhisperModel("base", device="cpu", compute_type="int8")
     segs, _ = m.transcribe(str(audio), word_timestamps=True)
     out = []
     for s in segs:
-        for w in (s.words or []):
+        for w in s.words or []:
             out.append((float(w.start), float(w.end), w.word.strip()))
     return out
 
@@ -1152,8 +1499,9 @@ def cmd_edit(a) -> int:
     # formato se evita de origen en vez de arreglarlo en la edicion).
     if a.voice == "chatterbox":
         voice = target / "voice.wav"
-        _chatterbox(sc["script"], voice, ref=a.ref, exaggeration=a.exaggeration,
-                    lang=a.lang)
+        _chatterbox(
+            sc["script"], voice, ref=a.ref, exaggeration=a.exaggeration, lang=a.lang
+        )
         words = _align_words(voice)
         print("[edit] voz Chatterbox alineada con whisper")
     elif a.voice.startswith(pl.KOKORO_VOICE_PREFIXES):
@@ -1190,24 +1538,57 @@ def cmd_edit(a) -> int:
     # el ralentizado por setpts DUPLICA fotogramas (micro-tirones y artefactos
     # que se quedan mas tiempo en pantalla); minterpolate los sintetiza de verdad,
     # pero es lento, asi que va bajo bandera
-    smooth = f",minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc" if (a.smooth and ratio > 1.05) else ""
-    chain = (f"[0:v]trim=start={s0}:end={s1},setpts=(PTS-STARTPTS)*{ratio:.4f},"
-             + (f"crop={lb}," if lb else "")
-             + f"scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,"
-               f"crop=1080:1920,{SHARPEN},fps=60{smooth}")
-    box = _wm_box(((an.get("watermark") or {}).get("where") or "")) \
-        if (an.get("watermark") or {}).get("present") else None
+    smooth = (
+        f",minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc"
+        if (a.smooth and ratio > 1.05)
+        else ""
+    )
+    chain = (
+        f"[0:v]trim=start={s0}:end={s1},setpts=(PTS-STARTPTS)*{ratio:.4f},"
+        + (f"crop={lb}," if lb else "")
+        + f"scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,"
+        f"crop=1080:1920,{SHARPEN},fps=60{smooth}"
+    )
+    box = (
+        _wm_box(((an.get("watermark") or {}).get("where") or ""))
+        if (an.get("watermark") or {}).get("present")
+        else None
+    )
     if box:
         x, y, w, h = box
-        chain += (f",split[a][b];[b]crop={w}:{h}:{x}:{y},boxblur=22[bl];"
-                  f"[a][bl]overlay={x}:{y}[v]")
+        chain += (
+            f",split[a][b];[b]crop={w}:{h}:{x}:{y},boxblur=22[bl];"
+            f"[a][bl]overlay={x}:{y}[v]"
+        )
         print(f"[edit] tapando marca de agua en {x},{y}")
     else:
         chain += "[v]"
     base = target / "base.mp4"
-    r = _run(["ffmpeg", "-y", "-v", "error", "-i", str(clip), "-filter_complex", chain,
-              "-map", "[v]", "-an", "-c:v", "libx264", "-preset", "veryfast",
-              "-crf", "17", "-pix_fmt", "yuv420p", str(base)], timeout=600)
+    r = _run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-i",
+            str(clip),
+            "-filter_complex",
+            chain,
+            "-map",
+            "[v]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "17",
+            "-pix_fmt",
+            "yuv420p",
+            str(base),
+        ],
+        timeout=600,
+    )
     if r.returncode != 0:
         print(f"ERROR base: {r.stderr[-500:]}")
         return 2
@@ -1232,8 +1613,10 @@ def cmd_edit(a) -> int:
         n = max(1, int((b1 - b0) / a.cut + 0.5))
         step = (b1 - b0) / n
         split += [(b0 + k * step, b0 + (k + 1) * step) for k in range(n)]
-    print(f"[edit] {len(bounds)} frases -> {len(split)} planos "
-          f"(1 cada {adur / max(len(split), 1):.1f}s)")
+    print(
+        f"[edit] {len(bounds)} frases -> {len(split)} planos "
+        f"(1 cada {adur / max(len(split), 1):.1f}s)"
+    )
     bounds = split
 
     # el payout manda: es donde va el golpe, el flash y el punch de camara
@@ -1254,22 +1637,28 @@ def cmd_edit(a) -> int:
         cw, ch = int(1080 / z) // 2 * 2, int(1920 / z) // 2 * 2
         mx, my = (1080 - cw) // 2, (1920 - ch) // 2
         x, y = int(mx + dx * mx), int(my + dy * my)
-        seg = (f"[0:v]trim=start={b0:.3f}:end={b1:.3f},setpts=PTS-STARTPTS,"
-               f"crop={cw}:{ch}:{x}:{y}")
+        seg = (
+            f"[0:v]trim=start={b0:.3f}:end={b1:.3f},setpts=PTS-STARTPTS,"
+            f"crop={cw}:{ch}:{x}:{y}"
+        )
         if z > 1.001:
             # ZOOM ANIMADO, no estatico: el metodo lo hace con dos keyframes en
             # 10-15 frames y curva de desaceleracion ("salida de cubo"). Aqui se
             # reproduce con scale evaluado por frame: arranca al 100% y cierra
             # hasta el zoom del plano en ~0,25s, frenando al final.
-            k = (f"(1+({z:.3f}-1)*(1-pow(1-min(1,t/0.25),3)))")
-            seg += (f",scale=w='1080*{k}':h='1920*{k}':eval=frame,"
-                    f"crop=1080:1920:(iw-1080)/2:(ih-1920)/2,{SHARPEN}")
+            k = f"(1+({z:.3f}-1)*(1-pow(1-min(1,t/0.25),3)))"
+            seg += (
+                f",scale=w='1080*{k}':h='1920*{k}':eval=frame,"
+                f"crop=1080:1920:(iw-1080)/2:(ih-1920)/2,{SHARPEN}"
+            )
         parts.append(seg + f"[s{i}]")
         labels.append(f"[s{i}]")
     fc = ";".join(parts) + ";" + "".join(labels) + f"concat=n={len(parts)}:v=1:a=0[vc]"
     # flash blanco de 3 frames en el payout + punch de color global
-    fc += (f";[vc]eq=saturation=1.14,eq=brightness=0.45:saturation=1.35:"
-           f"enable='between(t,{payout_at:.2f},{payout_at + 0.10:.2f})'[vz]")
+    fc += (
+        f";[vc]eq=saturation=1.14,eq=brightness=0.45:saturation=1.35:"
+        f"enable='between(t,{payout_at:.2f},{payout_at + 0.10:.2f})'[vz]"
+    )
 
     # CIRCULO CON SEGUIMIENTO: aparece 1,4s en dos momentos (tras el gancho y en
     # el payout) sobre lo que se esta moviendo. No va todo el rato a proposito:
@@ -1281,8 +1670,11 @@ def cmd_edit(a) -> int:
         # se dispara en cada frase que nombra a alguien, no en dos momentos
         # fijos. Se limita a 4 para que siga siendo un senalador y no ruido.
         import re as _re
-        person = _re.compile(r"\b(he|she|they|him|her|his|their|this (?:guy|man|woman|girl|kid)"
-                             r"|[A-Z][a-z]{2,})\b")
+
+        person = _re.compile(
+            r"\b(he|she|they|him|her|his|their|this (?:guy|man|woman|girl|kid)"
+            r"|[A-Z][a-z]{2,})\b"
+        )
         cand = []
         for (lb0, _lb1), line in zip(line_bounds, lines):
             if person.search(line.get("text", "")):
@@ -1301,7 +1693,9 @@ def cmd_edit(a) -> int:
             if c:
                 marks.append((mt, c))
         if marks:
-            print(f"[edit] circulo de seguimiento en {', '.join(f'{m:.1f}s' for m, _ in marks)}")
+            print(
+                f"[edit] circulo de seguimiento en {', '.join(f'{m:.1f}s' for m, _ in marks)}"
+            )
 
     # ---- 4. AUDIO: voz + musica con ducking (mismos parametros probados)
     music = pl._pick_music() if not a.no_music else None
@@ -1315,18 +1709,23 @@ def cmd_edit(a) -> int:
         inputs += ["-loop", "1", "-framerate", "60", "-i", str(circ)]
         ci = idx
         idx += 1
-        fc += f";[{ci}:v]format=rgba,split={len(marks)}" + \
-              "".join(f"[c{k}]" for k in range(len(marks)))
+        fc += f";[{ci}:v]format=rgba,split={len(marks)}" + "".join(
+            f"[c{k}]" for k in range(len(marks))
+        )
         for k, (mt, (cx, cy)) in enumerate(marks):
             # el limite inferior deja libre el carril de subtitulos: un circulo
             # encima del texto tapa lo unico que se lee en mute
             px = min(max(int(cx * 1080 - 180), 20), 1080 - 380)
             py = min(max(int(cy * 1920 - 180), 130), 980)
-            fc += (f";[c{k}]fade=in:st={mt:.2f}:d=0.12:alpha=1,"
-                   f"fade=out:st={mt + 1.15:.2f}:d=0.25:alpha=1[cf{k}]")
+            fc += (
+                f";[c{k}]fade=in:st={mt:.2f}:d=0.12:alpha=1,"
+                f"fade=out:st={mt + 1.15:.2f}:d=0.25:alpha=1[cf{k}]"
+            )
             nxt = f"[vm{k}]"
-            fc += (f";{vlab}[cf{k}]overlay={px}:{py}:"
-                   f"enable='between(t,{mt:.2f},{mt + 1.4:.2f})'{nxt}")
+            fc += (
+                f";{vlab}[cf{k}]overlay={px}:{py}:"
+                f"enable='between(t,{mt:.2f},{mt + 1.4:.2f})'{nxt}"
+            )
             vlab = nxt
 
     # subtitulos al final de la cadena de video (mismo estilo que el canal madre)
@@ -1343,7 +1742,11 @@ def cmd_edit(a) -> int:
         mus_i = idx
         idx += 1
     sfx_dir = ROOT / "motion_graphics" / "public" / "proof"
-    whoosh, impact, sting = sfx_dir / "whoosh.mp3", sfx_dir / "impact.mp3", sfx_dir / "sting.wav"
+    whoosh, impact, sting = (
+        sfx_dir / "whoosh.mp3",
+        sfx_dir / "impact.mp3",
+        sfx_dir / "sting.wav",
+    )
     use_sfx = not a.no_sfx and whoosh.exists() and impact.exists()
     if use_sfx:
         inputs += ["-i", str(whoosh), "-i", str(impact), "-i", str(sting)]
@@ -1353,11 +1756,13 @@ def cmd_edit(a) -> int:
     mix = []
     if music:
         # la musica SUBE a partir del payout: el oido lo lee como recompensa
-        fc += (f";[{mus_i}:a]aloop=loop=-1:size=2e9,"
-               f"volume='if(gte(t,{payout_at:.2f}),{a.music_vol * 2.3:.3f},{a.music_vol:.3f})'"
-               f":eval=frame[bg0];"
-               f"[1:a]asplit=2[vmix][vtrig];"
-               f"[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[bg]")
+        fc += (
+            f";[{mus_i}:a]aloop=loop=-1:size=2e9,"
+            f"volume='if(gte(t,{payout_at:.2f}),{a.music_vol * 2.3:.3f},{a.music_vol:.3f})'"
+            f":eval=frame[bg0];"
+            f"[1:a]asplit=2[vmix][vtrig];"
+            f"[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[bg]"
+        )
         mix += ["[vmix]", "[bg]"]
     else:
         fc += ";[1:a]anull[vmix]"
@@ -1368,7 +1773,9 @@ def cmd_edit(a) -> int:
         # payout + golpe justo encima: el "algo pasa cada 2s" que sostiene la
         # atencion en este formato
         cuts = [s[0] for s in segs[1:]]
-        fc += f";[{wh_i}:a]asplit={max(len(cuts), 1)}" + "".join(f"[w{k}]" for k in range(len(cuts)))
+        fc += f";[{wh_i}:a]asplit={max(len(cuts), 1)}" + "".join(
+            f"[w{k}]" for k in range(len(cuts))
+        )
         for k, t in enumerate(cuts):
             fc += f";[w{k}]adelay={int(t * 1000)}|{int(t * 1000)},volume=0.34[wd{k}]"
             mix.append(f"[wd{k}]")
@@ -1377,21 +1784,52 @@ def cmd_edit(a) -> int:
         fc += f";[{im_i}:a]adelay={int(payout_at * 1000)}|{int(payout_at * 1000)},volume=0.45[hit]"
         mix += ["[rise]", "[hit]"]
 
-    fc += (";" + "".join(mix) +
-           f"amix=inputs={len(mix)}:normalize=0:duration=first[aout]")
+    fc += (
+        ";" + "".join(mix) + f"amix=inputs={len(mix)}:normalize=0:duration=first[aout]"
+    )
 
     out = target / "short.mp4"
-    r = _run(["ffmpeg", "-y", "-v", "error", *inputs, "-filter_complex", fc,
-              "-map", "[vout]", "-map", "[aout]", "-t", f"{adur:.3f}",
-              "-r", "60", "-c:v", "libx264", "-preset", "slow", "-crf", "19",
-              "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", str(out)],
-             timeout=900)
+    r = _run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            *inputs,
+            "-filter_complex",
+            fc,
+            "-map",
+            "[vout]",
+            "-map",
+            "[aout]",
+            "-t",
+            f"{adur:.3f}",
+            "-r",
+            "60",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "slow",
+            "-crf",
+            "19",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(out),
+        ],
+        timeout=900,
+    )
     if r.returncode != 0:
         print(f"ERROR montaje: {r.stderr[-800:]}")
         return 2
     base.unlink(missing_ok=True)
     print(f"[edit] LISTO: {out} ({_duration(out):.1f}s)")
-    print(f"[edit] credito obligatorio en la descripcion: {sc.get('source_credit', '')}")
+    print(
+        f"[edit] credito obligatorio en la descripcion: {sc.get('source_credit', '')}"
+    )
     print(f"[edit] revisa antes de publicar: py viral_lab.py qa {out}")
     return 0
 
@@ -1428,6 +1866,7 @@ def _dhash(path: Path) -> int:
     """Hash perceptual 8x8 para detectar escenas repetidas (el error de 'repetir
     el mismo clip', que en nuestro motor aparece como el eco de apertura)."""
     from PIL import Image
+
     im = Image.open(path).convert("L").resize((9, 8), Image.LANCZOS)
     px = im.tobytes()
     bits = 0
@@ -1485,23 +1924,36 @@ def cmd_qa(a) -> int:
     content = []
     for t, f in frames:
         content.append({"type": "text", "text": f"--- t={t}s"})
-        content.append({"type": "image", "source": {
-            "type": "base64", "media_type": "image/jpeg",
-            "data": base64.b64encode(f.read_bytes()).decode()}})
-    content.append({"type": "text", "text": QA_PROMPT +
-                    (f"\n\nGUION NARRADO:\n{script}" if script else "")})
+        content.append(
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": base64.b64encode(f.read_bytes()).decode(),
+                },
+            }
+        )
+    content.append(
+        {
+            "type": "text",
+            "text": QA_PROMPT + (f"\n\nGUION NARRADO:\n{script}" if script else ""),
+        }
+    )
     print(f"[qa] revisando {len(frames)} escenas...")
     client = anthropic.Anthropic()
     resp = client.messages.create(
         model=os.environ.get("VIRAL_CLAUDE_MODEL", "claude-opus-4-8"),
-        max_tokens=4000, thinking={"type": "adaptive"},
-        messages=[{"role": "user", "content": content}])
+        max_tokens=4000,
+        thinking={"type": "adaptive"},
+        messages=[{"role": "user", "content": content}],
+    )
     txt = next((b.text for b in resp.content if b.type == "text"), "")
     _drop_frames(frames)
     if txt.strip().startswith("```"):
         txt = txt.split("```")[1].lstrip("json")
     try:
-        rep = json.loads(txt[txt.find("{"):txt.rfind("}") + 1])
+        rep = json.loads(txt[txt.find("{") : txt.rfind("}") + 1])
     except Exception as e:
         print(f"ERROR: no pude leer el informe ({e})")
         return 2
@@ -1511,20 +1963,32 @@ def cmd_qa(a) -> int:
     if dupes:
         lines.append("## Escenas repetidas")
         for t1, t2, d in dupes:
-            lines.append(f"- `{t1}s` y `{t2}s` son casi la misma imagen (distancia {d})")
+            lines.append(
+                f"- `{t1}s` y `{t2}s` son casi la misma imagen (distancia {d})"
+            )
         lines.append("")
-    lines.append("## Problemas de contenido" if bad else "## Sin problemas de contenido")
+    lines.append(
+        "## Problemas de contenido" if bad else "## Sin problemas de contenido"
+    )
     for f in bad:
-        lines.append(f"- `{f.get('t')}s` **{', '.join(f.get('problems', []))}** — "
-                     f"{f.get('detail', '')} (se ve: {f.get('sees', '')})")
+        lines.append(
+            f"- `{f.get('t')}s` **{', '.join(f.get('problems', []))}** — "
+            f"{f.get('detail', '')} (se ve: {f.get('sees', '')})"
+        )
     (video.parent / "qa.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    hard = [f for f in bad if "humanoid_animal" in f.get("problems", [])
-            or "mismatch" in f.get("problems", [])]
+    hard = [
+        f
+        for f in bad
+        if "humanoid_animal" in f.get("problems", [])
+        or "mismatch" in f.get("problems", [])
+    ]
     for t1, t2, d in dupes:
         print(f"[qa] REPETIDA: {t1}s ~ {t2}s")
     for f in bad:
-        print(f"[qa] {f.get('t')}s {','.join(f.get('problems', []))}: {f.get('detail', '')[:80]}")
+        print(
+            f"[qa] {f.get('t')}s {','.join(f.get('problems', []))}: {f.get('detail', '')[:80]}"
+        )
     print(f"[qa] veredicto: {rep.get('verdict')} — {video.parent / 'qa.md'}")
     return 1 if hard else 0  # codigo 1 = no publicar sin mirarlo
 
@@ -1550,9 +2014,12 @@ def main() -> int:
     r.add_argument("target", help="carpeta de viral/ o una url directa")
     r.add_argument("--dir", default=str(DEFAULT_DIR))
     r.add_argument("--model", default=VIDEO_MODEL)
-    r.add_argument("--engine", choices=["auto", "gemini", "claude"], default="auto",
-                    help="auto = Gemini (video real) y si no hay cuota cae a "
-                         "fotogramas + Claude")
+    r.add_argument(
+        "--engine",
+        choices=["auto", "gemini", "claude"],
+        default="auto",
+        help="auto = Gemini (video real) y si no hay cuota cae a fotogramas + Claude",
+    )
     r.add_argument("--whisper", default="base", help="tamano del modelo faster-whisper")
     r.add_argument("--force", action="store_true")
     r.set_defaults(func=cmd_read)
@@ -1560,9 +2027,13 @@ def main() -> int:
     s = sub.add_parser("script", help="guion de voz en off desde el analisis")
     s.add_argument("target", help="carpeta de viral/ ya analizada")
     s.add_argument("--seconds", type=int, default=0, help="duracion objetivo")
-    s.add_argument("--no-bait", dest="bait", action="store_false",
-                    help="quita el error factual deliberado (el metodo lo pone SIEMPRE: "
-                         "las correcciones en comentarios son retencion)")
+    s.add_argument(
+        "--no-bait",
+        dest="bait",
+        action="store_false",
+        help="quita el error factual deliberado (el metodo lo pone SIEMPRE: "
+        "las correcciones en comentarios son retencion)",
+    )
     s.set_defaults(bait=True)
     s.set_defaults(func=cmd_script)
 
@@ -1570,42 +2041,75 @@ def main() -> int:
     vv.add_argument("--out", default=str(ROOT / "assets" / "voice_tests"))
     vv.add_argument("--lang", default="en")
     vv.add_argument("--text", default="", help="frase de prueba propia")
-    vv.add_argument("--no-refs", action="store_true",
-                     help="solo la voz por defecto, sin generar referencias")
+    vv.add_argument(
+        "--no-refs",
+        action="store_true",
+        help="solo la voz por defecto, sin generar referencias",
+    )
     vv.set_defaults(func=cmd_voices)
 
     e = sub.add_parser("edit", help="monta el short final (voz + clip + subs + musica)")
     e.add_argument("target", help="carpeta de viral/ con script.json")
-    e.add_argument("--voice", default="chatterbox",
-                    help="'chatterbox' (mas real, local, MIT), una voz Kokoro "
-                         "(am_/af_/bm_/bf_) o una de edge-tts")
-    e.add_argument("--lang", default="en",
-                    help="idioma de Chatterbox: en, es, pt, fr... (25 idiomas)")
-    e.add_argument("--ref", default=str(VOICE_REF) if VOICE_REF.exists() else "",
-                    help="wav de referencia de timbre (por defecto la voz elegida "
-                         "del canal); pasa el tuyo para clonar tu voz")
-    e.add_argument("--subs-upper", action="store_true",
-                    help="subtitulos en mayusculas (por defecto minusculas)")
-    e.add_argument("--exaggeration", type=float, default=0.6,
-                    help="0.3 sobrio / 0.7+ enfatico (solo Chatterbox)")
+    e.add_argument(
+        "--voice",
+        default="chatterbox",
+        help="'chatterbox' (mas real, local, MIT), una voz Kokoro "
+        "(am_/af_/bm_/bf_) o una de edge-tts",
+    )
+    e.add_argument(
+        "--lang",
+        default="en",
+        help="idioma de Chatterbox: en, es, pt, fr... (25 idiomas)",
+    )
+    e.add_argument(
+        "--ref",
+        default=str(VOICE_REF) if VOICE_REF.exists() else "",
+        help="wav de referencia de timbre (por defecto la voz elegida "
+        "del canal); pasa el tuyo para clonar tu voz",
+    )
+    e.add_argument(
+        "--subs-upper",
+        action="store_true",
+        help="subtitulos en mayusculas (por defecto minusculas)",
+    )
+    e.add_argument(
+        "--exaggeration",
+        type=float,
+        default=0.6,
+        help="0.3 sobrio / 0.7+ enfatico (solo Chatterbox)",
+    )
     e.add_argument("--rate", default="+8%", help="solo edge-tts")
     e.add_argument("--speed", type=float, default=1.05, help="solo Kokoro")
     e.add_argument("--no-sfx", action="store_true")
     e.add_argument("--no-circle", action="store_true")
-    e.add_argument("--cut", type=float, default=1.9,
-                    help="segundos maximos por plano antes de forzar un cambio")
+    e.add_argument(
+        "--cut",
+        type=float,
+        default=1.9,
+        help="segundos maximos por plano antes de forzar un cambio",
+    )
     e.add_argument("--music-vol", type=float, default=0.07)
     e.add_argument("--no-music", action="store_true")
-    e.add_argument("--smooth", action="store_true",
-                    help="interpola fotogramas al ralentizar (mas fluido, lento)")
-    e.add_argument("--no-crop", action="store_true",
-                    help="no recortar las franjas negras del clip original")
+    e.add_argument(
+        "--smooth",
+        action="store_true",
+        help="interpola fotogramas al ralentizar (mas fluido, lento)",
+    )
+    e.add_argument(
+        "--no-crop",
+        action="store_true",
+        help="no recortar las franjas negras del clip original",
+    )
     e.set_defaults(func=cmd_edit)
 
     q = sub.add_parser("qa", help="revision automatica de un video antes de publicar")
     q.add_argument("target", help="carpeta output/<video> o un .mp4")
-    q.add_argument("--frames", type=int, default=0,
-                    help="fotogramas si no hay manifest (por defecto 12)")
+    q.add_argument(
+        "--frames",
+        type=int,
+        default=0,
+        help="fotogramas si no hay manifest (por defecto 12)",
+    )
     q.set_defaults(func=cmd_qa)
 
     a = ap.parse_args()

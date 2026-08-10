@@ -14,6 +14,7 @@ Los stickers ya tienen su propio cache (assets/stickers/, 112 generados) y las
 hojas de personaje tambien (ver _get_character_sheet en pipeline.py). Este
 modulo completa el resto.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -51,6 +52,7 @@ def _session(model: str):
     """Sesion rembg reusada (crearla es caro; una por modelo por proceso)."""
     if model not in _SESSIONS:
         from rembg import new_session
+
         _SESSIONS[model] = new_session(model)
     return _SESSIONS[model]
 
@@ -61,9 +63,10 @@ def _clean_alpha(png_bytes: bytes) -> bytes:
     Es lo que hace que el troquelado blanco del motor se asiente limpio."""
     import io
     from PIL import Image, ImageFilter
+
     im = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
     a = im.getchannel("A")
-    a = a.filter(ImageFilter.MinFilter(3))       # erosion 1px: quita la franja fantasma
+    a = a.filter(ImageFilter.MinFilter(3))  # erosion 1px: quita la franja fantasma
     a = a.filter(ImageFilter.GaussianBlur(0.6))  # anti-alias suave del nuevo borde
     im.putalpha(a)
     buf = io.BytesIO()
@@ -82,6 +85,7 @@ def cached_cutout(src: Path, model: str | None = None) -> Path:
     if out.exists():
         return out
     from rembg import remove  # import perezoso: solo paga el arranque si hace falta
+
     raw = remove(src.read_bytes(), session=_session(model))
     try:
         raw = _clean_alpha(raw)
@@ -113,9 +117,9 @@ def cached_cutout(src: Path, model: str | None = None) -> Path:
 # interior del color de fondo NO es una alternativa: el pelo cano y los ojos
 # son blancos y saldrian agujereados.
 # ============================================================================
-PLATE_TOL = 34          # distancia al color de fondo que sigue contando como fondo
-PLATE_MIN_BG = 0.20     # menos fondo que esto = la imagen no es una placa
-PLATE_MAX_BG = 0.96     # mas que esto = se comio al personaje
+PLATE_TOL = 34  # distancia al color de fondo que sigue contando como fondo
+PLATE_MIN_BG = 0.20  # menos fondo que esto = la imagen no es una placa
+PLATE_MAX_BG = 0.96  # mas que esto = se comio al personaje
 
 
 def plate_cutout(src: Path, tol: int = PLATE_TOL) -> Path | None:
@@ -137,7 +141,7 @@ def plate_cutout(src: Path, tol: int = PLATE_TOL) -> Path | None:
     # color de fondo = mediana de las cuatro esquinas (robusto a una esquina sucia)
     corners = np.array([a[0, 0], a[0, -1], a[-1, 0], a[-1, -1]], dtype=np.int16)
     bg = np.median(corners, axis=0)
-    near = (np.abs(a - bg).max(axis=2) <= tol)
+    near = np.abs(a - bg).max(axis=2) <= tol
 
     lab, n = ndimage.label(near)
     if n == 0:
@@ -175,6 +179,7 @@ def cutout_coverage(cutout_path: Path) -> float:
     ancho/grupo) -> la escena entra como foto de archivo clavada. Umbral
     calibrado con datos reales del proof (23 jul 2026)."""
     from PIL import Image
+
     im = Image.open(cutout_path).convert("RGBA")
     alpha = im.getchannel("A").tobytes()
     # muestreo cada 4 bytes: suficiente para la decision, 4x mas rapido
@@ -192,10 +197,10 @@ def cutout_coverage(cutout_path: Path) -> float:
 # Coste extra: ~0 (opera sobre el recorte ya cacheado) y el resultado se cachea.
 # ============================================================================
 
-PART_WORK = 220        # resolucion de trabajo del etiquetado (rapido y estable)
+PART_WORK = 220  # resolucion de trabajo del etiquetado (rapido y estable)
 PART_MIN_AREA = 0.010  # <1% del lienzo = mota/ruido, no un sujeto
-PART_MAX = 5           # tope pedido por el usuario (2..5 stickers por escena)
-PART_DOMINANT = 0.88   # si una pieza se lleva casi todo, no hay nada que separar
+PART_MAX = 5  # tope pedido por el usuario (2..5 stickers por escena)
+PART_DOMINANT = 0.88  # si una pieza se lleva casi todo, no hay nada que separar
 
 
 def _components(mask: list[bool], w: int, h: int) -> list[int]:
@@ -248,6 +253,7 @@ def _seeds_by_erosion(base, w: int, h: int) -> list[int] | None:
     3 marineros = 1 componente cruda, 3 componentes al erosionar 2 pasos).
     Devuelve la etiqueta por pixel de las semillas, o None si no hay division."""
     from PIL import ImageFilter
+
     m = base
     for r in range(1, 7):
         m = m.filter(ImageFilter.MinFilter(3))
@@ -272,6 +278,7 @@ def _watershed(seeds: list[int], mask: list[bool], w: int, h: int) -> list[int]:
     """Devuelve cada pixel de la mascara a su semilla mas cercana (BFS multi-
     fuente): recupera la figura COMPLETA que la erosion habia adelgazado."""
     from collections import deque
+
     lab = list(seeds)
     q = deque(i for i, v in enumerate(lab) if v)
     while q:
@@ -343,10 +350,14 @@ def cutout_parts(cutout_path: Path, max_parts: int = PART_MAX) -> list[dict]:
             stats[r] = [1, x, y, x, y]  # area, x0, y0, x1, y1
         else:
             s[0] += 1
-            if x < s[1]: s[1] = x
-            if y < s[2]: s[2] = y
-            if x > s[3]: s[3] = x
-            if y > s[4]: s[4] = y
+            if x < s[1]:
+                s[1] = x
+            if y < s[2]:
+                s[2] = y
+            if x > s[3]:
+                s[3] = x
+            if y > s[4]:
+                s[4] = y
 
     canvas = PART_WORK * PART_WORK
     keep = [(r, s) for r, s in stats.items() if s[0] / canvas >= PART_MIN_AREA]
@@ -365,8 +376,13 @@ def cutout_parts(cutout_path: Path, max_parts: int = PART_MAX) -> list[dict]:
         m = m.filter(ImageFilter.MaxFilter(3)).resize((W, H), Image.BILINEAR)
         piece = im.copy()
         a = piece.getchannel("A")
-        piece.putalpha(Image.frombytes("L", (W, H), bytes(
-            (av * mv) // 255 for av, mv in zip(a.tobytes(), m.tobytes()))))
+        piece.putalpha(
+            Image.frombytes(
+                "L",
+                (W, H),
+                bytes((av * mv) // 255 for av, mv in zip(a.tobytes(), m.tobytes())),
+            )
+        )
         box = piece.getchannel("A").getbbox()
         if not box:
             continue
@@ -374,12 +390,16 @@ def cutout_parts(cutout_path: Path, max_parts: int = PART_MAX) -> list[dict]:
         pf = CUTOUTS_DIR / f"{side[:-4]}.p{k}.png"
         piece.save(pf)
         x0, y0, x1, y1 = box
-        out.append({
-            "path": str(pf),
-            "nx": ((x0 + x1) / 2) / W, "ny": ((y0 + y1) / 2) / H,
-            "nw": (x1 - x0) / W, "nh": (y1 - y0) / H,
-            "area": s[0] / canvas,
-        })
+        out.append(
+            {
+                "path": str(pf),
+                "nx": ((x0 + x1) / 2) / W,
+                "ny": ((y0 + y1) / 2) / H,
+                "nw": (x1 - x0) / W,
+                "nh": (y1 - y0) / H,
+                "area": s[0] / canvas,
+            }
+        )
     if len(out) < 2:
         out = []
     meta_f.write_text(json.dumps(out), encoding="utf-8")
@@ -460,6 +480,7 @@ def scene_cache_store(term: str, style: str, img: Path) -> None:
         if f.exists():
             return
         import shutil as _sh
+
         _sh.copyfile(img, f)
         idx = _scene_index()
         idx[key] = {"term": term[:200], "file": f.name, "uses": 0}

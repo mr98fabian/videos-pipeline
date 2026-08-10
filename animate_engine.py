@@ -16,6 +16,7 @@ Construirlo desde cero:  ver tools/animated_drawings/repo/torchserve/ y el
                          es obligatorio: por defecto levanta un worker por
                          nucleo y muere de OOM sin dejar excepcion).
 """
+
 from __future__ import annotations
 
 import json
@@ -38,7 +39,7 @@ TORCHSERVE = "http://localhost:8080"
 # biblioteca CMU (libre, miles de BVH) es la via para ampliar esto con andares,
 # gestos de senalar y caidas.
 MOTIONS = {
-    "wave":   "examples/config/motion/wave_hello.yaml",
+    "wave": "examples/config/motion/wave_hello.yaml",
     "shamble": "examples/config/motion/zombie.yaml",
 }
 DEFAULT_MOTION = "wave"
@@ -47,7 +48,7 @@ DEFAULT_MOTION = "wave"
 # en archivo_engine.py, para que un 'shot' no dispare por 'shoulder'.
 _MOTION_KW = [
     ("shamble", r"march|walk|advance|retreat|flee|escape|drag|stagger|collaps"),
-    ("wave",    r"\btold\b|\bsaid\b|announc|declar|order|blame|accus|point|claim|insist"),
+    ("wave", r"\btold\b|\bsaid\b|announc|declar|order|blame|accus|point|claim|insist"),
 ]
 
 
@@ -61,6 +62,7 @@ def motion_for(narration: str) -> str:
 
 def _sha1(path: Path) -> str:
     import hashlib
+
     h = hashlib.sha1()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
@@ -71,6 +73,7 @@ def _sha1(path: Path) -> str:
 def torchserve_up() -> bool:
     try:
         import urllib.request
+
         with urllib.request.urlopen(f"{TORCHSERVE}/ping", timeout=5) as r:
             return json.loads(r.read()).get("status") == "Healthy"
     except Exception:
@@ -80,18 +83,40 @@ def torchserve_up() -> bool:
 # proporciones de una figura de pie recortada a su caja; solo son fiables
 # porque la placa impone la pose (ver CHARACTER_PLATE en pipeline.py)
 _PROPORTIONS = {
-    "root": (0.50, 0.56), "hip": (0.50, 0.56), "torso": (0.50, 0.37), "neck": (0.50, 0.21),
-    "right_shoulder": (0.35, 0.25), "right_elbow": (0.27, 0.40), "right_hand": (0.24, 0.55),
-    "left_shoulder": (0.65, 0.25), "left_elbow": (0.73, 0.40), "left_hand": (0.77, 0.54),
-    "right_hip": (0.43, 0.57), "right_knee": (0.42, 0.78), "right_foot": (0.40, 0.97),
-    "left_hip": (0.57, 0.57), "left_knee": (0.58, 0.76), "left_foot": (0.60, 0.95),
+    "root": (0.50, 0.56),
+    "hip": (0.50, 0.56),
+    "torso": (0.50, 0.37),
+    "neck": (0.50, 0.21),
+    "right_shoulder": (0.35, 0.25),
+    "right_elbow": (0.27, 0.40),
+    "right_hand": (0.24, 0.55),
+    "left_shoulder": (0.65, 0.25),
+    "left_elbow": (0.73, 0.40),
+    "left_hand": (0.77, 0.54),
+    "right_hip": (0.43, 0.57),
+    "right_knee": (0.42, 0.78),
+    "right_foot": (0.40, 0.97),
+    "left_hip": (0.57, 0.57),
+    "left_knee": (0.58, 0.76),
+    "left_foot": (0.60, 0.95),
 }
 _PARENTS = {
-    "root": None, "hip": "root", "torso": "hip", "neck": "torso",
-    "right_shoulder": "torso", "right_elbow": "right_shoulder", "right_hand": "right_elbow",
-    "left_shoulder": "torso", "left_elbow": "left_shoulder", "left_hand": "left_elbow",
-    "right_hip": "root", "right_knee": "right_hip", "right_foot": "right_knee",
-    "left_hip": "root", "left_knee": "left_hip", "left_foot": "left_knee",
+    "root": None,
+    "hip": "root",
+    "torso": "hip",
+    "neck": "torso",
+    "right_shoulder": "torso",
+    "right_elbow": "right_shoulder",
+    "right_hand": "right_elbow",
+    "left_shoulder": "torso",
+    "left_elbow": "left_shoulder",
+    "left_hand": "left_elbow",
+    "right_hip": "root",
+    "right_knee": "right_hip",
+    "right_foot": "right_knee",
+    "left_hip": "root",
+    "left_knee": "left_hip",
+    "left_foot": "left_knee",
 }
 
 
@@ -99,6 +124,7 @@ def _annotate_fallback(plate: Path, out_dir: Path) -> None:
     """char_cfg + texture + mask por proporciones, sin red."""
     import yaml
     from PIL import Image
+
     im = Image.open(plate).convert("RGBA")
     box = im.split()[3].getbbox() or (0, 0, *im.size)
     c = im.crop(box)
@@ -107,11 +133,22 @@ def _annotate_fallback(plate: Path, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     flat = Image.alpha_composite(Image.new("RGBA", c.size, (255, 255, 255, 255)), c)
     flat.convert("RGB").save(out_dir / "texture.png")
-    c.split()[3].point(lambda a: 255 if a > 40 else 0).convert("L").save(out_dir / "mask.png")
-    sk = [{"loc": [int(_PROPORTIONS[n][0] * w), int(_PROPORTIONS[n][1] * h)],
-           "name": n, "parent": _PARENTS[n]} for n in _PARENTS]
-    yaml.safe_dump({"width": w, "height": h, "skeleton": sk},
-                   open(out_dir / "char_cfg.yaml", "w"), sort_keys=False)
+    c.split()[3].point(lambda a: 255 if a > 40 else 0).convert("L").save(
+        out_dir / "mask.png"
+    )
+    sk = [
+        {
+            "loc": [int(_PROPORTIONS[n][0] * w), int(_PROPORTIONS[n][1] * h)],
+            "name": n,
+            "parent": _PARENTS[n],
+        }
+        for n in _PARENTS
+    ]
+    yaml.safe_dump(
+        {"width": w, "height": h, "skeleton": sk},
+        open(out_dir / "char_cfg.yaml", "w"),
+        sort_keys=False,
+    )
 
 
 def _clean_frames(gif: Path, out_dir: Path, tol: int = 40) -> int:
@@ -162,12 +199,23 @@ def annotate(plate: Path, out_dir: Path) -> str:
             src = work / f"{out_dir.name}.png"
             # la placa lleva alfa; el detector espera una imagen plana
             from PIL import Image
+
             im = Image.open(plate).convert("RGBA")
-            Image.alpha_composite(Image.new("RGBA", im.size, (255, 255, 255, 255)), im) \
-                 .convert("RGB").save(src)
+            Image.alpha_composite(
+                Image.new("RGBA", im.size, (255, 255, 255, 255)), im
+            ).convert("RGB").save(src)
             r = subprocess.run(
-                [str(AD_PY), "examples/image_to_annotations.py", str(src), str(out_dir)],
-                cwd=AD_ROOT, capture_output=True, text=True, timeout=600)
+                [
+                    str(AD_PY),
+                    "examples/image_to_annotations.py",
+                    str(src),
+                    str(out_dir),
+                ],
+                cwd=AD_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
             if (out_dir / "char_cfg.yaml").exists():
                 return "torchserve"
             print(f"[animate] anotacion fallo, van proporciones: {r.stderr[-200:]}")
@@ -208,11 +256,21 @@ def animate(plate: Path, motion: str = DEFAULT_MOTION, fps: int = 30) -> Path | 
             "controller:\n"
             "  MODE: video_render\n"
             f"  OUTPUT_VIDEO_PATH: work/{name}.gif\n"
-            "  OUTPUT_VIDEO_CODEC: png\n", encoding="utf-8")
+            "  OUTPUT_VIDEO_CODEC: png\n",
+            encoding="utf-8",
+        )
         r = subprocess.run(
-            [str(AD_PY), "-c",
-             "from animated_drawings import render; render.start(r'work/%s.yaml')" % name],
-            cwd=AD_ROOT, capture_output=True, text=True, timeout=1800)
+            [
+                str(AD_PY),
+                "-c",
+                "from animated_drawings import render; render.start(r'work/%s.yaml')"
+                % name,
+            ],
+            cwd=AD_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=1800,
+        )
         if not gif.exists():
             print(f"[animate] render fallo: {r.stderr[-300:]}")
             return None
@@ -224,11 +282,28 @@ def animate(plate: Path, motion: str = DEFAULT_MOTION, fps: int = 30) -> Path | 
         if not nf:
             print("[animate] no se pudieron limpiar los fotogramas")
             return None
-        cmd = ["ffmpeg", "-y", "-v", "error", "-framerate", str(fps),
-               "-i", str(frames / "f%05d.png"),
-               "-vf", "scale=720:-2,format=yuva444p10le",
-               "-c:v", "prores_ks", "-profile:v", "4444", "-qscale:v", "18",
-               "-pix_fmt", "yuva444p10le", "-an", str(out)]
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-framerate",
+            str(fps),
+            "-i",
+            str(frames / "f%05d.png"),
+            "-vf",
+            "scale=720:-2,format=yuva444p10le",
+            "-c:v",
+            "prores_ks",
+            "-profile:v",
+            "4444",
+            "-qscale:v",
+            "18",
+            "-pix_fmt",
+            "yuva444p10le",
+            "-an",
+            str(out),
+        ]
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         if p.returncode != 0 or not out.exists():
             print(f"[animate] conversion a alfa fallo: {p.stderr[-300:]}")
@@ -246,6 +321,7 @@ def animate(plate: Path, motion: str = DEFAULT_MOTION, fps: int = 30) -> Path | 
 
 if __name__ == "__main__":
     import argparse
+
     ap = argparse.ArgumentParser(description="Anima una placa de personaje")
     ap.add_argument("plate")
     ap.add_argument("--motion", default=DEFAULT_MOTION, choices=list(MOTIONS))

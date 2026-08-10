@@ -11,6 +11,7 @@ Imprime al final los segundos exactos de cada pausa, que son los que hay que
 meter en el `enable=` de la desaturacion y en los `adelay` de los golpes graves
 del comando de composicion (ver ESTADO_SESION.md).
 """
+
 import argparse
 import json
 import re
@@ -32,7 +33,7 @@ def find_word_start(words, frase: str) -> float | None:
     objetivo = [limpiar(w) for w in frase.split()]
     limpio = [(s, limpiar(w)) for s, _e, w in words]
     for i in range(len(limpio) - len(objetivo) + 1):
-        if [w for _s, w in limpio[i:i + len(objetivo)]] == objetivo:
+        if [w for _s, w in limpio[i : i + len(objetivo)]] == objetivo:
             return limpio[i][0]
     return None
 
@@ -56,9 +57,25 @@ def insertar_pausas(voice_path: Path, words, cortes):
     filtros.append("".join(partes) + f"concat=n={len(partes)}:v=0:a=1[out]")
 
     tmp = voice_path.with_name("voice_paused.mp3")
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(voice_path),
-                    "-filter_complex", ";".join(filtros), "-map", "[out]",
-                    "-ar", "24000", str(tmp)], check=True, timeout=300)
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-i",
+            str(voice_path),
+            "-filter_complex",
+            ";".join(filtros),
+            "-map",
+            "[out]",
+            "-ar",
+            "24000",
+            str(tmp),
+        ],
+        check=True,
+        timeout=300,
+    )
     tmp.replace(voice_path)
 
     def shift(t: float) -> float:
@@ -67,9 +84,14 @@ def insertar_pausas(voice_path: Path, words, cortes):
     return [(shift(s), shift(e), w) for s, e, w in words]
 
 
-
-def voz_chatterbox(script: str, out: Path, exaggeration: float, ref: str = "",
-                   cfg: float = 0.5, cadena: str = ""):
+def voz_chatterbox(
+    script: str,
+    out: Path,
+    exaggeration: float,
+    ref: str = "",
+    cfg: float = 0.5,
+    cadena: str = "",
+):
     """Voz con Chatterbox + timestamps REALES por alineacion con Whisper.
 
     Chatterbox suena mucho mas humano que edge-tts y admite control de
@@ -83,22 +105,40 @@ def voz_chatterbox(script: str, out: Path, exaggeration: float, ref: str = "",
     mal en pantalla. Por eso se compara contra el guion y se avisa.
     """
     import sys as _sys
+
     _sys.path.insert(0, str(ROOT))
     import viral_lab as V
 
     import hashlib
-    key = hashlib.sha1(f"{script}|{ref}|{exaggeration}|{cfg}|en".encode()).hexdigest()[:16]
+
+    key = hashlib.sha1(f"{script}|{ref}|{exaggeration}|{cfg}|en".encode()).hexdigest()[
+        :16
+    ]
     cache = ROOT / "assets" / "cache" / "voices" / f"{key}.wav"
     wav = out / "voice_chatterbox.wav"
     if cache.exists():
         shutil.copyfile(cache, wav)
         print("  voz Chatterbox desde cache")
     else:
-        txt = out / "_t.txt"; txt.write_text(script, encoding="utf-8")
-        cmd = ["uv", "run", "--directory", str(ROOT / "tools" / "chatterbox_tts"),
-               "synth.py", "--text-file", str(txt.resolve()),
-               "--out", str(wav.resolve()), "--exaggeration", str(exaggeration),
-               "--cfg", str(cfg), "--lang", "en"]
+        txt = out / "_t.txt"
+        txt.write_text(script, encoding="utf-8")
+        cmd = [
+            "uv",
+            "run",
+            "--directory",
+            str(ROOT / "tools" / "chatterbox_tts"),
+            "synth.py",
+            "--text-file",
+            str(txt.resolve()),
+            "--out",
+            str(wav.resolve()),
+            "--exaggeration",
+            str(exaggeration),
+            "--cfg",
+            str(cfg),
+            "--lang",
+            "en",
+        ]
         if ref:
             cmd += ["--ref", str((ROOT / ref).resolve())]
         subprocess.run(cmd, check=True, timeout=3600)
@@ -106,8 +146,11 @@ def voz_chatterbox(script: str, out: Path, exaggeration: float, ref: str = "",
         cache.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(wav, cache)
     mp3 = out / "voice.mp3"
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(wav),
-                    "-ar", "44100", str(mp3)], check=True, timeout=600)
+    subprocess.run(
+        ["ffmpeg", "-y", "-v", "error", "-i", str(wav), "-ar", "44100", str(mp3)],
+        check=True,
+        timeout=600,
+    )
     words = V._align_words(mp3)
     if not words:
         raise RuntimeError("Whisper no devolvio ninguna palabra alineada")
@@ -116,9 +159,11 @@ def voz_chatterbox(script: str, out: Path, exaggeration: float, ref: str = "",
     esperadas, oidas = limpiar(script), limpiar(" ".join(w for _s, _e, w in words))
     faltan = len(esperadas) - len(oidas)
     if abs(faltan) > max(3, len(esperadas) * 0.03):
-        print(f"  AVISO: el guion tiene {len(esperadas)} palabras y Whisper oyo "
-              f"{len(oidas)}. Los subtitulos muestran lo OIDO, asi que revisa el "
-              f".ass antes de renderizar.")
+        print(
+            f"  AVISO: el guion tiene {len(esperadas)} palabras y Whisper oyo "
+            f"{len(oidas)}. Los subtitulos muestran lo OIDO, asi que revisa el "
+            f".ass antes de renderizar."
+        )
     return mp3, words
 
 
@@ -126,11 +171,19 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("script_json")
     ap.add_argument("out_dir")
-    ap.add_argument("--pausa", action="append", default=[],
-                    help='"frase literal del guion=segundos", repetible')
+    ap.add_argument(
+        "--pausa",
+        action="append",
+        default=[],
+        help='"frase literal del guion=segundos", repetible',
+    )
     ap.add_argument("--tts", choices=["edge", "chatterbox"], default="edge")
-    ap.add_argument("--exaggeration", type=float, default=0.62,
-                    help="solo con --tts chatterbox; <0.5 lee plano, >0.7 sobreactua")
+    ap.add_argument(
+        "--exaggeration",
+        type=float,
+        default=0.62,
+        help="solo con --tts chatterbox; <0.5 lee plano, >0.7 sobreactua",
+    )
     ap.add_argument("--ref", default="", help="wav de referencia para clonar voz")
     ap.add_argument("--voice", default=P.DEFAULT_VOICE)
     ap.add_argument("--rate", default="+8%")
@@ -140,8 +193,12 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     data = json.loads(Path(args.script_json).read_text(encoding="utf-8"))
 
-    P._check_open_hook(data["script"], data.get("title", ""),
-                      data.get("hook_card", ""), data.get("formato", ""))
+    P._check_open_hook(
+        data["script"],
+        data.get("title", ""),
+        data.get("hook_card", ""),
+        data.get("formato", ""),
+    )
     P._check_payoff_spacing(data["script"], data.get("payoffs"))
     P._check_relleno_inicial(data["script"])
     P._check_ventana_critica(data["script"], data.get("payoffs"))
@@ -151,8 +208,13 @@ def main() -> None:
         ex = (data.get("voz") or {}).get("exaggeration", args.exaggeration)
         v = data.get("voz") or {}
         voice, words = voz_chatterbox(
-            data["script"], out, ex, args.ref or v.get("ref", ""),
-            v.get("cfg", 0.5), v.get("cadena", ""))
+            data["script"],
+            out,
+            ex,
+            args.ref or v.get("ref", ""),
+            v.get("cfg", 0.5),
+            v.get("cadena", ""),
+        )
     else:
         voice, words = P.generate_audio(data["script"], args.voice, args.rate, out)
     voice, words = P.trim_silence_inplace(voice, words)
@@ -173,12 +235,15 @@ def main() -> None:
     ass = P.generate_subtitles(words, out, keywords=data.get("caption_keywords"))
     rojas = len(re.findall(re.escape(P._CAP_RED), ass.read_text(encoding="utf-8")))
 
-    (out / "script.json").write_text(json.dumps(data, ensure_ascii=False, indent=2),
-                                     encoding="utf-8")
+    (out / "script.json").write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     (out / "title.txt").write_text(data["title"], encoding="utf-8")
 
-    print(f"\nvoz {total:.2f}s | {rojas}/{len(words)} palabras en rojo "
-          f"({rojas / len(words) * 100:.1f}%, objetivo ~5%)")
+    print(
+        f"\nvoz {total:.2f}s | {rojas}/{len(words)} palabras en rojo "
+        f"({rojas / len(words) * 100:.1f}%, objetivo ~5%)"
+    )
     desp = 0.0
     print("silencios ya desplazados (para el enable= y los adelay=):")
     for t, dur in cortes:

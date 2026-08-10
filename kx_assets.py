@@ -20,6 +20,7 @@ placa troquelada (ch_*.png), separado, tal cual se pidio.
 Uso desde un guion: cada escena declara una clave en "set_terms". Las claves
 libres se generan la primera vez y quedan en assets/kx_sets/.
 """
+
 from __future__ import annotations
 
 import json
@@ -34,10 +35,17 @@ MANIFEST = SETS_DIR / "sets.json"
 # Estilo del escenario. Se fija aca y no en el guion por la misma razon que
 # HIDDENFACTS_STYLE vive en pipeline.py: si el estilo lo decide el guion, deriva
 # entre videos y el mundo deja de ser el mismo.
+# MISMA CADENA DE ESTILO QUE EL REPARTO (3 ago 2026). Empezaba con "Flat vector"
+# igual que CAST_STYLE, y era el mismo fallo: fondos de ilustracion vectorial
+# moderna bajo un personaje entintado a mano. El estilo aprobado del canal es el
+# dibujo ENTINTADO con sombreado de lapiz y papel viejo -- ver BRANDING_KOREX.md.
 SET_STYLE = (
-    "Flat vector 1930s rubber-hose cartoon background art (early Disney/Fleischer "
-    "style), black and white with soft grey wash and vintage film grain, thick "
-    "confident ink outlines, simple geometric shapes, gentle vignette"
+    "1930s rubber-hose cartoon background art in the style of early "
+    "Disney/Fleischer animation, black and white. HAND-INKED look: thick "
+    "confident brush outlines with varying line weight, soft pencil-like grey "
+    "shading and light cross-hatching, subtle aged paper texture and faint film "
+    "grain, gentle vignette. NOT flat vector art, NOT clean digital "
+    "illustration, NOT modern cartoon style"
 )
 _SET_RULES = (
     "EMPTY STAGE: absolutely no characters, no people, no animals, no text, no "
@@ -104,10 +112,15 @@ def get_set(key: str, description: str = "") -> Path | None:
     # asi que no sufren la falta de consistencia de FLUX schnell (ver comfy_client).
     api_key = pl.os.environ.get("PIAPI_API_KEY", "")
     if api_key:
-        gen = lambda pr, ds: pl._seedream_generate_image(pr, ds, api_key, style_directive=SET_STYLE)
+        gen = lambda pr, ds: pl._seedream_generate_image(
+            pr, ds, api_key, style_directive=SET_STYLE
+        )
     else:
         import comfy_client
-        gen = lambda pr, ds: comfy_client.generate_image(pr, ds, style_directive=SET_STYLE)
+
+        gen = lambda pr, ds: comfy_client.generate_image(
+            pr, ds, style_directive=SET_STYLE
+        )
 
     SETS_DIR.mkdir(parents=True, exist_ok=True)
     prompt = f"{desc}. {_SET_RULES}"

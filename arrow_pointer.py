@@ -41,7 +41,7 @@ SS = 4  # supersampling: se dibuja a 4x y se reduce, si no los bordes salen dent
 
 # de donde VIENE la flecha, en grados (0 = apunta a la derecha)
 DIRS = {
-    "bottom-left": 45,     # la del video de referencia: sube hacia la derecha
+    "bottom-left": 45,  # la del video de referencia: sube hacia la derecha
     "bottom-right": 135,
     "top-left": -45,
     "top-right": -135,
@@ -54,7 +54,7 @@ DIRS = {
 
 def _hex(c: str) -> tuple[int, int, int]:
     c = c.lstrip("#")
-    return tuple(int(c[i:i + 2], 16) for i in (0, 2, 4))
+    return tuple(int(c[i : i + 2], 16) for i in (0, 2, 4))
 
 
 def make_arrow(length: int, angle_deg: float, color: str, width: int) -> Image.Image:
@@ -69,7 +69,7 @@ def make_arrow(length: int, angle_deg: float, color: str, width: int) -> Image.I
     d = ImageDraw.Draw(img)
     rgb = _hex(color)
 
-    cx = cy = size * SS // 2                      # punta = centro
+    cx = cy = size * SS // 2  # punta = centro
     a = math.radians(angle_deg)
     tail_x = cx + int(math.cos(a) * length * SS)
     tail_y = cy + int(math.sin(a) * length * SS)
@@ -89,30 +89,61 @@ def make_arrow(length: int, angle_deg: float, color: str, width: int) -> Image.I
 
 def ffprobe_size(path: Path) -> tuple[int, int]:
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-select_streams", "v:0",
-         "-show_entries", "stream=width,height", "-of", "csv=p=0", str(path)],
-        capture_output=True, text=True, check=True, timeout=60).stdout.strip()
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "csv=p=0",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60,
+    ).stdout.strip()
     w, h = out.split(",")[:2]
     return int(w), int(h)
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("video")
-    ap.add_argument("--at", type=float, required=True,
-                    help="segundo en que aparece (el del video de referencia: 1.5)")
+    ap.add_argument(
+        "--at",
+        type=float,
+        required=True,
+        help="segundo en que aparece (el del video de referencia: 1.5)",
+    )
     ap.add_argument("--dur", type=float, default=1.2, help="cuanto dura en pantalla")
-    ap.add_argument("--to", required=True,
-                    help="a que punto apunta, en pixeles del video: 'x,y'")
-    ap.add_argument("--from-dir", default="bottom-left", choices=sorted(DIRS),
-                    help="desde donde entra la flecha (default bottom-left, como la de referencia)")
+    ap.add_argument(
+        "--to", required=True, help="a que punto apunta, en pixeles del video: 'x,y'"
+    )
+    ap.add_argument(
+        "--from-dir",
+        default="bottom-left",
+        choices=sorted(DIRS),
+        help="desde donde entra la flecha (default bottom-left, como la de referencia)",
+    )
     ap.add_argument("--length", type=int, default=170, help="largo en px")
     ap.add_argument("--width", type=int, default=13, help="grosor del cuerpo en px")
-    ap.add_argument("--color", default="#E8352B",
-                    help="color; rojo por defecto porque debe ser el unico saturado del cuadro")
-    ap.add_argument("--fade", type=float, default=0.15, help="fundido de entrada/salida")
-    ap.add_argument("--out", default=None, help="nombre de salida (default <video>_flecha.mp4)")
+    ap.add_argument(
+        "--color",
+        default="#E8352B",
+        help="color; rojo por defecto porque debe ser el unico saturado del cuadro",
+    )
+    ap.add_argument(
+        "--fade", type=float, default=0.15, help="fundido de entrada/salida"
+    )
+    ap.add_argument(
+        "--out", default=None, help="nombre de salida (default <video>_flecha.mp4)"
+    )
     args = ap.parse_args()
 
     src = Path(args.video)
@@ -144,16 +175,46 @@ def main() -> None:
     if not dst.is_absolute():
         dst = ROOT / dst
 
-    fc = (f"[1:v]format=rgba,fade=t=in:st={args.at}:d={args.fade}:alpha=1,"
-          f"fade=t=out:st={fo}:d={args.fade}:alpha=1[a];"
-          f"[0:v][a]overlay={ox}:{oy}:enable='between(t,{args.at},{end})',setsar=1[v]")
+    fc = (
+        f"[1:v]format=rgba,fade=t=in:st={args.at}:d={args.fade}:alpha=1,"
+        f"fade=t=out:st={fo}:d={args.fade}:alpha=1[a];"
+        f"[0:v][a]overlay={ox}:{oy}:enable='between(t,{args.at},{end})',setsar=1[v]"
+    )
 
-    subprocess.run([
-        "ffmpeg", "-y", "-v", "error", "-i", str(src), "-loop", "1", "-i", str(png),
-        "-filter_complex", fc, "-map", "[v]", "-map", "0:a?",
-        "-c:v", "libx264", "-crf", "21", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-        "-c:a", "copy", "-shortest", str(dst),
-    ], check=True, timeout=900)
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-i",
+            str(src),
+            "-loop",
+            "1",
+            "-i",
+            str(png),
+            "-filter_complex",
+            fc,
+            "-map",
+            "[v]",
+            "-map",
+            "0:a?",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "21",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "copy",
+            "-shortest",
+            str(dst),
+        ],
+        check=True,
+        timeout=900,
+    )
 
     print(f"flecha {args.color} desde {args.from_dir} -> ({tx},{ty})")
     print(f"visible {args.at:.2f}s - {end:.2f}s")

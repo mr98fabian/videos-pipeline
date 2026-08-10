@@ -18,6 +18,7 @@ Uso:
   py topic_radar.py --outliers vidiq.txt # sube el score de temas que matcheen
                                           # un outlier real (una linea por titulo)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,33 +39,142 @@ CUR_YEAR = 2026  # se ajusta abajo con la fecha real si esta disponible
 # Temas del nicho -> keywords que los delatan en el texto del evento. Un evento
 # que no matchea NINGUN tema se descarta (no es del canal).
 NICHE_THEMES: dict[str, tuple[str, ...]] = {
-    "espionaje": ("spy", "espionage", "intelligence", "cia", "kgb", "mi6", "mi5",
-                   "gestapo", "agent", "defector", "codebreak", "cipher", "enigma",
-                   "cryptolog", "double agent", "counterintelligence", "mossad"),
-    "wwii": ("nazi", "hitler", "wehrmacht", "world war ii", "wwii", "d-day",
-              "resistance", "sabotage", "commando", "occupation", "holocaust",
-              "partisan", "gestapo", "waffen", "reich", "auschwitz", "blitz"),
-    "guerra_fria": ("soviet", "stalin", "cold war", "nuclear", "atomic", "manhattan project",
-                     "cuban missile", "berlin wall", "kgb", "defect", "iron curtain",
-                     "mkultra", "u-2", "bay of pigs"),
-    "cons_fraude": ("hoax", "con man", "con artist", "fraud", "scam", "forgery",
-                     "counterfeit", "impostor", "swindle", "ponzi", "embezzle", "fake"),
-    "misterio": ("mystery", "disappear", "vanished", "unsolved", "unexplained",
-                  "cover-up", "coverup", "conspiracy", "classified", "declassified",
-                  "secret", "hidden", "mysterious"),
-    "heroes_ocultos": ("rescued", "saved", "smuggled", "secretly", "medal of honor",
-                        "hid ", "sheltered", "forged papers", "underground railroad"),
-    "asesinato_golpe": ("assassinat", "coup", "plot to kill", "conspir", "overthrow",
-                         "regicide", "poison"),
+    "espionaje": (
+        "spy",
+        "espionage",
+        "intelligence",
+        "cia",
+        "kgb",
+        "mi6",
+        "mi5",
+        "gestapo",
+        "agent",
+        "defector",
+        "codebreak",
+        "cipher",
+        "enigma",
+        "cryptolog",
+        "double agent",
+        "counterintelligence",
+        "mossad",
+    ),
+    "wwii": (
+        "nazi",
+        "hitler",
+        "wehrmacht",
+        "world war ii",
+        "wwii",
+        "d-day",
+        "resistance",
+        "sabotage",
+        "commando",
+        "occupation",
+        "holocaust",
+        "partisan",
+        "gestapo",
+        "waffen",
+        "reich",
+        "auschwitz",
+        "blitz",
+    ),
+    "guerra_fria": (
+        "soviet",
+        "stalin",
+        "cold war",
+        "nuclear",
+        "atomic",
+        "manhattan project",
+        "cuban missile",
+        "berlin wall",
+        "kgb",
+        "defect",
+        "iron curtain",
+        "mkultra",
+        "u-2",
+        "bay of pigs",
+    ),
+    "cons_fraude": (
+        "hoax",
+        "con man",
+        "con artist",
+        "fraud",
+        "scam",
+        "forgery",
+        "counterfeit",
+        "impostor",
+        "swindle",
+        "ponzi",
+        "embezzle",
+        "fake",
+    ),
+    "misterio": (
+        "mystery",
+        "disappear",
+        "vanished",
+        "unsolved",
+        "unexplained",
+        "cover-up",
+        "coverup",
+        "conspiracy",
+        "classified",
+        "declassified",
+        "secret",
+        "hidden",
+        "mysterious",
+    ),
+    "heroes_ocultos": (
+        "rescued",
+        "saved",
+        "smuggled",
+        "secretly",
+        "medal of honor",
+        "hid ",
+        "sheltered",
+        "forged papers",
+        "underground railroad",
+    ),
+    "asesinato_golpe": (
+        "assassinat",
+        "coup",
+        "plot to kill",
+        "conspir",
+        "overthrow",
+        "regicide",
+        "poison",
+    ),
 }
 
 # Antagonista famoso nombrable en el titulo = la senal validada mas fuerte del
 # canal (ver memoria titulo-antagonista-famoso). Presencia -> bonus grande.
 NAMEABLE_ANTAGONISTS = (
-    "hitler", "stalin", "mussolini", "hirohito", "mao", "castro", "franco",
-    "kgb", "cia", "gestapo", "the ss", "waffen-ss", "nazi", "mafia", "cosa nostra",
-    "hoover", "beria", "himmler", "goebbels", "napoleon", "lenin", "trotsky",
-    "pol pot", "idi amin", "pinochet", "the stasi", "the cartel", "escobar",
+    "hitler",
+    "stalin",
+    "mussolini",
+    "hirohito",
+    "mao",
+    "castro",
+    "franco",
+    "kgb",
+    "cia",
+    "gestapo",
+    "the ss",
+    "waffen-ss",
+    "nazi",
+    "mafia",
+    "cosa nostra",
+    "hoover",
+    "beria",
+    "himmler",
+    "goebbels",
+    "napoleon",
+    "lenin",
+    "trotsky",
+    "pol pot",
+    "idi amin",
+    "pinochet",
+    "the stasi",
+    "the cartel",
+    "escobar",
 )
 
 # SATIRIZABLE: temas donde la voz del archivista cínico corre libre (golpea al
@@ -72,18 +182,61 @@ NAMEABLE_ANTAGONISTS = (
 # compartible y nos diversifica del cluster pesado de atrocidades (dirección
 # 24 jul: humor ácido = palanca de shares). Ver estabilizacion-y-tono-24jul.
 SATIRIZABLE = (
-    "hoax", "con man", "con artist", "fraud", "scam", "forgery", "counterfeit",
-    "impostor", "swindle", "ponzi", "embezzle", "fake", "absurd", "bizarre",
-    "ridiculous", "propaganda", "bureaucra", "red tape", "renamed", "named after",
-    "trading", "sold", "bought", "debt", "tax", "loophole", "tradition", "ceremon",
-    "ego", "vanity", "blunder", "fiasco", "botched", "backfired", "petty", "feud",
-    "corporate", "company", "advertising", "publicity stunt", "swimsuit", "toilet",
+    "hoax",
+    "con man",
+    "con artist",
+    "fraud",
+    "scam",
+    "forgery",
+    "counterfeit",
+    "impostor",
+    "swindle",
+    "ponzi",
+    "embezzle",
+    "fake",
+    "absurd",
+    "bizarre",
+    "ridiculous",
+    "propaganda",
+    "bureaucra",
+    "red tape",
+    "renamed",
+    "named after",
+    "trading",
+    "sold",
+    "bought",
+    "debt",
+    "tax",
+    "loophole",
+    "tradition",
+    "ceremon",
+    "ego",
+    "vanity",
+    "blunder",
+    "fiasco",
+    "botched",
+    "backfired",
+    "petty",
+    "feud",
+    "corporate",
+    "company",
+    "advertising",
+    "publicity stunt",
+    "swimsuit",
+    "toilet",
 )
 
 # Temas sobre-explotados en el nicho -> penalizacion (ver criterio-guiones).
 SATURATED = (
-    "bermuda triangle", "flight 19", "area 51", "roswell", "loch ness",
-    "jack the ripper", "amelia earhart", "d.b. cooper", "titanic",
+    "bermuda triangle",
+    "flight 19",
+    "area 51",
+    "roswell",
+    "loch ness",
+    "jack the ripper",
+    "amelia earhart",
+    "d.b. cooper",
+    "titanic",
 )
 
 
@@ -91,17 +244,26 @@ def _fetch_onthisday(month: int, day: int) -> list[dict]:
     """Eventos + 'selected' (curados) de Wikipedia On this day para MM/DD."""
     out: list[dict] = []
     for kind in ("selected", "events"):
-        url = (f"https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/"
-               f"{kind}/{month:02d}/{day:02d}")
-        req = urllib.request.Request(url, headers={"User-Agent": "HiddenFactsRadar/1.0 (topic research)"})
+        url = (
+            f"https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/"
+            f"{kind}/{month:02d}/{day:02d}"
+        )
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "HiddenFactsRadar/1.0 (topic research)"}
+        )
         try:
             with urllib.request.urlopen(req, timeout=20) as r:
                 data = json.loads(r.read())
         except Exception as e:
-            print(f"[radar] aviso: fallo {kind} {month:02d}/{day:02d}: {e}", file=sys.stderr)
+            print(
+                f"[radar] aviso: fallo {kind} {month:02d}/{day:02d}: {e}",
+                file=sys.stderr,
+            )
             continue
         for ev in data.get(kind, []) or data.get("events", []):
-            out.append({"year": ev.get("year"), "text": ev.get("text", ""), "kind": kind})
+            out.append(
+                {"year": ev.get("year"), "text": ev.get("text", ""), "kind": kind}
+            )
     # dedup por texto
     seen, uniq = set(), []
     for ev in out:
@@ -179,17 +341,23 @@ def score_event(ev: dict, on_year: int, outlier_terms: list[str]) -> dict | None
     satirizable = any(s in low for s in SATIRIZABLE)
 
     score = (
-        min(len(themes), 3) * 2        # fuerza/variedad de tema (cap 3)
-        + (4 if antagonist else 0)     # villano nombrable (senal #1)
-        + anni_bonus                    # aniversario redondo
-        + (3 if outlier_hit else 0)    # matchea un outlier real de vidIQ
-        + (2 if satirizable else 0)    # tema donde la voz acida corre libre (shares)
-        + sat_pen                       # saturacion
+        min(len(themes), 3) * 2  # fuerza/variedad de tema (cap 3)
+        + (4 if antagonist else 0)  # villano nombrable (senal #1)
+        + anni_bonus  # aniversario redondo
+        + (3 if outlier_hit else 0)  # matchea un outlier real de vidIQ
+        + (2 if satirizable else 0)  # tema donde la voz acida corre libre (shares)
+        + sat_pen  # saturacion
     )
     return {
-        "score": score, "year": ev.get("year"), "age": age, "text": text,
-        "themes": themes, "antagonist": antagonist, "anni_bonus": anni_bonus,
-        "outlier_hit": outlier_hit, "satirizable": satirizable,
+        "score": score,
+        "year": ev.get("year"),
+        "age": age,
+        "text": text,
+        "themes": themes,
+        "antagonist": antagonist,
+        "anni_bonus": anni_bonus,
+        "outlier_hit": outlier_hit,
+        "satirizable": satirizable,
         "angle": _hook_angle(text, antagonist),
     }
 
@@ -211,16 +379,24 @@ def run(days: int, top: int, start: date, outlier_terms: list[str]) -> list[dict
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--days", type=int, default=7, help="ventana desde hoy (default 7)")
     ap.add_argument("--top", type=int, default=15)
     ap.add_argument("--date", default=None, help="fecha puntual MM-DD (ignora --days)")
-    ap.add_argument("--outliers", default=None,
-                     help="archivo con titulos de outliers de vidIQ (1 por linea) "
-                          "para subir el score de temas que matcheen; 'auto' los "
-                          "trae en vivo via vidiq_tools (YouTube + TikTok/IG, ~25 cr)")
-    ap.add_argument("--append-topics", action="store_true",
-                     help="agrega el top al final de topics.txt (temas nuevos, sin duplicar)")
+    ap.add_argument(
+        "--outliers",
+        default=None,
+        help="archivo con titulos de outliers de vidIQ (1 por linea) "
+        "para subir el score de temas que matcheen; 'auto' los "
+        "trae en vivo via vidiq_tools (YouTube + TikTok/IG, ~25 cr)",
+    )
+    ap.add_argument(
+        "--append-topics",
+        action="store_true",
+        help="agrega el top al final de topics.txt (temas nuevos, sin duplicar)",
+    )
     args = ap.parse_args()
 
     outlier_terms: list[str] = []
@@ -228,22 +404,48 @@ def main() -> int:
         # fetch en vivo (YouTube + TikTok/IG); si vidIQ falla, el radar sigue sin la capa
         try:
             import subprocess
+
             r = subprocess.run(
-                [sys.executable, str(Path(__file__).parent / "vidiq_tools.py"),
-                 "radar-terms", "--cross-platform"],
-                capture_output=True, text=True, encoding="utf-8", timeout=180)
-            titles = [ln for ln in (r.stdout or "").splitlines() if ln and not ln.startswith("#")]
-            outlier_terms = [w.strip().lower() for t in titles for w in t.split()
-                             if len(w.strip()) >= 4]
-            print(f"[radar] outliers en vivo: {len(titles)} titulos ({len(outlier_terms)} terminos)")
+                [
+                    sys.executable,
+                    str(Path(__file__).parent / "vidiq_tools.py"),
+                    "radar-terms",
+                    "--cross-platform",
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=180,
+            )
+            titles = [
+                ln
+                for ln in (r.stdout or "").splitlines()
+                if ln and not ln.startswith("#")
+            ]
+            outlier_terms = [
+                w.strip().lower()
+                for t in titles
+                for w in t.split()
+                if len(w.strip()) >= 4
+            ]
+            print(
+                f"[radar] outliers en vivo: {len(titles)} titulos ({len(outlier_terms)} terminos)"
+            )
         except Exception as e:
-            print(f"[radar] aviso: outliers auto fallo ({e}), sigo sin capa de outliers")
+            print(
+                f"[radar] aviso: outliers auto fallo ({e}), sigo sin capa de outliers"
+            )
     elif args.outliers:
         p = Path(args.outliers)
         if p.exists():
-            outlier_terms = [w.strip().lower() for w in p.read_text(encoding="utf-8").split()
-                             if len(w.strip()) >= 4]
-            print(f"[radar] {len(outlier_terms)} terminos de outliers cargados de {p.name}")
+            outlier_terms = [
+                w.strip().lower()
+                for w in p.read_text(encoding="utf-8").split()
+                if len(w.strip()) >= 4
+            ]
+            print(
+                f"[radar] {len(outlier_terms)} terminos de outliers cargados de {p.name}"
+            )
         else:
             print(f"[radar] aviso: no existe {p}, sigo sin capa de outliers")
 
@@ -260,13 +462,17 @@ def main() -> int:
         print("[radar] sin candidatos del nicho en esa ventana (raro; revisa la API)")
         return 1
 
-    print(f"\n=== RADAR DE TEMAS — {start.isoformat()} (+{days-1}d) — top {len(results)} ===\n")
+    print(
+        f"\n=== RADAR DE TEMAS — {start.isoformat()} (+{days - 1}d) — top {len(results)} ===\n"
+    )
     for i, c in enumerate(results, 1):
         anni = f" · {c['age']}º aniversario" if c["anni_bonus"] else ""
         vil = f" · villano: {c['antagonist'].title()}" if c["antagonist"] else ""
         out = " · [OUTLIER]" if c["outlier_hit"] else ""
         sat = " · [SATIRIZABLE]" if c.get("satirizable") else ""
-        print(f"{i:2d}. [score {c['score']}] {c['year']} — {', '.join(c['themes'])}{anni}{vil}{out}{sat}")
+        print(
+            f"{i:2d}. [score {c['score']}] {c['year']} — {', '.join(c['themes'])}{anni}{vil}{out}{sat}"
+        )
         print(f"    {c['text']}")
         print(f"    -> {c['angle']}\n")
 

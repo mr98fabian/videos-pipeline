@@ -50,7 +50,8 @@ for job in JOBS:
     r = requests.post(
         "https://api.piapi.ai/api/v1/task",
         headers={"X-API-Key": api_key, "Content-Type": "application/json"},
-        json=payload, timeout=60,
+        json=payload,
+        timeout=60,
     )
     r.raise_for_status()
     task_id = r.json()["data"]["task_id"]
@@ -58,8 +59,11 @@ for job in JOBS:
     done = False
     for _ in range(60):
         time.sleep(2)
-        poll = requests.get(f"https://api.piapi.ai/api/v1/task/{task_id}",
-                             headers={"X-API-Key": api_key}, timeout=30)
+        poll = requests.get(
+            f"https://api.piapi.ai/api/v1/task/{task_id}",
+            headers={"X-API-Key": api_key},
+            timeout=30,
+        )
         poll.raise_for_status()
         task = poll.json()["data"]
         status = task.get("status", "").lower()

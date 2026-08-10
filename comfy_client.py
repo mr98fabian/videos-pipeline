@@ -18,6 +18,7 @@ ComfyUI se arranca solo la primera vez que se pide una imagen y queda vivo para
 el resto de la corrida: levantarlo cuesta ~30-60s de carga de modelo y pagarlo
 una vez por escena seria absurdo.
 """
+
 from __future__ import annotations
 
 import json
@@ -64,9 +65,19 @@ def ensure_server(timeout: float = 180.0) -> bool:
         return False
     print("[comfy] arrancando ComfyUI local (la primera imagen tarda mas)...")
     _PROC = subprocess.Popen(
-        ["uv", "run", "--directory", str(COMFY_DIR), "main.py",
-         "--port", str(PORT), "--listen", HOST],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        [
+            "uv",
+            "run",
+            "--directory",
+            str(COMFY_DIR),
+            "main.py",
+            "--port",
+            str(PORT),
+            "--listen",
+            HOST,
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -90,8 +101,10 @@ def shutdown() -> None:
 
 def _post(path: str, payload: dict) -> dict:
     req = urllib.request.Request(
-        f"{BASE}{path}", data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"})
+        f"{BASE}{path}",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+    )
     with urllib.request.urlopen(req, timeout=60) as r:
         return json.loads(r.read())
 
@@ -107,34 +120,60 @@ def _workflow(prompt: str, width: int, height: int, seed: int) -> dict:
     la conexion igual."""
     return {
         "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": UNET}},
-        "2": {"class_type": "DualCLIPLoader",
-              "inputs": {"clip_name1": T5, "clip_name2": CLIP_L,
-                         "type": "flux", "device": "default"}},
+        "2": {
+            "class_type": "DualCLIPLoader",
+            "inputs": {
+                "clip_name1": T5,
+                "clip_name2": CLIP_L,
+                "type": "flux",
+                "device": "default",
+            },
+        },
         "3": {"class_type": "VAELoader", "inputs": {"vae_name": VAE}},
-        "4": {"class_type": "CLIPTextEncode",
-              "inputs": {"text": prompt, "clip": ["2", 0]}},
-        "5": {"class_type": "CLIPTextEncode",
-              "inputs": {"text": "", "clip": ["2", 0]}},
-        "6": {"class_type": "EmptyLatentImage",
-              "inputs": {"width": width, "height": height, "batch_size": 1}},
-        "7": {"class_type": "KSampler",
-              "inputs": {"seed": seed, "steps": STEPS, "cfg": 1.0,
-                         "sampler_name": "euler", "scheduler": "simple",
-                         "denoise": 1.0, "model": ["1", 0],
-                         "positive": ["4", 0], "negative": ["5", 0],
-                         "latent_image": ["6", 0]}},
-        "8": {"class_type": "VAEDecode",
-              "inputs": {"samples": ["7", 0], "vae": ["3", 0]}},
-        "9": {"class_type": "SaveImage",
-              "inputs": {"filename_prefix": "pipe", "images": ["8", 0]}},
+        "4": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": prompt, "clip": ["2", 0]},
+        },
+        "5": {"class_type": "CLIPTextEncode", "inputs": {"text": "", "clip": ["2", 0]}},
+        "6": {
+            "class_type": "EmptyLatentImage",
+            "inputs": {"width": width, "height": height, "batch_size": 1},
+        },
+        "7": {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": seed,
+                "steps": STEPS,
+                "cfg": 1.0,
+                "sampler_name": "euler",
+                "scheduler": "simple",
+                "denoise": 1.0,
+                "model": ["1", 0],
+                "positive": ["4", 0],
+                "negative": ["5", 0],
+                "latent_image": ["6", 0],
+            },
+        },
+        "8": {
+            "class_type": "VAEDecode",
+            "inputs": {"samples": ["7", 0], "vae": ["3", 0]},
+        },
+        "9": {
+            "class_type": "SaveImage",
+            "inputs": {"filename_prefix": "pipe", "images": ["8", 0]},
+        },
     }
 
 
-def generate_image(prompt: str, path: Path, api_key: str = "",
-                   reference_image: Path | None = None,
-                   reference_images: list[Path] | None = None,
-                   style_directive: str | None = None,
-                   attempts: int = 2) -> bool:
+def generate_image(
+    prompt: str,
+    path: Path,
+    api_key: str = "",
+    reference_image: Path | None = None,
+    reference_images: list[Path] | None = None,
+    style_directive: str | None = None,
+    attempts: int = 2,
+) -> bool:
     """Misma firma que _seedream_generate_image() para poder intercambiarlos.
 
     api_key se ignora (es local). Las referencias tambien se ignoran: schnell no
@@ -142,8 +181,10 @@ def generate_image(prompt: str, path: Path, api_key: str = "",
     que esa escena perdio la consistencia de personaje.
     """
     if reference_image or reference_images:
-        print("[comfy] AVISO: FLUX schnell ignora las imagenes de referencia; "
-              "esta escena no tendra consistencia de personaje")
+        print(
+            "[comfy] AVISO: FLUX schnell ignora las imagenes de referencia; "
+            "esta escena no tendra consistencia de personaje"
+        )
     if not ensure_server():
         return False
 
@@ -168,8 +209,12 @@ def generate_image(prompt: str, path: Path, api_key: str = "",
                     raise RuntimeError("el grafo termino sin imagen")
                 im = imgs[0]
                 q = urllib.parse.urlencode(
-                    {"filename": im["filename"], "subfolder": im.get("subfolder", ""),
-                     "type": im.get("type", "output")})
+                    {
+                        "filename": im["filename"],
+                        "subfolder": im.get("subfolder", ""),
+                        "type": im.get("type", "output"),
+                    }
+                )
                 with urllib.request.urlopen(f"{BASE}/view?{q}", timeout=120) as r:
                     path.write_bytes(r.read())
                 return True
@@ -185,5 +230,7 @@ def generate_image(prompt: str, path: Path, api_key: str = "",
 
 if __name__ == "__main__":
     out = Path(sys.argv[2] if len(sys.argv) > 2 else "comfy_test.png")
-    ok = generate_image(sys.argv[1] if len(sys.argv) > 1 else "a plain wooden table", out)
+    ok = generate_image(
+        sys.argv[1] if len(sys.argv) > 1 else "a plain wooden table", out
+    )
     print("OK" if ok else "FALLO", out)

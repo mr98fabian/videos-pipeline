@@ -27,6 +27,7 @@ Uso standalone (regenerar un video ya producido, costo API cero):
 
 Desde pipeline.py se invoca con render_from_parts() (flag --korex).
 """
+
 from __future__ import annotations
 
 import json
@@ -66,16 +67,49 @@ def _run(cmd: list[str], cwd: Path | None = None, timeout: int = 3600) -> None:
     subprocess.run(cmd, cwd=str(cwd) if cwd else None, check=True, timeout=timeout)
 
 
+def _concurrency() -> int:
+    """Hilos de render de Remotion. MEDIDO el 3 ago 2026 sobre este video
+    (1.609 frames, maquina de 32 nucleos):
+
+        sin --concurrency (default de Remotion) -> 189s
+        --concurrency=24                        -> 103s   (-45%)
+
+    Remotion por defecto se queda corto en maquinas grandes. Se usa el 75% de
+    los nucleos: deja aire para el sistema y para el ffmpeg del mux, y en la
+    maquina donde se midio da exactamente los 24 de la prueba.
+    """
+    import os
+
+    return max(2, int((os.cpu_count() or 4) * 0.75))
+
+
 def _ffprobe_dur(path: Path) -> float:
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=nw=1:nk=1", str(path)],
-        capture_output=True, text=True, check=True, timeout=60).stdout.strip()
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=nw=1:nk=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60,
+    ).stdout.strip()
     return float(out)
 
 
-def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
-                    audio_dur: float, slug: str) -> dict:
+def build_manifest(
+    out_dir: Path,
+    data: dict,
+    words: list[tuple[float, str]],
+    audio_dur: float,
+    slug: str,
+) -> dict:
     """Arma el manifest para la composicion KorexVideo.
 
     words = [(inicio_seg, palabra)]. A diferencia de Archivo Vivo, aqui NO se
@@ -90,7 +124,9 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     clips = out_dir / "clips"
     imgs = sorted(clips.glob("nb_*.png"), key=lambda p: int(p.stem.split("_")[1]))
     if not imgs:
-        raise RuntimeError(f"no hay nb_*.png en {clips} (el motor necesita imagenes de escena)")
+        raise RuntimeError(
+            f"no hay nb_*.png en {clips} (el motor necesita imagenes de escena)"
+        )
     n = len(imgs)
 
     pub = MOTION / "public" / "korex" / slug
@@ -106,11 +142,13 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     # (ver kx_assets.py). Sin set_terms en el guion, todas las escenas van con el
     # set dibujado en SVG de siempre.
     import kx_assets
+
     scene_sets = kx_assets.resolve_scene_sets(data, n)
     set_rel_by_name: dict[str, str] = {}
 
     # Poses del reparto, cacheadas de por vida (ver kx_cast.py)
     import kx_cast
+
     cast_poses = kx_cast.resolve_scene_cast(data, n)
 
     scenes = []
@@ -162,17 +200,19 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                 set_rel_by_name[set_path.name] = f"korex/{slug}/set_{set_path.name}"
             set_rel = set_rel_by_name[set_path.name]
 
-        scenes.append({
-            "from": cursor,
-            "dur": dur_f,
-            "fg": fg_rel,
-            "bg": bg_rel,
-            "set": set_rel,
-            "accent": _accent_for(f"{term} {char_term}"),
-            # alterna el encuadre del personaje para que dos escenas seguidas no
-            # sean la misma pose mirando al mismo lado
-            "flip": bool(i % 3 == 2),
-        })
+        scenes.append(
+            {
+                "from": cursor,
+                "dur": dur_f,
+                "fg": fg_rel,
+                "bg": bg_rel,
+                "set": set_rel,
+                "accent": _accent_for(f"{term} {char_term}"),
+                # alterna el encuadre del personaje para que dos escenas seguidas no
+                # sean la misma pose mirando al mismo lado
+                "flip": bool(i % 3 == 2),
+            }
+        )
         cursor += dur_f
 
     wframes = [{"t": int(round(t * FPS)), "w": w} for t, w in words]
@@ -187,13 +227,15 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
         "scenes": scenes,
         "words": wframes,
         "openerWords": opener_words,
-        "hook": (data.get("hook_card")
-                 or " ".join(data.get("script", "").split()[:8])).strip(),
+        "hook": (
+            data.get("hook_card") or " ".join(data.get("script", "").split()[:8])
+        ).strip(),
     }
 
 
-def render_from_parts(out_dir: Path, data: dict, words: list[tuple[float, str]],
-                       audio_path: Path) -> Path:
+def render_from_parts(
+    out_dir: Path, data: dict, words: list[tuple[float, str]], audio_path: Path
+) -> Path:
     """Renderiza el video KoreX completo y muxea voz + musica."""
     sys.path.insert(0, str(ROOT))
     import pipeline as pl
@@ -205,15 +247,31 @@ def render_from_parts(out_dir: Path, data: dict, words: list[tuple[float, str]],
 
     props = out_dir / "clips" / "korex_manifest.json"
     props.parent.mkdir(exist_ok=True)
-    props.write_text(json.dumps({"manifest": manifest}, ensure_ascii=False), encoding="utf-8")
-    print(f"[korex] manifest: {len(manifest['scenes'])} escenas, "
-          f"{len(manifest['words'])} palabras, {manifest['durationInFrames']} frames")
+    props.write_text(
+        json.dumps({"manifest": manifest}, ensure_ascii=False), encoding="utf-8"
+    )
+    print(
+        f"[korex] manifest: {len(manifest['scenes'])} escenas, "
+        f"{len(manifest['words'])} palabras, {manifest['durationInFrames']} frames"
+    )
 
     engine_mp4 = out_dir / "clips" / "korex_engine.mp4"
     npx = shutil.which("npx") or "npx"
     print("[korex] renderizando composicion (esto tarda unos minutos)...")
-    _run([npx, "remotion", "render", "src/index.jsx", "KorexVideo",
-          str(engine_mp4.resolve()), "--props", str(props.resolve())], cwd=MOTION)
+    _run(
+        [
+            npx,
+            "remotion",
+            "render",
+            "src/index.jsx",
+            "KorexVideo",
+            str(engine_mp4.resolve()),
+            "--props",
+            str(props.resolve()),
+            f"--concurrency={_concurrency()}",
+        ],
+        cwd=MOTION,
+    )
 
     music = pl._pick_music()
     final = out_dir / "video.mp4"
@@ -221,17 +279,46 @@ def render_from_parts(out_dir: Path, data: dict, words: list[tuple[float, str]],
     fc = "[1:a]anull[voice];"
     if music:
         inputs += ["-i", str(music)]
-        fc += ("[voice]asplit=2[vmix][vtrig];"
-               "[2:a]aloop=loop=-1:size=2e9,volume=0.06[bg0];"
-               "[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[bg];")
+        fc += (
+            "[voice]asplit=2[vmix][vtrig];"
+            # volume 0.09 (como MUSIC_VOLUME del ensamblado clasico, pedido
+            # explicito del usuario 30 jul 2026: rango -18/-22dB; 0.06 quedaba
+            # por debajo). attack 50ms / release 300ms: fila "contenido
+            # rapido" de la tabla de ducking (SOUND_DESIGN_RETENCION.md,
+            # 9 ago 2026) -- la musica vuelve rapido entre frases staccato.
+            "[2:a]aloop=loop=-1:size=2e9,volume=0.09[bg0];"
+            "[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=50:release=300[bg];"
+        )
         labels, ninputs = "[0:a][vmix][bg]", 3
     else:
         fc += "[voice]anull[vmix];"
         labels, ninputs = "[0:a][vmix]", 2
-    fc += f"{labels}amix=inputs={ninputs}:normalize=0:duration=first[a]"
-    _run(["ffmpeg", "-y", *inputs, "-filter_complex", fc,
-          "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-          str(final)])
+    # loudnorm -14 LUFS / -1.0 dBTP (estandar de plataformas,
+    # SOUND_DESIGN_RETENCION.md) -- antes el motor KOREX no normalizaba.
+    fc += (
+        f"{labels}amix=inputs={ninputs}:normalize=0:duration=first,"
+        "loudnorm=I=-14:TP=-1.0:LRA=11[a]"
+    )
+    _run(
+        [
+            "ffmpeg",
+            "-y",
+            *inputs,
+            "-filter_complex",
+            fc,
+            "-map",
+            "0:v",
+            "-map",
+            "[a]",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(final),
+        ]
+    )
     print(f"[korex] LISTO: {final}")
     return final
 
@@ -245,6 +332,7 @@ def main() -> int:
     sys.path.insert(0, str(ROOT))
     from archivo_engine import words_from_ass
     import pipeline as pl
+
     words = words_from_ass(out_dir / "subs.ass")
     if not words:
         print("ERROR: no pude reconstruir timestamps desde subs.ass")

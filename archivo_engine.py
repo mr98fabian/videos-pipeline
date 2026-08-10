@@ -18,6 +18,7 @@ Uso standalone (regenerar un video ya producido, costo API cero):
 
 Desde pipeline.py se invoca con render_from_parts() (flag --archivo).
 """
+
 from __future__ import annotations
 
 import json
@@ -68,8 +69,19 @@ def _run(cmd: list[str], cwd: Path | None = None, timeout: float = 900.0) -> Non
 
 def _ffprobe_dur(p: Path) -> float:
     r = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)],
-        capture_output=True, text=True, timeout=30,
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "csv=p=0",
+            str(p),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
     return float(r.stdout.strip())
 
@@ -102,12 +114,18 @@ def words_from_ass(ass_path: Path) -> list[tuple[float, str]]:
 # "falling" NO debe disparar "fall"); prefijos sueltos para conjugaciones.
 _ACTION_KW = [
     ("explosion", r"explod|explos|detonat|blast|blew up|blew apart|bombed|erupt"),
-    ("impact",    r"slam|smash|struck|\bstrike\b|shrapnel|rammed|crash|hurl|\btore\b|\btorn\b"),
-    ("topple",    r"collaps|toppl|crumbl|\bfell\b|knocked down|brought down"),
-    ("sink",      r"\bsank\b|\bsunk\b|\bsink\b|drown|underwater|beneath the wa|went under"),
-    ("shoot",     r"\bshot\b|\bshoot\b|\bfired\b|firing|gunned|execut|\bbullet|opened fire"),
-    ("flee",      r"escap|\bfled\b|\bflee\b|fleeing|slipp|smuggl|sneak|\bsnuck\b|\bran\b"),
-    ("rise",      r"emerg|stood up|rebuil|rose up|rising up"),
+    (
+        "impact",
+        r"slam|smash|struck|\bstrike\b|shrapnel|rammed|crash|hurl|\btore\b|\btorn\b",
+    ),
+    ("topple", r"collaps|toppl|crumbl|\bfell\b|knocked down|brought down"),
+    ("sink", r"\bsank\b|\bsunk\b|\bsink\b|drown|underwater|beneath the wa|went under"),
+    (
+        "shoot",
+        r"\bshot\b|\bshoot\b|\bfired\b|firing|gunned|execut|\bbullet|opened fire",
+    ),
+    ("flee", r"escap|\bfled\b|\bflee\b|fleeing|slipp|smuggl|sneak|\bsnuck\b|\bran\b"),
+    ("rise", r"emerg|stood up|rebuil|rose up|rising up"),
 ]
 
 
@@ -116,17 +134,17 @@ _ACTION_KW = [
 # es lo que vende la causalidad: primero pasa, DESPUES los demas lo sufren.
 _REACTION = {
     "explosion": ("topple", 6),
-    "impact":    ("topple", 5),
-    "shoot":     ("recoil", 5),
-    "lunge":     ("recoil", 5),
-    "topple":    ("recoil", 6),
-    "fall":      ("recoil", 6),
-    "collapse":  ("recoil", 6),
-    "flee":      ("lunge", 8),    # uno huye, el otro se lanza tras el
-    "escape":    ("lunge", 8),
-    "sink":      ("sink", 9),     # se hunden en cadena
-    "rise":      ("rise", 7),
-    "recoil":    ("recoil", 4),
+    "impact": ("topple", 5),
+    "shoot": ("recoil", 5),
+    "lunge": ("recoil", 5),
+    "topple": ("recoil", 6),
+    "fall": ("recoil", 6),
+    "collapse": ("recoil", 6),
+    "flee": ("lunge", 8),  # uno huye, el otro se lanza tras el
+    "escape": ("lunge", 8),
+    "sink": ("sink", 9),  # se hunden en cadena
+    "rise": ("rise", 7),
+    "recoil": ("recoil", 4),
 }
 
 
@@ -138,8 +156,26 @@ def _detect_action(text: str):
     return None
 
 
-_TITLE_STOP = {"how", "why", "the", "what", "when", "who", "a", "an", "this",
-               "that", "his", "her", "their", "one", "man", "became", "of", "in"}
+_TITLE_STOP = {
+    "how",
+    "why",
+    "the",
+    "what",
+    "when",
+    "who",
+    "a",
+    "an",
+    "this",
+    "that",
+    "his",
+    "her",
+    "their",
+    "one",
+    "man",
+    "became",
+    "of",
+    "in",
+}
 
 
 def _auto_subject(title: str):
@@ -173,6 +209,7 @@ def _fetch_real_photo(query: str, pub: Path, slug: str):
     import urllib.request
     import pipeline as pl
     from PIL import Image
+
     # cache de foto real por query -> se descarga UNA vez en la vida (evita el
     # 429 de Wikimedia en cada re-render)
     cache_dir = ROOT / "assets" / "cache" / "real"
@@ -200,7 +237,9 @@ def _fetch_real_photo(query: str, pub: Path, slug: str):
     # titulo del archivo tiene que compartir alguna palabra fuerte con la query;
     # si nada matchea, MEJOR SIN FOTO que con una foto falsa.
     keys = {w.lower() for w in _re.findall(r"[A-Za-z]{4,}", query)}
-    keys |= {w.lower() for w in _re.findall(r"\b[A-Z]{2,}\b", query)}  # siglas: CIA, FBI
+    keys |= {
+        w.lower() for w in _re.findall(r"\b[A-Z]{2,}\b", query)
+    }  # siglas: CIA, FBI
     keys -= {"the", "and", "with", "from", "headquarters"}
     # DOS palabras, no una (28 jul 2026): con una sola coincidencia, el titulo
     # "300 Frenchmen Died Defending Hitler's Bunker" traia un grabado de "Eight
@@ -209,33 +248,49 @@ def _fetch_real_photo(query: str, pub: Path, slug: str):
     # a que el archivo hable del mismo tema. Sin foto es mejor que con la falsa.
     need = 2 if len(keys) >= 3 else 1
     if keys:
+
         def _hits(c):
             t = (c.get("title") or "").lower()
             return sum(1 for k in keys if k in t)
+
         relevant = [c for c in cands if _hits(c) >= need]
         if not relevant:
-            print(f"[archivo] foto real descartada: nada relevante para '{query}' "
-                  f"(hacian falta {need} palabras en comun)")
+            print(
+                f"[archivo] foto real descartada: nada relevante para '{query}' "
+                f"(hacian falta {need} palabras en comun)"
+            )
             return None
         cands = sorted(relevant, key=_hits, reverse=True)
     # preferir dominio público / CC0 (sin obligación de atribución en el Short)
-    cands.sort(key=lambda c: 0 if any(t in (c.get("license") or "").lower()
-                                      for t in ("public domain", "cc0", "pd")) else 1)
+    cands.sort(
+        key=lambda c: (
+            0
+            if any(
+                t in (c.get("license") or "").lower()
+                for t in ("public domain", "cc0", "pd")
+            )
+            else 1
+        )
+    )
     for c in cands:
         url = c.get("url")
         if not url:
             continue
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "HiddenFactsBot/1.0"})
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "HiddenFactsBot/1.0"}
+            )
             with urllib.request.urlopen(req, timeout=20) as r:
                 im = Image.open(io.BytesIO(r.read())).convert("RGB")
             w, h = im.size
             if w < 260 or h < 260 or w / h > 2.2 or h / w > 2.2:
                 continue  # descarta miniaturas y panoramicas raras
             im.thumbnail((900, 900))
-            im.save(ckey)               # cache de por vida
+            im.save(ckey)  # cache de por vida
             _sh.copyfile(ckey, pub / "real.png")
-            print(f"[archivo] foto real: '{query}' <- {c.get('license', '?')} ({c.get('title', '')[:40]})")
+            print(
+                f"[archivo] foto real: '{query}' <- {c.get('license', '?')} ({c.get('title', '')[:40]})"
+            )
             return f"archivo/{slug}/real.png"
         except Exception:
             continue
@@ -244,11 +299,18 @@ def _fetch_real_photo(query: str, pub: Path, slug: str):
 
 _DATE_PAT = re.compile(
     r"\b(January|February|March|April|May|June|July|August|September|October|November|December)"
-    r"\s+\d{1,2},?\s+(1[89]\d\d|20\d\d)\b", re.I)
+    r"\s+\d{1,2},?\s+(1[89]\d\d|20\d\d)\b",
+    re.I,
+)
 
 
-def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
-                    audio_dur: float, slug: str) -> dict:
+def build_manifest(
+    out_dir: Path,
+    data: dict,
+    words: list[tuple[float, str]],
+    audio_dur: float,
+    slug: str,
+) -> dict:
     """Arma el manifest para ArchivoVideo. words = [(start_seg, palabra)]."""
     sys.path.insert(0, str(ROOT))
     from visual_cache import cached_cutout, cutout_coverage, cutout_parts, plate_cutout
@@ -257,7 +319,9 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     clips = out_dir / "clips"
     imgs = sorted(clips.glob("nb_*.png"), key=lambda p: int(p.stem.split("_")[1]))
     if not imgs:
-        raise RuntimeError(f"no hay nb_*.png en {clips} (el motor necesita imagenes de escena)")
+        raise RuntimeError(
+            f"no hay nb_*.png en {clips} (el motor necesita imagenes de escena)"
+        )
     n = len(imgs)
 
     # carpeta de assets publicos del video
@@ -274,7 +338,15 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     force_photo = {int(k) for k in data.get("force_photo", [])}
     # los primeros planos de CARA nunca se troquelan bien (cara flotante, borde
     # sucio); van como foto clavada, que es donde lucen (feedback 23 jul)
-    _CLOSEUP_KW = ("close-up", "close up", "extreme close", "'s face", " a face", "portrait", "facial")
+    _CLOSEUP_KW = (
+        "close-up",
+        "close up",
+        "extreme close",
+        "'s face",
+        " a face",
+        "portrait",
+        "facial",
+    )
     for ti, term in enumerate(terms_all := (data.get("search_terms") or [])):
         if any(k in term.lower() for k in _CLOSEUP_KW):
             force_photo.add(ti + 1)
@@ -301,9 +373,13 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                 # que es justo lo que rembg deja macizo y se lee como sucio
                 cut = plate_cutout(plate)
                 if cut is None:
-                    print(f"[archivo] escena {i}: placa no recortable por color, va rembg")
+                    print(
+                        f"[archivo] escena {i}: placa no recortable por color, va rembg"
+                    )
             cut = cut or cached_cutout(cut_src)
-            if cutout_coverage(cut) > 0.17:  # v2: recortes chicos (cabezas sueltas) -> foto clavada, que es lo que el usuario ama
+            if (
+                cutout_coverage(cut) > 0.17
+            ):  # v2: recortes chicos (cabezas sueltas) -> foto clavada, que es lo que el usuario ama
                 shutil.copyfile(cut, pub / f"fg_{i}.png")
                 fg_rel = f"archivo/{slug}/fg_{i}.png"
                 treatment = "sticker"
@@ -311,27 +387,44 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                 # cada uno sale como sticker propio para que puedan interactuar.
                 for k, pt in enumerate(cutout_parts(cut)):
                     shutil.copyfile(pt["path"], pub / f"fg_{i}_p{k}.png")
-                    parts_rel.append({
-                        "src": f"archivo/{slug}/fg_{i}_p{k}.png",
-                        "nx": pt["nx"], "ny": pt["ny"], "nw": pt["nw"], "nh": pt["nh"],
-                        "area": pt["area"],
-                    })
+                    parts_rel.append(
+                        {
+                            "src": f"archivo/{slug}/fg_{i}_p{k}.png",
+                            "nx": pt["nx"],
+                            "ny": pt["ny"],
+                            "nw": pt["nw"],
+                            "nh": pt["nh"],
+                            "area": pt["area"],
+                        }
+                    )
                 if parts_rel:
                     big = max(p["area"] for p in parts_rel)
                     for k, p in enumerate(parts_rel):
                         # el mas grande manda el plano cercano; los demas se alejan
                         p["depth"] = round(0.70 + 0.30 * (p["area"] / big), 3)
-                        p["from"] = k * 3          # entradas escalonadas, no en bloque
-                        p["dir"] = "left" if p["nx"] < 0.45 else "right" if p["nx"] > 0.55 else "bottom"
+                        p["from"] = k * 3  # entradas escalonadas, no en bloque
+                        p["dir"] = (
+                            "left"
+                            if p["nx"] < 0.45
+                            else "right"
+                            if p["nx"] > 0.55
+                            else "bottom"
+                        )
                     print(f"[archivo] escena {i}: {len(parts_rel)} piezas separadas")
         except Exception as e:
             print(f"[archivo] recorte escena {i} fallo ({e}); foto clavada")
         dur_f = max(int(round(durations[i] * FPS)), 12)
-        scenes.append({
-            "from": cursor, "dur": dur_f,
-            "bg": f"archivo/{slug}/bg_{i}.png", "fg": fg_rel,
-            "parts": parts_rel, "treatment": treatment, "beats": {},
-        })
+        scenes.append(
+            {
+                "from": cursor,
+                "dur": dur_f,
+                "bg": f"archivo/{slug}/bg_{i}.png",
+                "fg": fg_rel,
+                "parts": parts_rel,
+                "treatment": treatment,
+                "beats": {},
+            }
+        )
         cursor += dur_f
 
     # palabras -> frames globales (desplazadas por el cold-open)
@@ -349,7 +442,10 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                     g = wframes[wi]["t"]
                     for s in scenes:
                         if s["from"] <= g < s["from"] + s["dur"]:
-                            s["beats"]["stamp"] = {"text": date_text, "at": max(g - s["from"], 4)}
+                            s["beats"]["stamp"] = {
+                                "text": date_text,
+                                "at": max(g - s["from"], 4),
+                            }
                             break
                 break
 
@@ -364,8 +460,14 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
         if raw.isdigit() and len(raw) >= 2 and not (1800 <= int(raw) <= 2099):
             g = wd["t"]
             for s_ in scenes:
-                if s_["from"] <= g < s_["from"] + s_["dur"] and "numstamp" not in s_["beats"]:
-                    s_["beats"]["numstamp"] = {"text": raw, "at": max(g - s_["from"], 4)}
+                if (
+                    s_["from"] <= g < s_["from"] + s_["dur"]
+                    and "numstamp" not in s_["beats"]
+                ):
+                    s_["beats"]["numstamp"] = {
+                        "text": raw,
+                        "at": max(g - s_["from"], 4),
+                    }
                     break
 
     # 3. zoom-evidencia alternado en toda escena con aire (>55 frames)
@@ -414,8 +516,13 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                 # sentido: el que esta a la izquierda del que actua sale despedido
                 # hacia la izquierda (y viceversa) -> se lee empuje, no derrumbe
                 away = -1 if p["nx"] < (s_["parts"][0]["nx"] - 0.02) else 1
-                p["action"] = {"type": rtype, "at": at + lag + (k - 1) * 2,
-                                "dur": 16, "away": away, "amp": 0.7}
+                p["action"] = {
+                    "type": rtype,
+                    "at": at + lag + (k - 1) * 2,
+                    "dur": 16,
+                    "away": away,
+                    "amp": 0.7,
+                }
 
     # 4a-bis. PERSONAJE ANIMADO: la placa con esqueleto retargeteado sustituye
     #     al sticker quieto. Solo escenas con placa propia (ch_<i>.png) y un
@@ -426,6 +533,7 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     #     render programado.
     try:
         import animate_engine as _an
+
         for si, s_ in enumerate(scenes):
             if not ANIMATE_CHARACTERS or not s_.get("fg") or s_.get("parts"):
                 continue
@@ -454,6 +562,7 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     #     Sigue cayendo en silencio si no hay biblioteca: nunca bloquea el render.
     try:
         import stock_effects as _fx
+
         for si, s_ in enumerate(scenes):
             narr = " ".join(w["w"] for w in scene_words[si])
             cat = _fx.detect_effect(narr)
@@ -492,7 +601,11 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
                 yr = rp.get("year") or (mdate.group(2) if mdate else "")
                 for si in targets:
                     if 0 <= si < len(scenes):
-                        scenes[si]["beats"]["evidence"] = {"src": real_rel, "at": 8, "year": yr}
+                        scenes[si]["beats"]["evidence"] = {
+                            "src": real_rel,
+                            "at": 8,
+                            "year": yr,
+                        }
         except Exception as e:
             print(f"[archivo] foto real no disponible: {e}")
 
@@ -507,8 +620,14 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
             continue
         if wd["w"].strip(".,!?").lower() in _CTA_W:
             for s_ in scenes:
-                if s_["from"] <= wd["t"] < s_["from"] + s_["dur"] and "cta" not in s_["beats"]:
-                    s_["beats"]["cta"] = {"at": max(wd["t"] - s_["from"] - 6, 2), "dur": 46}
+                if (
+                    s_["from"] <= wd["t"] < s_["from"] + s_["dur"]
+                    and "cta" not in s_["beats"]
+                ):
+                    s_["beats"]["cta"] = {
+                        "at": max(wd["t"] - s_["from"] - 6, 2),
+                        "dur": 46,
+                    }
                     break
             break
 
@@ -532,8 +651,11 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     # falso). Determinista desde el hash del tema -> mismo video = mismo numero,
     # pero variado entre videos, sensacion de "archivo de mil casos". Override
     # explicito con case_no en el JSON.
-    case_no = int(data["case_no"]) if str(data.get("case_no", "")).isdigit() and int(data.get("case_no", 1)) > 1 \
+    case_no = (
+        int(data["case_no"])
+        if str(data.get("case_no", "")).isdigit() and int(data.get("case_no", 1)) > 1
         else 12 + (zlib.crc32(slug.encode()) % 460)
+    )
 
     def _word_safe(text: str, limit: int = 58) -> str:
         text = text.strip()
@@ -551,46 +673,82 @@ def build_manifest(out_dir: Path, data: dict, words: list[tuple[float, str]],
     # que un fragmento mas largo cortado a la mitad. Puntuacion debil (,;:) solo
     # desde la 4a. Sin puntuacion, 6 palabras. Nunca termina en palabra vacia
     # (of/the/and...), que dejaria la frase colgando: en ese caso estira una mas.
-    _DANGLING = {"of", "the", "a", "an", "and", "or", "with", "to", "in", "for",
-                 "on", "at", "by", "from", "his", "her", "their", "its", "that"}
+    _DANGLING = {
+        "of",
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "with",
+        "to",
+        "in",
+        "for",
+        "on",
+        "at",
+        "by",
+        "from",
+        "his",
+        "her",
+        "their",
+        "its",
+        "that",
+    }
     opener_words = 0
     if len(words) > 8:
         opener_words = 6
         for k, (_t, w) in enumerate(words[:8], start=1):
             clean = w.rstrip("\"')")
-            if (k >= 3 and clean.endswith((".", "!", "?"))) or \
-               (k >= 4 and clean.endswith((":", ";", ","))):
+            if (k >= 3 and clean.endswith((".", "!", "?"))) or (
+                k >= 4 and clean.endswith((":", ";", ","))
+            ):
                 opener_words = k
                 break
-        while (opener_words < 8
-               and re.sub(r"[^a-z]", "", words[opener_words - 1][1].lower()) in _DANGLING):
+        while (
+            opener_words < 8
+            and re.sub(r"[^a-z]", "", words[opener_words - 1][1].lower()) in _DANGLING
+        ):
             opener_words += 1
 
     return {
         "durationInFrames": close_from + CLOSE_TAIL,
-        "coldOpen": ({"src": f"archivo/{slug}/bg_{n - 1}.png", "label": "CLASSIFIED",
-                      "tag": "IN 60 SECONDS...", "frames": COLD_FRAMES}
-                     if COLD_FRAMES else None),
+        "coldOpen": (
+            {
+                "src": f"archivo/{slug}/bg_{n - 1}.png",
+                "label": "CLASSIFIED",
+                "tag": "IN 60 SECONDS...",
+                "frames": COLD_FRAMES,
+            }
+            if COLD_FRAMES
+            else None
+        ),
         "scenes": scenes,
         # promesa legible desde el frame 0: hook_card del guion, o las primeras
         # 8 palabras del guion como respaldo (los benchmarks piden 4-8)
-        "hook": (data.get("hook_card")
-                 or " ".join(data.get("script", "").split()[:8])).strip(),
+        "hook": (
+            data.get("hook_card") or " ".join(data.get("script", "").split()[:8])
+        ).strip(),
         "words": wframes,
         "openerWords": opener_words,
         "caseBase": case_no,
         "close": {
-            "from": close_from, "series": series,
+            "from": close_from,
+            "series": series,
             "caseNo": case_no,
-            "share1": share.get("line1", _word_safe(
-                (data.get("hook_card") or title.split("|")[0]).split(".")[0] + ".")),
+            "share1": share.get(
+                "line1",
+                _word_safe(
+                    (data.get("hook_card") or title.split("|")[0]).split(".")[0] + "."
+                ),
+            ),
             "share2": share.get("line2", "True story."),
         },
     }
 
 
-def render_from_parts(out_dir: Path, data: dict, words: list[tuple[float, str]],
-                       audio_path: Path) -> Path:
+def render_from_parts(
+    out_dir: Path, data: dict, words: list[tuple[float, str]], audio_path: Path
+) -> Path:
     """Renderiza el video Archivo Vivo completo y muxea voz + musica."""
     sys.path.insert(0, str(ROOT))
     import pipeline as pl
@@ -602,15 +760,32 @@ def render_from_parts(out_dir: Path, data: dict, words: list[tuple[float, str]],
 
     props = out_dir / "clips" / "archivo_manifest.json"
     props.parent.mkdir(exist_ok=True)
-    props.write_text(json.dumps({"manifest": manifest}, ensure_ascii=False), encoding="utf-8")
-    print(f"[archivo] manifest: {len(manifest['scenes'])} escenas, "
-          f"{len(manifest['words'])} palabras, {manifest['durationInFrames']} frames")
+    props.write_text(
+        json.dumps({"manifest": manifest}, ensure_ascii=False), encoding="utf-8"
+    )
+    print(
+        f"[archivo] manifest: {len(manifest['scenes'])} escenas, "
+        f"{len(manifest['words'])} palabras, {manifest['durationInFrames']} frames"
+    )
 
     engine_mp4 = out_dir / "clips" / "archivo_engine.mp4"
     npx = shutil.which("npx") or "npx"
     print("[archivo] renderizando composicion (esto tarda unos minutos)...")
-    _run([npx, "remotion", "render", "src/index.jsx", "ArchivoVideo",
-          str(engine_mp4.resolve()), "--props", str(props.resolve())], cwd=MOTION)
+    _run(
+        [
+            npx,
+            "remotion",
+            "render",
+            "src/index.jsx",
+            "ArchivoVideo",
+            str(engine_mp4.resolve()),
+            "--props",
+            str(props.resolve()),
+            # ver korex_engine._concurrency(): medido -45% de tiempo de render
+            f"--concurrency={max(2, int((__import__('os').cpu_count() or 4) * 0.75))}",
+        ],
+        cwd=MOTION,
+    )
 
     # mux: motor (video + sfx del motor) + voz desplazada por el cold-open + musica
     cold_ms = int(COLD_FRAMES / FPS * 1000)
@@ -622,17 +797,36 @@ def render_from_parts(out_dir: Path, data: dict, words: list[tuple[float, str]],
         # DUCKING (fix 23 jul): la musica baja cuando habla la voz, igual que en
         # assemble() clasico (sidechaincompress con los mismos parametros probados)
         inputs += ["-i", str(music)]
-        fc += ("[voice]asplit=2[vmix][vtrig];"
-               "[2:a]aloop=loop=-1:size=2e9,volume=0.06[bg0];"
-               "[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[bg];")
+        fc += (
+            "[voice]asplit=2[vmix][vtrig];"
+            "[2:a]aloop=loop=-1:size=2e9,volume=0.06[bg0];"
+            "[bg0][vtrig]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[bg];"
+        )
         labels, ninputs = "[0:a][vmix][bg]", 3
     else:
         fc += "[voice]anull[vmix];"
         labels, ninputs = "[0:a][vmix]", 2
     fc += f"{labels}amix=inputs={ninputs}:normalize=0:duration=first[a]"
-    _run(["ffmpeg", "-y", *inputs, "-filter_complex", fc,
-          "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-          str(final)])
+    _run(
+        [
+            "ffmpeg",
+            "-y",
+            *inputs,
+            "-filter_complex",
+            fc,
+            "-map",
+            "0:v",
+            "-map",
+            "[a]",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(final),
+        ]
+    )
     print(f"[archivo] LISTO: {final}")
     return final
 

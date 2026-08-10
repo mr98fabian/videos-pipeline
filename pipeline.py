@@ -105,8 +105,7 @@ CHARACTER_PLATE = (
     "characters. One single character only."
 )
 BACKGROUND_PLATE = (
-    "Empty scene with NO people, NO characters, NO figures anywhere. "
-    "Environment only."
+    "Empty scene with NO people, NO characters, NO figures anywhere. Environment only."
 )
 # El estilo del canal pide grano de pelicula, textura rayada y sombras: sobre
 # la placa eso es basura que hay que recortar despues. El motor YA pone el
@@ -140,7 +139,9 @@ _PERSON_RE = re.compile(
 # notas de encuadre que el guion arrastra y que no pintan nada en ninguna placa
 _CAMERA_RE = re.compile(
     r",\s*(?:full figures?(?: apart)?|half figures?|close ?ups?|standing apart"
-    r"|full figures? apart)\b.*$", re.I)
+    r"|full figures? apart)\b.*$",
+    re.I,
+)
 # el participio (-ing) parte la frase: delante queda QUIEN, detras DONDE
 _GERUND_RE = re.compile(
     # el (?:\w+\s+)? admite un adverbio entre el gerundio y la preposicion:
@@ -148,7 +149,9 @@ _GERUND_RE = re.compile(
     # con un prompt contradictorio (la persona + "escena vacia sin gente"),
     # que el modelo resuelve dibujando a la persona igual (28 jul 2026)
     r"\b(\w+ing)\s+(?:\w+\s+)?(?:inside|into|in front of|at|on|in|under|near|behind|"
-    r"outside|across|through|over|beside|down|along)\s+(.+)$", re.I)
+    r"outside|across|through|over|beside|down|along)\s+(.+)$",
+    re.I,
+)
 
 
 def _plate_terms(term: str, char_term: str | None) -> tuple[str, str | None]:
@@ -166,7 +169,7 @@ def _plate_terms(term: str, char_term: str | None) -> tuple[str, str | None]:
     clean = _CAMERA_RE.sub("", (term or "").strip()).strip(" ,")
     has_person = bool(_PERSON_RE.search(clean))
     if not has_person and not char_term:
-        return term, None            # escena sin personaje: una sola placa
+        return term, None  # escena sin personaje: una sola placa
 
     place = None
     g = _GERUND_RE.search(clean)
@@ -193,14 +196,14 @@ def _plate_terms(term: str, char_term: str | None) -> tuple[str, str | None]:
         # hay persona pero no se puede separar el sitio -> no se parte: mejor
         # una placa correcta que dos mal cortadas
         return term, None
-    return f"{place}, {BACKGROUND_PLATE}", clean[:g.start()].strip(" ,")
+    return f"{place}, {BACKGROUND_PLATE}", clean[: g.start()].strip(" ,")
 
 
 DEFAULT_RATE = "+8%"
 DEFAULT_CLIPS = 10  # ~4-5s/escena en un Short de 45s. Antes 5 (~9s/escena) -- muy
-                    # por debajo del benchmark de retencion de 2-4s por corte
-                    # (ver RETENCION_PSICOLOGIA.md secc. 4). Subir aun mas si el
-                    # guion tiene muchos beats cortos.
+# por debajo del benchmark de retencion de 2-4s por corte
+# (ver RETENCION_PSICOLOGIA.md secc. 4). Subir aun mas si el
+# guion tiene muchos beats cortos.
 WIDTH, HEIGHT, FPS = 1080, 1920, 30
 
 SCRIPT_SCHEMA = {
@@ -209,88 +212,134 @@ SCRIPT_SCHEMA = {
         "script": {
             "type": "string",
             "description": "Voiceover text, word-for-word, 355-375 words, no markdown. "
-                            "*** HARD RULE: NOTHING EXPLANATORY AFTER THE PAYOFF *** The payoff is "
-                            "the sentence that delivers what the hook promised (the twist, the "
-                            "result, the reveal). The moment it lands, the story is OVER for the "
-                            "viewer -- any further background, dates, aftermath or 'and that is why "
-                            "...' sentence is dead weight and they leave right there, taking the "
-                            "last seconds of retention with them. After the payoff you may write "
-                            "ONLY: (a) at most one short dry acid remark, if it hits HARDER than the "
-                            "payoff itself, (b) the share trigger, (c) the closing question. Never a "
-                            "new fact, never a recap, never extra context. If a detail matters, it "
-                            "belongs BEFORE the payoff, not after it. "
-                            "*** HARD RULE: THE SCRIPT MUST LOOP *** The last sentence has to close using the SAME KEY WORDS as the hook, so that when the Short restarts the viewer does not perceive a cut and watches it again. Measured on this channel (26 jul 2026): the only video with a real loop holds a 3.76 -> 2.89 audience ratio (watched ~3 times through, -23% across the whole video), while videos closing with a summary sentence ('and so...', 'that is how...') fall to 0.95 and 0.08. A summary tells the viewer it is over; a loop hides the seam. Example that works: hook 'almost nobody today remembers why' -> close 'then quietly vanished from the pages of history'. NEVER close with a recap or a moral. "
-                            "*** PLANTILLA UNICA DEL CANAL: replicar Black Tom *** Es el unico video con re-watch real (3,76 -> 2,89) y de el se copian TRES cosas, no solo el loop: (1) el ancla es un ICONO FAMOSO que el espectador reconoce al instante y puede ver hoy (la Estatua de la Libertad), no un personaje historico que hay que presentar; (2) la consecuencia SIGUE VISIBLE HOY -- la antorcha lleva cerrada desde entonces -- asi que el espectador puede comprobarlo el mismo ('ever since', 'to this day', 'still closed'); (3) el loop lexico y visual. Si el tema no tiene un icono reconocible con una huella visible hoy, el guion no alcanza este patron: buscar otro angulo del mismo hecho hasta encontrarlo.",
+            "*** HARD RULE: NOTHING EXPLANATORY AFTER THE PAYOFF *** The payoff is "
+            "the sentence that delivers what the hook promised (the twist, the "
+            "result, the reveal). The moment it lands, the story is OVER for the "
+            "viewer -- any further background, dates, aftermath or 'and that is why "
+            "...' sentence is dead weight and they leave right there, taking the "
+            "last seconds of retention with them. After the payoff you may write "
+            "ONLY: (a) at most one short dry acid remark, if it hits HARDER than the "
+            "payoff itself, (b) the share trigger, (c) the closing question. Never a "
+            "new fact, never a recap, never extra context. If a detail matters, it "
+            "belongs BEFORE the payoff, not after it. "
+            "*** HARD RULE: THE SCRIPT MUST LOOP *** The last sentence has to close using the SAME KEY WORDS as the hook, so that when the Short restarts the viewer does not perceive a cut and watches it again. Measured on this channel (26 jul 2026): the only video with a real loop holds a 3.76 -> 2.89 audience ratio (watched ~3 times through, -23% across the whole video), while videos closing with a summary sentence ('and so...', 'that is how...') fall to 0.95 and 0.08. A summary tells the viewer it is over; a loop hides the seam. Example that works: hook 'almost nobody today remembers why' -> close 'then quietly vanished from the pages of history'. NEVER close with a recap or a moral. "
+            "*** PLANTILLA UNICA DEL CANAL: replicar Black Tom *** Es el unico video con re-watch real (3,76 -> 2,89) y de el se copian TRES cosas, no solo el loop: (1) el ancla es un ICONO FAMOSO que el espectador reconoce al instante y puede ver hoy (la Estatua de la Libertad), no un personaje historico que hay que presentar; (2) la consecuencia SIGUE VISIBLE HOY -- la antorcha lleva cerrada desde entonces -- asi que el espectador puede comprobarlo el mismo ('ever since', 'to this day', 'still closed'); (3) el loop lexico y visual. Si el tema no tiene un icono reconocible con una huella visible hoy, el guion no alcanza este patron: buscar otro angulo del mismo hecho hasta encontrarlo.",
         },
         "search_terms": {
             "type": "array",
             "items": {"type": "string"},
             "description": "8-12 concrete, visual queries (objects/scenes, not concepts). "
-                            "More, shorter scenes beat fewer long ones -- retention research shows "
-                            "high-performing Shorts cut every 2-4 seconds, not every 8-9. "
-                            "CUT-OUT FRIENDLY (the engine isolates the subject as a die-cut sticker): "
-                            "each MIDDLE term should show ONE clear subject as a FULL or HALF figure "
-                            "with a clean silhouette, doing one readable action, on an uncluttered "
-                            "background -- e.g. 'a soldier crouching in a trench, full figure' NOT "
-                            "'a soldier's face in extreme close-up'. Extreme face close-ups isolate "
-                            "as ugly floating heads. The ONLY exception is the FIRST (and its echo, "
-                            "the last) term: a single intense face close-up there is encouraged for "
-                            "the thumbnail scroll-stop -- the engine renders those as a clean taped "
-                            "photo, not a cut-out. "
-                            "*** THE LAST TERM MUST CHAIN INTO THE FIRST *** Not merely resemble it: the closing image has to be a frame the first image could cut back to without a visible seam (same place, same light, same framing, later moment). That visual loop is half of the re-watch effect measured on this channel. Example: opens on a night explosion in the harbor, closes on the same harbor still smoldering. "
-                            "MULTI-SUBJECT: in 3-4 of the middle terms, ask for TWO or THREE figures "
-                            "(or a figure plus a key object) STANDING CLEARLY APART, not touching and "
-                            "not overlapping -- e.g. 'two officers standing apart facing each other "
-                            "across an empty room, full figures'. The engine cuts each one out "
-                            "separately and makes them ACT on each other (one shoves, the other "
-                            "topples), which only works if they do not overlap in the image.",
+            "More, shorter scenes beat fewer long ones -- retention research shows "
+            "high-performing Shorts cut every 2-4 seconds, not every 8-9. "
+            "CUT-OUT FRIENDLY (the engine isolates the subject as a die-cut sticker): "
+            "each MIDDLE term should show ONE clear subject as a FULL or HALF figure "
+            "with a clean silhouette, doing one readable action, on an uncluttered "
+            "background -- e.g. 'a soldier crouching in a trench, full figure' NOT "
+            "'a soldier's face in extreme close-up'. Extreme face close-ups isolate "
+            "as ugly floating heads. The ONLY exception is the FIRST (and its echo, "
+            "the last) term: a single intense face close-up there is encouraged for "
+            "the thumbnail scroll-stop -- the engine renders those as a clean taped "
+            "photo, not a cut-out. "
+            "*** THE LAST TERM MUST CHAIN INTO THE FIRST *** Not merely resemble it: the closing image has to be a frame the first image could cut back to without a visible seam (same place, same light, same framing, later moment). That visual loop is half of the re-watch effect measured on this channel. Example: opens on a night explosion in the harbor, closes on the same harbor still smoldering. "
+            "MULTI-SUBJECT: in 3-4 of the middle terms, ask for TWO or THREE figures "
+            "(or a figure plus a key object) STANDING CLEARLY APART, not touching and "
+            "not overlapping -- e.g. 'two officers standing apart facing each other "
+            "across an empty room, full figures'. The engine cuts each one out "
+            "separately and makes them ACT on each other (one shoves, the other "
+            "topples), which only works if they do not overlap in the image.",
         },
         "character_terms": {
             "type": "array",
             "items": {"type": "string"},
             "description": "PARALLEL to search_terms, exactly the same length. For a scene "
-                            "whose subject is a PERSON, put the character alone here: who they "
-                            "are and what they wear, nothing else -- 'a museum handyman in "
-                            "workman overalls', 'an elderly Prussian general in dress uniform'. "
-                            "No place, no action, no props, no other characters: the engine adds "
-                            "the pose and the plain background, and the ACTION comes from the "
-                            "skeleton animation, not from the drawing. For a scene with no person "
-                            "(an empty room, a document, a railway track) put an EMPTY STRING. "
-                            "The character is drawn on its own plate and composited over the "
-                            "background plate, so anything that touches the figure in the image "
-                            "can never be separated again.",
+            "whose subject is a PERSON, put the character alone here: who they "
+            "are and what they wear, nothing else -- 'a museum handyman in "
+            "workman overalls', 'an elderly Prussian general in dress uniform'. "
+            "No place, no action, no props, no other characters: the engine adds "
+            "the pose and the plain background, and the ACTION comes from the "
+            "skeleton animation, not from the drawing. For a scene with no person "
+            "(an empty room, a document, a railway track) put an EMPTY STRING. "
+            "The character is drawn on its own plate and composited over the "
+            "background plate, so anything that touches the figure in the image "
+            "can never be separated again.",
         },
-        "title": {"type": "string", "description": "YouTube Shorts title, <90 chars, curiosity-driven"},
-        "description": {"type": "string", "description": "YouTube description with 3-5 hashtags at the end"},
+        "title": {
+            "type": "string",
+            "description": "YouTube Shorts title, <90 chars, curiosity-driven",
+        },
+        "description": {
+            "type": "string",
+            "description": "YouTube description with 3-5 hashtags at the end",
+        },
         "music_mood": {
             "type": "string",
             "description": "Short text prompt (English) describing instrumental background music matching "
-                            "this script's tone, for an AI music generator. E.g. 'upbeat quirky ukulele pop, "
-                            "playful and light' or 'tense minimal synth, building suspense'. No vocals.",
+            "this script's tone, for an AI music generator. E.g. 'upbeat quirky ukulele pop, "
+            "playful and light' or 'tense minimal synth, building suspense'. No vocals.",
         },
         "hook_card": {
             "type": "string",
             "description": "A ~6-10 word on-screen premise card shown for the first 2.2s (high-contrast "
-                            "text over the video, separate from narration/subtitles). States the video's "
-                            "premise as a curiosity gap -- withholds the resolution the script itself "
-                            "reveals. E.g. 'A king survived a gun built to kill him.' Never restates the "
-                            "hook sentence word-for-word; it should read like a caption someone would pause "
-                            "on, not a subtitle.",
+            "text over the video, separate from narration/subtitles). States the video's "
+            "premise as a curiosity gap -- withholds the resolution the script itself "
+            "reveals. E.g. 'A king survived a gun built to kill him.' Never restates the "
+            "hook sentence word-for-word; it should read like a caption someone would pause "
+            "on, not a subtitle.",
         },
         "hook_punch": {
             "type": "string",
             "description": "EXACTLY 3-5 words, no more. The visual hook: rendered huge and bold at the "
-                            "top of the card, above hook_card. Kallaway (reviewed 30 jul 2026) argues the "
-                            "visual hook is far more powerful than the spoken one because people read "
-                            "faster than they hear -- a full-sentence card is read too slowly to land in "
-                            "the window that decides the swipe. This is the 3-5 words the viewer absorbs "
-                            "in one glance, BEFORE reading anything else. Make it concrete and loaded, not "
-                            "a topic label: 'HE INVOICED HIS SISTER' not 'FAMILY DRAMA'; 'THE TORCH NEVER "
-                            "REOPENED' not 'STATUE OF LIBERTY'. No final period. It may be uppercase.",
+            "top of the card, above hook_card. Kallaway (reviewed 30 jul 2026) argues the "
+            "visual hook is far more powerful than the spoken one because people read "
+            "faster than they hear -- a full-sentence card is read too slowly to land in "
+            "the window that decides the swipe. This is the 3-5 words the viewer absorbs "
+            "in one glance, BEFORE reading anything else. Make it concrete and loaded, not "
+            "a topic label: 'HE INVOICED HIS SISTER' not 'FAMILY DRAMA'; 'THE TORCH NEVER "
+            "REOPENED' not 'STATUE OF LIBERTY'. No final period. It may be uppercase.",
+        },
+        "target_emotion": {
+            "type": "string",
+            "description": "ONE word: 'awe', 'surprise', 'humor' or 'outrage'. The single "
+            "high-arousal emotion this script is engineered to trigger. Share research "
+            "(Berger STEPPS; Dobele 2007 -- surprise is the #1 share trigger in viral "
+            "video) shows only high-arousal emotions get shared; calm/sad content dies. "
+            "This channel's own data: median shares = 0 across 51 measured videos -- a "
+            "script with no declared emotion is designed to keep it that way. Declare "
+            "the emotion and make sure the wording actually provokes it.",
+        },
+        "twist_phrase": {
+            "type": "string",
+            "description": "A short VERBATIM phrase (4-8 words) copied from the sentence "
+            "where the main surprise/twist lands. The twist must break a prediction the "
+            "viewer already made, and it must land between 30% and 60% of the script -- "
+            "later and most viewers are already gone (this channel's retention curves "
+            "collapse in the first 14%), earlier and no tension is built. "
+            "`_check_giro_posicion` locates this phrase in the script and warns when it "
+            "falls outside the band.",
+        },
+        "comment_cta": {
+            "type": "string",
+            "description": "The pinned-comment question, ONE sentence, choice-based: "
+            "'X or Y? Tell me below.' -- choice CTAs beat open questions because picking "
+            "a side is lower friction than formulating a thought. It must be about the "
+            "story's judgment call (who was right / what would you have done), NEVER "
+            "generic ('what do you think?'), and NEVER spoken in the script (rule 5) -- "
+            "it lives in the description and the pinned comment only.",
         },
     },
-    "required": ["script", "search_terms", "character_terms", "title", "description",
-                 "music_mood", "hook_card", "hook_punch"],
+    "required": [
+        "script",
+        "search_terms",
+        "character_terms",
+        "title",
+        "description",
+        "music_mood",
+        "hook_card",
+        "hook_punch",
+        "target_emotion",
+        "twist_phrase",
+        "comment_cta",
+    ],
     "additionalProperties": False,
 }
 
@@ -571,6 +620,27 @@ Instructions:
     an unfamiliar establishing shot burns that entire window for nothing. If the topic's
     icon cannot be shown instantly recognizable in frame one, it fails rule 9 of the Black
     Tom template above (find a different angle) rather than opening on a vague shot.
+11. *** SHARE ENGINEERING *** (9 ago 2026 -- investigacion multiidioma, ver
+    PSICOLOGIA_COMPARTIR.md y ANALISIS_OUTLIERS_PROPIOS.md.)
+    Every script is engineered to be SHARED, not only watched -- this channel's median
+    shares is 0 across 51 measured videos, and shares are the strongest 2026 signal.
+    (a) TARGET EMOTION -- declare `target_emotion` (awe / surprise / humor / outrage).
+        Only high-arousal emotions drive shares (Berger & Milkman). If the script
+        provokes none, it is designed to die: rewrite before delivering.
+    (b) THE TWIST AT 30-60% -- plant a strong prediction and break it with ONE clear,
+        unmistakable twist landing between 30% and 60% of the script; copy 4-8 verbatim
+        words of that sentence into `twist_phrase`. Surprise is the #1 share trigger
+        (Dobele 2007); a twist the viewer already guessed is no twist, and a twist near
+        the end is one nobody sees (our retention collapses in the first 14%).
+    (c) SOCIAL CURRENCY -- the viewer shares to look good ("the one who knows insane
+        true stories"). The core fact must be re-tellable in ONE <=15-word sentence at
+        a dinner table; if it needs the whole video to explain, simplify it.
+    (d) COMMENT CTA -- write `comment_cta` as a choice question ("A or B?") about the
+        story's judgment call. Never spoken in the script; it lives in the description
+        and the pinned comment.
+    (e) HUMOR DIRECTION -- the acid punches UP at power and at the absurdity of things,
+        never at groups of people or at victims (benign-violation rule: what is
+        'benign' depends on the audience; identity-based violations are never benign).
 
 *** PLANTILLA UNICA DEL CANAL: replicar Black Tom *** Es el unico video con re-watch real
 (3,76 -> 2,89) y de el se copian TRES cosas, no solo el loop: (1) el ancla es un ICONO
@@ -640,18 +710,33 @@ def run(cmd: list[str], cwd: Path | None = None, timeout: float = 600.0) -> None
     infinito) no debe bloquear una corrida desatendida (tarea programada) para
     siempre -- antes no habia limite y el proceso podia quedar colgado indefinidamente."""
     try:
-        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(
+            cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout
+        )
     except subprocess.TimeoutExpired as e:
-        raise RuntimeError(f"Comando colgado >{timeout:.0f}s ({cmd[0]}), abortado: {' '.join(cmd[:4])}...") from e
+        raise RuntimeError(
+            f"Comando colgado >{timeout:.0f}s ({cmd[0]}), abortado: {' '.join(cmd[:4])}..."
+        ) from e
     if result.returncode != 0:
         raise RuntimeError(f"Comando fallo ({cmd[0]}):\n{result.stderr[-2000:]}")
 
 
 def ffprobe_duration(path: Path, timeout: float = 30.0) -> float:
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
-        capture_output=True, text=True, check=True, timeout=timeout,
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=timeout,
     )
     return float(out.stdout.strip())
 
@@ -660,10 +745,22 @@ def ffprobe_resolution(path: Path, timeout: float = 30.0) -> tuple[int, int] | N
     """(ancho, alto) reales del stream de video, o None si no se puede leer."""
     try:
         out = subprocess.run(
-            ["ffprobe", "-v", "error", "-select_streams", "v:0",
-             "-show_entries", "stream=width,height",
-             "-of", "csv=p=0:s=x", str(path)],
-            capture_output=True, text=True, check=True, timeout=timeout,
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height",
+                "-of",
+                "csv=p=0:s=x",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=timeout,
         )
         w, h = out.stdout.strip().split("x")[:2]
         return int(w), int(h)
@@ -694,9 +791,15 @@ def _load_json(path: Path, default):
         return default
 
 
-_DRAWTEXT_SPECIAL = str.maketrans({
-    "\\": "\\\\", "'": "’", ":": "\\:", ",": "\\,", "%": "\\%",
-})
+_DRAWTEXT_SPECIAL = str.maketrans(
+    {
+        "\\": "\\\\",
+        "'": "’",
+        ":": "\\:",
+        ",": "\\,",
+        "%": "\\%",
+    }
+)
 
 
 def _drawtext_escape(text: str) -> str:
@@ -712,6 +815,7 @@ def _wrap_caption(text: str, width_chars: int = 26) -> str:
     """Envuelve el parrafo de caption estatico en lineas cortas para que quepa
     en el ancho del frame vertical -- drawtext no auto-envuelve texto."""
     import textwrap
+
     return "\n".join(textwrap.wrap(text, width=width_chars))
 
 
@@ -732,6 +836,7 @@ def with_retries(fn, *args, attempts: int = 3, delay: float = 10.0, **kwargs):
 
 # ------------------------------------------------------------- AUTO TOPICS
 
+
 def _load_used_topics() -> set[str]:
     return set(_load_json(USED_TOPICS_FILE, []))
 
@@ -747,10 +852,15 @@ def pick_next_topic() -> str:
     con Claude y los agrega al archivo. Nunca repite un tema ya producido."""
     topics_path = ROOT / "topics.txt"
     used = _load_used_topics()
-    lines = [
-        line.strip() for line in topics_path.read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.startswith("#")
-    ] if topics_path.exists() else []
+    lines = (
+        [
+            line.strip()
+            for line in topics_path.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.startswith("#")
+        ]
+        if topics_path.exists()
+        else []
+    )
 
     remaining = [t for t in lines if t not in used]
     if remaining:
@@ -765,6 +875,7 @@ def pick_next_topic() -> str:
 
 
 # ---------------------------------------------------------------- 1. SCRIPT
+
 
 def _claude_json_call(max_tokens: int, schema: dict, prompt: str) -> dict:
     """Helper compartido para llamadas a Claude con salida json_schema --
@@ -784,8 +895,10 @@ def _claude_json_call(max_tokens: int, schema: dict, prompt: str) -> dict:
     )
     text = next((b.text for b in response.content if b.type == "text"), None)
     if text is None:
-        raise RuntimeError("Claude no devolvio bloque de texto (solo thinking?) -- "
-                            "revisar max_tokens/presupuesto de pensamiento")
+        raise RuntimeError(
+            "Claude no devolvio bloque de texto (solo thinking?) -- "
+            "revisar max_tokens/presupuesto de pensamiento"
+        )
     return json.loads(text)
 
 
@@ -794,8 +907,19 @@ def generate_script(topic: str) -> dict:
     # 2000 se quedaba corto (27 jul 2026): el prompt crecio mucho hoy (loop,
     # plantilla Black Tom, reglas de hook) y el presupuesto de thinking
     # adaptativo se comia todo el budget antes de escribir el bloque de texto
-    data = with_retries(_claude_json_call, 4000, SCRIPT_SCHEMA, SCRIPT_PROMPT.format(topic=topic))
-    log("script", f"{len(data['script'].split())} palabras, {len(data['search_terms'])} search terms")
+    data = with_retries(
+        _claude_json_call, 4000, SCRIPT_SCHEMA, SCRIPT_PROMPT.format(topic=topic)
+    )
+    log(
+        "script",
+        f"{len(data['script'].split())} palabras, {len(data['search_terms'])} search terms",
+    )
+    log(
+        "script",
+        f"emocion: {data.get('target_emotion') or 'NO DECLARADA'} | "
+        f"giro: {str(data.get('twist_phrase'))[:40]!r} | "
+        f"cta: {str(data.get('comment_cta'))[:40]!r}",
+    )
     return data
 
 
@@ -808,11 +932,16 @@ def generate_ideas(existing_topics: list[str]) -> list[str]:
 
 # ----------------------------------------------------------------- 2. AUDIO
 
-async def _tts(script: str, voice: str, rate: str, mp3_path: Path) -> list[tuple[float, float, str]]:
+
+async def _tts(
+    script: str, voice: str, rate: str, mp3_path: Path
+) -> list[tuple[float, float, str]]:
     import edge_tts
 
     words: list[tuple[float, float, str]] = []
-    communicate = edge_tts.Communicate(script, voice, rate=rate, boundary="WordBoundary")
+    communicate = edge_tts.Communicate(
+        script, voice, rate=rate, boundary="WordBoundary"
+    )
     with open(mp3_path, "wb") as f:
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
@@ -824,9 +953,13 @@ async def _tts(script: str, voice: str, rate: str, mp3_path: Path) -> list[tuple
     return words
 
 
-def trim_silence_inplace(audio_path: Path, words: list[tuple[float, float, str]],
-                         keep: float = 0.10, noise: float = -35.0,
-                         min_silence: float = 0.20):
+def trim_silence_inplace(
+    audio_path: Path,
+    words: list[tuple[float, float, str]],
+    keep: float = 0.10,
+    noise: float = -35.0,
+    min_silence: float = 0.20,
+):
     """Recorta los silencios de la voz y remapea los timestamps de palabra.
 
     edge-tts deja ~0.4s entre oraciones; medido 30 jul 2026 eso era el 13,9% de
@@ -843,7 +976,9 @@ def trim_silence_inplace(audio_path: Path, words: list[tuple[float, float, str]]
     try:
         import trim_silence as tsm
     except Exception as e:
-        log("audio", f"AVISO: no se pudo importar trim_silence ({e}), sigo sin recortar")
+        log(
+            "audio", f"AVISO: no se pudo importar trim_silence ({e}), sigo sin recortar"
+        )
         return audio_path, words
 
     try:
@@ -864,12 +999,18 @@ def trim_silence_inplace(audio_path: Path, words: list[tuple[float, float, str]]
 
         new_words = [(tsm.remap(s, rem), tsm.remap(e, rem), w) for s, e, w in words]
         cut = sum(e - s for s, e in rem)
-        log("audio", f"silencios recortados: -{cut:.2f}s ({cut / total * 100:.1f}%), "
-                     f"{total:.1f}s -> {total - cut:.1f}s (original en voice_raw.mp3)")
+        log(
+            "audio",
+            f"silencios recortados: -{cut:.2f}s ({cut / total * 100:.1f}%), "
+            f"{total:.1f}s -> {total - cut:.1f}s (original en voice_raw.mp3)",
+        )
         return audio_path, new_words
     except Exception as e:
-        log("audio", f"AVISO: fallo el recorte de silencios ({type(e).__name__}: {e}), "
-                     f"sigo con la voz original")
+        log(
+            "audio",
+            f"AVISO: fallo el recorte de silencios ({type(e).__name__}: {e}), "
+            f"sigo con la voz original",
+        )
         return audio_path, words
 
 
@@ -879,19 +1020,34 @@ KOKORO_DIR = ROOT / "tools" / "kokoro_tts"
 KOKORO_VOICE_PREFIXES = ("em_", "ef_", "am_", "af_", "bm_", "bf_")
 
 
-def _kokoro_tts(script: str, voice: str, wav_path: Path, speed: float = 1.0) -> list[tuple[float, float, str]]:
+def _kokoro_tts(
+    script: str, voice: str, wav_path: Path, speed: float = 1.0
+) -> list[tuple[float, float, str]]:
     """Corre tools/kokoro_tts/synth.py en su propio venv (Python 3.12; Kokoro
     no compila aun en 3.14). Timestamps de palabra son una ESTIMACION por
     longitud de caracter, no timing acustico real -- ver synth.py."""
     text_file = wav_path.with_suffix(".txt")
     words_file = wav_path.with_suffix(".words.json")
     text_file.write_text(script, encoding="utf-8")
-    run([
-        "uv", "run", "--directory", str(KOKORO_DIR), "synth.py",
-        "--text-file", str(text_file), "--voice", voice,
-        "--out", str(wav_path), "--words-out", str(words_file),
-        "--speed", str(speed),
-    ])
+    run(
+        [
+            "uv",
+            "run",
+            "--directory",
+            str(KOKORO_DIR),
+            "synth.py",
+            "--text-file",
+            str(text_file),
+            "--voice",
+            voice,
+            "--out",
+            str(wav_path),
+            "--words-out",
+            str(words_file),
+            "--speed",
+            str(speed),
+        ]
+    )
     words_raw = json.loads(words_file.read_text(encoding="utf-8"))
     return [(float(s), float(e), w) for s, e, w in words_raw]
 
@@ -919,11 +1075,11 @@ _REF_SEED_VOICE = {"es": "es-MX-JorgeNeural", "en": "en-US-AndrewNeural"}
 # llevar carga emocional ni signos de exclamacion.
 _REF_SEED_TEXT = {
     "es": "En noviembre de aquel año, los documentos del archivo revelaron una "
-          "operación que nadie había registrado. Las cifras estaban ahí, firmadas, "
-          "y durante años ninguna autoridad quiso revisarlas con atención.",
+    "operación que nadie había registrado. Las cifras estaban ahí, firmadas, "
+    "y durante años ninguna autoridad quiso revisarlas con atención.",
     "en": "In November of that year, the archive documents revealed an operation "
-          "no one had recorded. The figures were there, signed, and for years no "
-          "authority cared to examine them closely.",
+    "no one had recorded. The figures were there, signed, and for years no "
+    "authority cared to examine them closely.",
 }
 
 
@@ -948,13 +1104,17 @@ def _chatterbox_ref(lang: str) -> Path | None:
         mp3.unlink(missing_ok=True)
         return ref
     except Exception as e:
-        log("audio", f"AVISO: sin muestra de timbre ({type(e).__name__}: {e}), "
-                     f"Chatterbox usara su voz por defecto")
+        log(
+            "audio",
+            f"AVISO: sin muestra de timbre ({type(e).__name__}: {e}), "
+            f"Chatterbox usara su voz por defecto",
+        )
         return None
 
 
-def _align_words(audio: Path, script: str = "",
-                 lang: str = "") -> list[tuple[float, float, str]]:
+def _align_words(
+    audio: Path, script: str = "", lang: str = ""
+) -> list[tuple[float, float, str]]:
     """Timestamps REALES por palabra sobre el audio ya sintetizado.
 
     Chatterbox no devuelve tiempos (ver tools/chatterbox_tts/synth.py) y los de
@@ -963,29 +1123,40 @@ def _align_words(audio: Path, script: str = "",
     acustico, asi que se reconoce el propio audio con whisper.
     """
     from faster_whisper import WhisperModel
+
     try:
         import torch
+
         cuda = torch.cuda.is_available()
     except Exception:
         cuda = False
     device, compute = ("cuda", "float16") if cuda else ("cpu", "int8")
     m = WhisperModel("base", device=device, compute_type=compute)
     segs, _ = m.transcribe(str(audio), word_timestamps=True, language=lang or None)
-    heard = [(float(w.start), float(w.end), w.word.strip())
-             for s in segs for w in (s.words or []) if w.word.strip()]
+    heard = [
+        (float(w.start), float(w.end), w.word.strip())
+        for s in segs
+        for w in (s.words or [])
+        if w.word.strip()
+    ]
     return _snap_to_script(heard, script) if script else heard
 
 
 def _norm_word(w: str) -> str:
     """Forma comparable: minusculas, sin puntuacion y sin tildes/dieresis."""
     import unicodedata
-    w = "".join(c for c in unicodedata.normalize("NFD", w.lower())
-                if unicodedata.category(c) != "Mn")
+
+    w = "".join(
+        c
+        for c in unicodedata.normalize("NFD", w.lower())
+        if unicodedata.category(c) != "Mn"
+    )
     return re.sub(r"[^\w]", "", w)
 
 
-def _snap_to_script(heard: list[tuple[float, float, str]],
-                    script: str) -> list[tuple[float, float, str]]:
+def _snap_to_script(
+    heard: list[tuple[float, float, str]], script: str
+) -> list[tuple[float, float, str]]:
     """Devuelve las palabras DEL GUION con los tiempos que midio whisper.
 
     Whisper transcribe lo que oye, no lo que escribimos: donde entiende mal, el
@@ -998,12 +1169,15 @@ def _snap_to_script(heard: list[tuple[float, float, str]],
     que nunca se pierde ni se reordena una palabra del guion.
     """
     import difflib
+
     target = [w for w in re.findall(r"\S+", script) if _norm_word(w)]
     if not target or not heard:
         return heard
     sm = difflib.SequenceMatcher(
         a=[_norm_word(w) for _, _, w in heard],
-        b=[_norm_word(w) for w in target], autojunk=False)
+        b=[_norm_word(w) for w in target],
+        autojunk=False,
+    )
     times: list[tuple[float, float] | None] = [None] * len(target)
     for i, j, n in sm.get_matching_blocks():
         for k in range(n):
@@ -1028,9 +1202,13 @@ def _snap_to_script(heard: list[tuple[float, float, str]],
     return [(t[0], t[1], w) for t, w in zip(times, target)]
 
 
-def _chatterbox_tts(script: str, voice: str, wav_path: Path,
-                    exaggeration: float = 0.45,
-                    cfg: float = 0.3) -> list[tuple[float, float, str]]:
+def _chatterbox_tts(
+    script: str,
+    voice: str,
+    wav_path: Path,
+    exaggeration: float = 0.45,
+    cfg: float = 0.3,
+) -> list[tuple[float, float, str]]:
     """Corre tools/chatterbox_tts/synth.py en su propio venv (arrastra torch).
 
     Cacheado por hash de texto+parametros en assets/cache/voices/: sintetizar es
@@ -1038,7 +1216,9 @@ def _chatterbox_tts(script: str, voice: str, wav_path: Path,
     """
     lang = voice.split("_", 1)[1] if "_" in voice else "es"
     ref = str(_chatterbox_ref(lang).resolve()) if _chatterbox_ref(lang) else ""
-    key = hashlib.sha1(f"{script}|{ref}|{exaggeration}|{cfg}|{lang}".encode()).hexdigest()[:16]
+    key = hashlib.sha1(
+        f"{script}|{ref}|{exaggeration}|{cfg}|{lang}".encode()
+    ).hexdigest()[:16]
     cache = ROOT / "assets" / "cache" / "voices"
     cache.mkdir(parents=True, exist_ok=True)
     cached = cache / f"{key}.wav"
@@ -1048,14 +1228,30 @@ def _chatterbox_tts(script: str, voice: str, wav_path: Path,
     else:
         text_file = wav_path.with_suffix(".txt")
         text_file.write_text(script, encoding="utf-8")
-        cmd = ["uv", "run", "--directory", str(CHATTERBOX_DIR), "synth.py",
-               "--text-file", str(text_file.resolve()), "--out", str(wav_path.resolve()),
-               "--exaggeration", str(exaggeration), "--cfg", str(cfg),
-               "--lang", lang]
+        cmd = [
+            "uv",
+            "run",
+            "--directory",
+            str(CHATTERBOX_DIR),
+            "synth.py",
+            "--text-file",
+            str(text_file.resolve()),
+            "--out",
+            str(wav_path.resolve()),
+            "--exaggeration",
+            str(exaggeration),
+            "--cfg",
+            str(cfg),
+            "--lang",
+            lang,
+        ]
         if ref:
             cmd += ["--ref", ref]
-        log("audio", f"Sintetizando voz con Chatterbox (lang={lang}"
-                     f"{', ref clonada' if ref else ''})...")
+        log(
+            "audio",
+            f"Sintetizando voz con Chatterbox (lang={lang}"
+            f"{', ref clonada' if ref else ''})...",
+        )
         run(cmd, timeout=1800)
         text_file.unlink(missing_ok=True)
         if not wav_path.exists():
@@ -1094,16 +1290,25 @@ def _check_pacing(script: str, target_seconds: float = TARGET_SECONDS) -> None:
     wps = word_count / target_seconds
     if wps < WPS_MIN:
         target_words = round(WPS_MIN * target_seconds)
-        log("pacing", f"AVISO: {word_count} palabras / {target_seconds:.0f}s = "
-                       f"{wps:.2f} wps (lento, riesgo de curva 'Hump'). "
-                       f"Considera subir a ~{target_words} palabras.")
+        log(
+            "pacing",
+            f"AVISO: {word_count} palabras / {target_seconds:.0f}s = "
+            f"{wps:.2f} wps (lento, riesgo de curva 'Hump'). "
+            f"Considera subir a ~{target_words} palabras.",
+        )
     elif wps > WPS_MAX:
         target_words = round(WPS_MAX * target_seconds)
-        log("pacing", f"AVISO: {word_count} palabras / {target_seconds:.0f}s = "
-                       f"{wps:.2f} wps (denso, se pierden palabras en mute). "
-                       f"Considera bajar a ~{target_words} palabras.")
+        log(
+            "pacing",
+            f"AVISO: {word_count} palabras / {target_seconds:.0f}s = "
+            f"{wps:.2f} wps (denso, se pierden palabras en mute). "
+            f"Considera bajar a ~{target_words} palabras.",
+        )
     else:
-        log("pacing", f"{word_count} palabras / {target_seconds:.0f}s = {wps:.2f} wps (OK)")
+        log(
+            "pacing",
+            f"{word_count} palabras / {target_seconds:.0f}s = {wps:.2f} wps (OK)",
+        )
 
 
 def _starts_with_why(text: str) -> bool:
@@ -1113,8 +1318,9 @@ def _starts_with_why(text: str) -> bool:
     return t.startswith("why") or t.startswith("por que") or t.startswith("por qué")
 
 
-def _check_open_hook(script: str, title: str, hook_card: str,
-                     formato: str = "") -> None:
+def _check_open_hook(
+    script: str, title: str, hook_card: str, formato: str = ""
+) -> None:
     """La primera frase debe AFIRMAR un hecho imposible y dejarlo sin resolver
     (regla 9 reescrita el 1 ago 2026; antes obligaba a abrir con "Why").
 
@@ -1130,21 +1336,34 @@ def _check_open_hook(script: str, title: str, hook_card: str,
     por --script-file y NO pasan por Claude: sin este aviso la regla no se
     aplicaria justo en el camino que mas usamos.
     """
-    for etiqueta, texto in (("guion", script), ("titulo", title), ("hook_card", hook_card)):
+    for etiqueta, texto in (
+        ("guion", script),
+        ("titulo", title),
+        ("hook_card", hook_card),
+    ):
         if texto and _starts_with_why(texto):
-            log("lint", f"AVISO: el {etiqueta} abre con pregunta 'Why/Por que'. "
-                        f"La regla 9 pide un hecho imposible AFIRMADO en seco "
-                        f"(Garcia Marquez nunca pregunta).")
+            log(
+                "lint",
+                f"AVISO: el {etiqueta} abre con pregunta 'Why/Por que'. "
+                f"La regla 9 pide un hecho imposible AFIRMADO en seco "
+                f"(Garcia Marquez nunca pregunta).",
+            )
 
-    primera = next((x.strip() for x in re.split(r"(?<=[.!?])\s+", script or "") if x.strip()), "")
+    primera = next(
+        (x.strip() for x in re.split(r"(?<=[.!?])\s+", script or "") if x.strip()), ""
+    )
     if primera and _RESUELVE_HOOK.search(primera):
-        log("lint", "AVISO: la 1a frase contiene su propia respuesta "
-                    "(because/since/so that/porque). Corta la subordinada y "
-                    "dejala colgando -- regla 9, 'never resolve the hook in the hook'.")
+        log(
+            "lint",
+            "AVISO: la 1a frase contiene su propia respuesta "
+            "(because/since/so that/porque). Corta la subordinada y "
+            "dejala colgando -- regla 9, 'never resolve the hook in the hook'.",
+        )
     tiene_cifra = re.search(r"\d", primera)
     tiene_nombre = re.search(r"\s[A-Z][a-z]+", primera)
-    tiene_numero = any(w.strip(".,;:-").upper() in _AUTO_RED
-                       for w in re.split(r"[\s-]+", primera))
+    tiene_numero = any(
+        w.strip(".,;:-").upper() in _AUTO_RED for w in re.split(r"[\s-]+", primera)
+    )
     if formato == "chisme":
         # Excepcion pedida por Fabian el 1 ago 2026 y respaldada por el unico
         # dato real que hay: el ganador de 1,6M tambien abre con marco, no con
@@ -1153,25 +1372,38 @@ def _check_open_hook(script: str, title: str, hook_card: str,
         # periodismo, no chisme. La intencion de la regla 9 se conserva -- el
         # hueco sigue necesitando su prime -- solo se mueve de sitio: en vez de
         # exigirlo en la 1a frase, se admite en los primeros ~3 segundos.
-        ventana = " ".join(script.split()[:int(3 * WPS_SPOKEN)])
-        if not (re.search(r"\d", ventana) or re.search(r"\s[A-Z][a-z]+", ventana)
-                or any(w.strip(".,;:-").upper() in _AUTO_RED
-                       for w in re.split(r"[\s-]+", ventana))):
-            log("lint", "AVISO: formato chisme, pero en los primeros 3 segundos "
-                        "no hay ningun dato concreto. El marco emocional abre la "
-                        "puerta; sin dato detras no hay hueco que llenar.")
+        ventana = " ".join(script.split()[: int(3 * WPS_SPOKEN)])
+        if not (
+            re.search(r"\d", ventana)
+            or re.search(r"\s[A-Z][a-z]+", ventana)
+            or any(
+                w.strip(".,;:-").upper() in _AUTO_RED
+                for w in re.split(r"[\s-]+", ventana)
+            )
+        ):
+            log(
+                "lint",
+                "AVISO: formato chisme, pero en los primeros 3 segundos "
+                "no hay ningun dato concreto. El marco emocional abre la "
+                "puerta; sin dato detras no hay hueco que llenar.",
+            )
         return
 
     if primera and not (tiene_cifra or tiene_nombre or tiene_numero):
-        log("lint", "AVISO: la 1a frase no lleva ningun dato concreto dentro "
-                    "(cifra, fecha o nombre propio). Sin ese 'prime' no hay hueco "
-                    "de informacion que llenar, solo ambiente -- regla 9.")
+        log(
+            "lint",
+            "AVISO: la 1a frase no lleva ningun dato concreto dentro "
+            "(cifra, fecha o nombre propio). Sin ese 'prime' no hay hueco "
+            "de informacion que llenar, solo ambiente -- regla 9.",
+        )
 
 
 # Subordinadas que resuelven el gancho dentro del propio gancho.
 _RESUELVE_HOOK = re.compile(
     r"\b(because|so that|which is why|porque|ya que|"
-    r"puesto que|de modo que)\b", re.I)
+    r"puesto que|de modo que)\b",
+    re.I,
+)
 
 
 # Palabras por segundo reales de edge-tts a +8% tras recortar silencios, medidas
@@ -1187,11 +1419,23 @@ PAYOFF_MIN_COUNT = 4
 # 4,0-5,8 y la retencion se desploma desde el 5,5 (104,9% -> 59,4% en 4,6s).
 # Segundo y medio de desfase = lo que tarda alguien en decidir y deslizar.
 _RELLENO = [
-    r"my name (does\s*n.?t|doesn't) matter", r"this is my story", r"here'?s my story",
-    r"let me tell you", r"i'?ll tell you", r"it all started", r"where do i (even )?begin",
-    r"buckle up", r"bear with me", r"a bit of context", r"some background",
-    r"mi nombre no importa", r"esta es mi historia", r"dejame contarte",
-    r"todo empezo cuando", r"para que entiendas", r"os cuento",
+    r"my name (does\s*n.?t|doesn't) matter",
+    r"this is my story",
+    r"here'?s my story",
+    r"let me tell you",
+    r"i'?ll tell you",
+    r"it all started",
+    r"where do i (even )?begin",
+    r"buckle up",
+    r"bear with me",
+    r"a bit of context",
+    r"some background",
+    r"mi nombre no importa",
+    r"esta es mi historia",
+    r"dejame contarte",
+    r"todo empezo cuando",
+    r"para que entiendas",
+    r"os cuento",
 ]
 _RELLENO_RE = [re.compile(p, re.I) for p in _RELLENO]
 VENTANA_CRITICA = (5.0, 10.0)
@@ -1200,7 +1444,9 @@ VENTANA_CRITICA = (5.0, 10.0)
 _MUERTE = re.compile(
     r"\b(died|death|dead|funeral|buried|grave|headstone|cemetery|"
     r"terminal|miscarriage|stillborn|passed away|murio|muerte|"
-    r"entierro|lapida|cementerio)\b|no heartbeat", re.I)
+    r"entierro|lapida|cementerio)\b|no heartbeat",
+    re.I,
+)
 
 
 def _check_apuesta_cotidiana(script: str, script_path=None) -> None:
@@ -1217,14 +1463,22 @@ def _check_apuesta_cotidiana(script: str, script_path=None) -> None:
     if not carpeta.is_dir():
         log("lint", "AVISO: este guion se apoya en una muerte (regla 9h).")
         return
-    otros = sorted(carpeta.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)[:6]
-    con = sum(1 for f in otros
-              if f.name != Path(script_path or "").name
-              and _MUERTE.search(f.read_text(encoding="utf-8", errors="ignore")))
+    otros = sorted(
+        carpeta.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True
+    )[:6]
+    con = sum(
+        1
+        for f in otros
+        if f.name != Path(script_path or "").name
+        and _MUERTE.search(f.read_text(encoding="utf-8", errors="ignore"))
+    )
     if con >= 2:
-        log("lint", f"AVISO: este guion se apoya en una muerte, y {con} de los "
-                    f"ultimos guiones tambien. Es una racha, no un caso suelto -- "
-                    f"regla 9h. El comparable de 1,6M no tiene ni un muerto.")
+        log(
+            "lint",
+            f"AVISO: este guion se apoya en una muerte, y {con} de los "
+            f"ultimos guiones tambien. Es una racha, no un caso suelto -- "
+            f"regla 9h. El comparable de 1,6M no tiene ni un muerto.",
+        )
 
 
 def _check_relleno_inicial(script: str) -> None:
@@ -1235,15 +1489,20 @@ def _check_relleno_inicial(script: str) -> None:
     que el resto tampoco. Por eso la caida es tan vertical y no gradual.
     """
     t = 0.0
-    for frase in [x.strip() for x in re.split(r"(?<=[.!?])\s+", script or "") if x.strip()]:
+    for frase in [
+        x.strip() for x in re.split(r"(?<=[.!?])\s+", script or "") if x.strip()
+    ]:
         dur = len(frase.split()) / WPS_SPOKEN
         if t > 12.0:
             break
         for rx in _RELLENO_RE:
             if rx.search(frase):
-                log("lint", f"AVISO: relleno en el segundo {t:.1f} -> {frase!r}. "
-                            f"Ninguna frase de los primeros 10s puede existir sin "
-                            f"aportar un hecho nuevo (regla 9g).")
+                log(
+                    "lint",
+                    f"AVISO: relleno en el segundo {t:.1f} -> {frase!r}. "
+                    f"Ninguna frase de los primeros 10s puede existir sin "
+                    f"aportar un hecho nuevo (regla 9g).",
+                )
                 break
         t += dur
 
@@ -1265,9 +1524,12 @@ def _check_ventana_critica(script: str, payoffs: list[str] | None) -> None:
         t = len(script[:i].split()) / WPS_SPOKEN
         if a <= t <= b:
             return
-    log("lint", f"AVISO: ningun premio entre el segundo {a:.0f} y el {b:.0f}. "
-                f"Es la ventana donde la retencion medida cae 45 puntos en 4,6s "
-                f"-- regla 9g, premio obligatorio ahi.")
+    log(
+        "lint",
+        f"AVISO: ningun premio entre el segundo {a:.0f} y el {b:.0f}. "
+        f"Es la ventana donde la retencion medida cae 45 puntos en 4,6s "
+        f"-- regla 9g, premio obligatorio ahi.",
+    )
 
 
 def _check_payoff_spacing(script: str, payoffs: list[str] | None) -> None:
@@ -1282,8 +1544,11 @@ def _check_payoff_spacing(script: str, payoffs: list[str] | None) -> None:
     --script-file y no pasan por Claude.
     """
     if not payoffs:
-        log("lint", "AVISO: el guion no declara `payoffs`. Sin la escalera de la "
-                    "regla 9f no hay forma de saber si hay 30s seguidos sin premio.")
+        log(
+            "lint",
+            "AVISO: el guion no declara `payoffs`. Sin la escalera de la "
+            "regla 9f no hay forma de saber si hay 30s seguidos sin premio.",
+        )
         return
 
     palabras = script.split()
@@ -1300,31 +1565,112 @@ def _check_payoff_spacing(script: str, payoffs: list[str] | None) -> None:
     pos.sort()
 
     if len(pos) < PAYOFF_MIN_COUNT:
-        log("lint", f"AVISO: solo {len(pos)} premios declarados (minimo "
-                    f"{PAYOFF_MIN_COUNT}, regla 9f). Un unico pago al final solo "
-                    f"lo cobra quien llega al final.")
+        log(
+            "lint",
+            f"AVISO: solo {len(pos)} premios declarados (minimo "
+            f"{PAYOFF_MIN_COUNT}, regla 9f). Un unico pago al final solo "
+            f"lo cobra quien llega al final.",
+        )
 
     huecos = [pos[0]] + [b - a for a, b in zip(pos, pos[1:])] + [total_s - pos[-1]]
     peor = max(huecos)
     if peor > PAYOFF_MAX_GAP_S:
         i = huecos.index(peor)
         desde = 0.0 if i == 0 else pos[i - 1]
-        log("lint", f"AVISO: {peor:.0f}s sin ningun premio (del segundo {desde:.0f} "
-                    f"al {desde + peor:.0f}). Maximo {PAYOFF_MAX_GAP_S:.0f}s, regla 9f.")
+        log(
+            "lint",
+            f"AVISO: {peor:.0f}s sin ningun premio (del segundo {desde:.0f} "
+            f"al {desde + peor:.0f}). Maximo {PAYOFF_MAX_GAP_S:.0f}s, regla 9f.",
+        )
 
     internos = huecos[1:-1]
     if len(internos) >= 3:
         media = sum(internos) / len(internos)
         desv = (sum((x - media) ** 2 for x in internos) / len(internos)) ** 0.5
         if media and desv / media < 0.25:
-            log("lint", f"AVISO: los premios llegan a intervalos casi iguales "
-                        f"(~{media:.0f}s, desviacion {desv:.1f}s). Un ritmo predecible "
-                        f"le dice al espectador cuando puede irse -- regla 9f pide "
-                        f"espaciado irregular.")
+            log(
+                "lint",
+                f"AVISO: los premios llegan a intervalos casi iguales "
+                f"(~{media:.0f}s, desviacion {desv:.1f}s). Un ritmo predecible "
+                f"le dice al espectador cuando puede irse -- regla 9f pide "
+                f"espaciado irregular.",
+            )
 
 
-_CONTRAST_OPENERS = ("but", "except", "yet", "although", "however",
-                     "pero", "salvo", "aunque", "sin embargo")
+# Banda dura de aviso para la posicion del giro (fraccion del guion). El ideal
+# de la investigacion es 30-60% (PSICOLOGIA_COMPARTIR.md, regla 11b); fuera de
+# 25-75% el giro casi seguro no trabaja: antes no hay tension construida y
+# despues no queda nadie (la curva propia colapsa en el primer 14%).
+GIRO_MIN_FRAC, GIRO_MAX_FRAC = 0.25, 0.75
+EMOCIONES_ALTA_ACTIVACION = ("awe", "surprise", "humor", "outrage")
+
+
+def _check_giro_posicion(
+    script: str, twist_phrase: str | None, target_emotion: str | None
+) -> None:
+    """Verifica la ingenieria de compartir de la regla 11 (9 ago 2026).
+
+    Tres avisos: emocion de alta activacion no declarada o invalida, giro no
+    declarado / no literal en el guion, y giro fuera de la banda 25-75% (ideal
+    30-60%). Solo avisa, nunca bloquea -- igual que el resto del lint. Vive
+    aqui y no solo en el prompt porque los guiones a mano entran por
+    --script-file y no pasan por Claude.
+    """
+    if not target_emotion:
+        log(
+            "lint",
+            "AVISO: el guion no declara `target_emotion`. Sin emocion de alta "
+            "activacion (awe/surprise/humor/outrage) el video esta disenado "
+            "para no compartirse -- regla 11a.",
+        )
+    elif str(target_emotion).strip().lower() not in EMOCIONES_ALTA_ACTIVACION:
+        log(
+            "lint",
+            f"AVISO: `target_emotion` = {target_emotion!r}, fuera de "
+            f"{EMOCIONES_ALTA_ACTIVACION}. Las emociones de baja activacion "
+            f"(calma, tristeza) no se comparten (Berger & Milkman).",
+        )
+
+    if not twist_phrase:
+        log(
+            "lint",
+            "AVISO: el guion no declara `twist_phrase`. La sorpresa es el "
+            "disparador #1 de shares (Dobele 2007) y sin giro declarado no hay "
+            "forma de saber si existe ni donde cae -- regla 11b.",
+        )
+        return
+
+    i = script.lower().find(twist_phrase.lower())
+    if i < 0:
+        log(
+            "lint",
+            f"AVISO: el giro {twist_phrase!r} no aparece literal en el guion.",
+        )
+        return
+
+    total = len(script.split())
+    frac = len(script[:i].split()) / total if total else 0.0
+    if not (GIRO_MIN_FRAC <= frac <= GIRO_MAX_FRAC):
+        log(
+            "lint",
+            f"AVISO: el giro cae al {frac:.0%} del guion (banda "
+            f"{GIRO_MIN_FRAC:.0%}-{GIRO_MAX_FRAC:.0%}, ideal 30-60%). "
+            f"{'Antes no hay tension construida.' if frac < GIRO_MIN_FRAC else 'Tan tarde ya casi nadie lo ve.'}",
+        )
+
+
+
+_CONTRAST_OPENERS = (
+    "but",
+    "except",
+    "yet",
+    "although",
+    "however",
+    "pero",
+    "salvo",
+    "aunque",
+    "sin embargo",
+)
 
 
 def _check_hook_beats(script: str) -> None:
@@ -1338,26 +1684,48 @@ def _check_hook_beats(script: str) -> None:
     """
     sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", script or "") if s.strip()]
     if len(sents) < 3:
-        log("lint", "AVISO: el guion tiene menos de 3 oraciones, no se puede "
-                    "verificar el gancho de 3 tiempos (regla 9b).")
+        log(
+            "lint",
+            "AVISO: el guion tiene menos de 3 oraciones, no se puede "
+            "verificar el gancho de 3 tiempos (regla 9b).",
+        )
         return
 
     beat2 = sents[1]
     first_word = re.sub(r"[^\w]", "", beat2.split()[0]).lower() if beat2.split() else ""
     if first_word not in _CONTRAST_OPENERS:
-        log("lint", f"AVISO: la 2a oracion no abre con palabra de contraste "
-                    f"(But/Except/Yet/Although); abre con {first_word!r}. Es el "
-                    f"'scroll-stop' de la regla 9b, sin el no hay freno tras el gancho.")
+        log(
+            "lint",
+            f"AVISO: la 2a oracion no abre con palabra de contraste "
+            f"(But/Except/Yet/Although); abre con {first_word!r}. Es el "
+            f"'scroll-stop' de la regla 9b, sin el no hay freno tras el gancho.",
+        )
 
     for i, beat in ((2, sents[1]), (3, sents[2])):
         n = len(beat.split())
         if n > 12:
-            log("lint", f"AVISO: la oracion {i} del gancho tiene {n} palabras (max 12) "
-                        f"-- la apertura debe ser staccato, regla 9b.")
+            log(
+                "lint",
+                f"AVISO: la oracion {i} del gancho tiene {n} palabras (max 12) "
+                f"-- la apertura debe ser staccato, regla 9b.",
+            )
 
 
-_CONNECTIVES = ("but", "therefore", "so", "because", "yet", "except", "although",
-                "however", "pero", "asi que", "porque", "aunque", "sin embargo")
+_CONNECTIVES = (
+    "but",
+    "therefore",
+    "so",
+    "because",
+    "yet",
+    "except",
+    "although",
+    "however",
+    "pero",
+    "asi que",
+    "porque",
+    "aunque",
+    "sin embargo",
+)
 
 
 def _check_but_therefore(script: str) -> None:
@@ -1383,14 +1751,20 @@ def _check_but_therefore(script: str) -> None:
     if len(sents) < 4:
         return
     body = sents[1:]  # la primera es el gancho, no encadena con nada
-    hits = sum(1 for s in body
-               if s.split() and s.split()[0].strip(",.").lower() in _CONNECTIVES)
+    hits = sum(
+        1
+        for s in body
+        if s.split() and s.split()[0].strip(",.").lower() in _CONNECTIVES
+    )
     ratio = hits / len(body)
     if ratio < 0.12:
-        log("lint", f"AVISO (suave): {hits}/{len(body)} oraciones encadenan con "
-                    f"but/therefore/so/because ({ratio:.0%}). Referencia: el lider "
-                    f"del formato esta en 0%, asi que esto NO es urgente -- solo "
-                    f"revisa que la historia no sea una lista plana de sucesos.")
+        log(
+            "lint",
+            f"AVISO (suave): {hits}/{len(body)} oraciones encadenan con "
+            f"but/therefore/so/because ({ratio:.0%}). Referencia: el lider "
+            f"del formato esta en 0%, asi que esto NO es urgente -- solo "
+            f"revisa que la historia no sea una lista plana de sucesos.",
+        )
 
 
 def _check_sentence_rhythm(script: str) -> None:
@@ -1417,31 +1791,50 @@ def _check_sentence_rhythm(script: str) -> None:
     lens = [len(s.split()) for s in sents]
     mean = sum(lens) / len(lens)
     var = sum((x - mean) ** 2 for x in lens) / len(lens)
-    stdev = var ** 0.5
+    stdev = var**0.5
     if stdev < 5.0:
-        log("lint", f"AVISO: las oraciones miden casi todas lo mismo "
-                    f"(media {mean:.0f} palabras, desviacion {stdev:.1f}; el lider "
-                    f"del formato esta en 6,1 con frases de 2 a 24 palabras). "
-                    f"Mete frases de 2-4 palabras entre las largas para romper la "
-                    f"monotonia (ver regla 9c).")
+        log(
+            "lint",
+            f"AVISO: las oraciones miden casi todas lo mismo "
+            f"(media {mean:.0f} palabras, desviacion {stdev:.1f}; el lider "
+            f"del formato esta en 6,1 con frases de 2 a 24 palabras). "
+            f"Mete frases de 2-4 palabras entre las largas para romper la "
+            f"monotonia (ver regla 9c).",
+        )
 
 
-def _check_script_lint(script: str, title: str, voice: str,
-                       search_terms: list[str] | None = None) -> None:
+def _check_script_lint(
+    script: str, title: str, voice: str, search_terms: list[str] | None = None
+) -> None:
     """Avisos rapidos y baratos (nunca bloquean) sobre reglas ya validadas
     con datos reales esta temporada, para no depender de acordarse a mano:
-    (1) palabras con ñ en guiones de voz en espanol -- el TTS las pronuncia
-    mal (ver memoria voz-espanol-impixxel); (2) titulo sin nombre propio
+    (1) palabras a las que les FALTA la ñ y por eso son otra palabra (ver
+    lint_enie.py); (2) titulo sin nombre propio
     reconocible -- proxy barato de la regla 'antagonista/institucion famosa
     en el titulo' (ver memoria titulo-antagonista-famoso), que correlaciono
     con 1000+ vistas en HiddenFacts; (3) primer search_term sin cara/close-up
     -- el area fusiforme facial reconoce rostros en 50-200ms, es el freno de
     scroll mas rapido; abrir con una escena amplia desperdicia esa palanca (ver
     RETENTION_CHECKLIST.md, gancho visual)."""
-    if voice.startswith("es-") and "ñ" in script.lower():
-        log("lint", "AVISO: el guion tiene 'ñ' con voz en espanol -- el TTS suele "
-                     "pronunciarla mal, considera un sinonimo (ver memoria "
-                     "voz-espanol-impixxel).")
+    # LA ENIE SE ESCRIBE, NO SE ESQUIVA (3 ago 2026). Este aviso decia lo
+    # contrario -- avisaba cuando el guion SI llevaba ñ y empujaba a quitarla.
+    # Esa regla salio de edge-tts y era peor que el mal que curaba: sin ñ,
+    # 'años' se convierte en 'anos', que es OTRA palabra y el TTS la lee tal
+    # cual. Paso de verdad en el guion de Tadeo ("tres anos derechito",
+    # "que hazana"). Ahora se avisa de lo contrario: de las trampas a las que
+    # les falta la ñ. Qwen3-TTS (tools/qwen_tts) la pronuncia bien.
+    try:
+        import lint_enie
+
+        for w in lint_enie.trampas_en_texto(script):
+            log(
+                "lint",
+                f"AVISO: '{w}' parece '{lint_enie.TRAMPAS[w]}' sin ñ -- "
+                f"el TTS lo leera como '{w}', que es otra palabra. "
+                f"Escribela con ñ o reescribe la frase.",
+            )
+    except Exception:
+        pass
     # heuristica barata: alguna palabra que empiece en mayuscula despues de la
     # primera palabra del titulo (nombre propio/institucion), sin serlo TODAS
     # las palabras (titulo en Title Case no cuenta como señal)
@@ -1449,27 +1842,48 @@ def _check_script_lint(script: str, title: str, voice: str,
     if len(words) > 1:
         capitalized = sum(1 for w in words[1:] if w[:1].isupper())
         if capitalized == 0:
-            log("lint", "AVISO: el titulo no parece nombrar a nadie/nada propio "
-                        "(antagonista, institucion, figura famosa) -- esa señal "
-                        "correlaciono con 1000+ vistas en HiddenFacts, considera "
-                        "agregarla si el hecho real lo permite (ver memoria "
-                        "titulo-antagonista-famoso).")
+            log(
+                "lint",
+                "AVISO: el titulo no parece nombrar a nadie/nada propio "
+                "(antagonista, institucion, figura famosa) -- esa señal "
+                "correlaciono con 1000+ vistas en HiddenFacts, considera "
+                "agregarla si el hecho real lo permite (ver memoria "
+                "titulo-antagonista-famoso).",
+            )
     if search_terms:
         first = search_terms[0].lower()
-        if not any(w in first for w in ("face", "close-up", "close up", "eyes",
-                                        "portrait", "staring", "expression")):
-            log("lint", "AVISO: el primer search_term no parece un primer plano de "
-                        "un rostro -- una cara con contacto visual frena el scroll "
-                        "en 50-200ms (gancho visual, ver RETENTION_CHECKLIST.md). "
-                        "Considera abrir con un close-up de cara intensa.")
-        sentence_count = len([s for s in re.split(r"(?<=[.!?])\s+", script) if s.strip()])
+        if not any(
+            w in first
+            for w in (
+                "face",
+                "close-up",
+                "close up",
+                "eyes",
+                "portrait",
+                "staring",
+                "expression",
+            )
+        ):
+            log(
+                "lint",
+                "AVISO: el primer search_term no parece un primer plano de "
+                "un rostro -- una cara con contacto visual frena el scroll "
+                "en 50-200ms (gancho visual, ver RETENTION_CHECKLIST.md). "
+                "Considera abrir con un close-up de cara intensa.",
+            )
+        sentence_count = len(
+            [s for s in re.split(r"(?<=[.!?])\s+", script) if s.strip()]
+        )
         if len(search_terms) != sentence_count:
-            log("lint", f"AVISO: {len(search_terms)} search_terms mas {sentence_count} "
-                        "oraciones en el guion -- el corte de escena solo puede caer en "
-                        "fin de oracion, un conteo distinto fuerza al menos un corte a "
-                        "mitad de frase (imagen y voz desincronizadas, ver investigacion "
-                        "de sync narracion/imagen). Igualalos o agrega una oracion de "
-                        "cierre extra si el ultimo search_term es un eco/loop visual.")
+            log(
+                "lint",
+                f"AVISO: {len(search_terms)} search_terms mas {sentence_count} "
+                "oraciones en el guion -- el corte de escena solo puede caer en "
+                "fin de oracion, un conteo distinto fuerza al menos un corte a "
+                "mitad de frase (imagen y voz desincronizadas, ver investigacion "
+                "de sync narracion/imagen). Igualalos o agrega una oracion de "
+                "cierre extra si el ultimo search_term es un eco/loop visual.",
+            )
 
 
 def _rate_to_kokoro_speed(rate: str) -> float:
@@ -1482,16 +1896,31 @@ def _rate_to_kokoro_speed(rate: str) -> float:
         return 1.0
 
 
-def generate_audio(script: str, voice: str, rate: str, out_dir: Path) -> tuple[Path, list]:
+def generate_audio(
+    script: str,
+    voice: str,
+    rate: str,
+    out_dir: Path,
+    exaggeration: float | None = None,
+    cfg: float | None = None,
+) -> tuple[Path, list]:
     if voice.startswith(CHATTERBOX_VOICE_PREFIXES):
         wav_path = out_dir / "voice.wav"
-        words = _chatterbox_tts(script, voice, wav_path)
+        extra = {}
+        if exaggeration is not None:
+            extra["exaggeration"] = exaggeration
+        if cfg is not None:
+            extra["cfg"] = cfg
+        words = _chatterbox_tts(script, voice, wav_path, **extra)
         mp3_path = out_dir / "voice.mp3"
         run(["ffmpeg", "-y", "-i", str(wav_path), "-ar", "44100", str(mp3_path)])
     elif voice.startswith(KOKORO_VOICE_PREFIXES):
         wav_path = out_dir / "voice.wav"
         speed = _rate_to_kokoro_speed(rate)
-        log("audio", f"Sintetizando voz con Kokoro (local, voz {voice}, speed {speed})...")
+        log(
+            "audio",
+            f"Sintetizando voz con Kokoro (local, voz {voice}, speed {speed})...",
+        )
         words = _kokoro_tts(script, voice, wav_path, speed=speed)
         # convertir a mp3 para que el resto del pipeline (assemble, etc) sea igual
         mp3_path = out_dir / "voice.mp3"
@@ -1510,9 +1939,18 @@ def generate_audio(script: str, voice: str, rate: str, out_dir: Path) -> tuple[P
     # que no desincroniza los subtitulos (sus timestamps caen antes del silencio).
     trimmed = out_dir / "voice_trim.mp3"
     try:
-        run(["ffmpeg", "-y", "-i", str(mp3_path), "-af",
-             "areverse,silenceremove=start_periods=1:start_silence=0.1:"
-             "start_threshold=-45dB,areverse", str(trimmed)])
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(mp3_path),
+                "-af",
+                "areverse,silenceremove=start_periods=1:start_silence=0.1:"
+                "start_threshold=-45dB,areverse",
+                str(trimmed),
+            ]
+        )
         trimmed.replace(mp3_path)
     except Exception as e:
         log("audio", f"trim de silencio final omitido: {e}")
@@ -1525,9 +1963,17 @@ def generate_audio(script: str, voice: str, rate: str, out_dir: Path) -> tuple[P
     # medios sigan sincronizados.
     lead_trimmed = out_dir / "voice_lead.mp3"
     try:
-        run(["ffmpeg", "-y", "-i", str(mp3_path), "-af",
-             "silenceremove=start_periods=1:start_silence=0.1:start_threshold=-45dB",
-             str(lead_trimmed)])
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(mp3_path),
+                "-af",
+                "silenceremove=start_periods=1:start_silence=0.1:start_threshold=-45dB",
+                str(lead_trimmed),
+            ]
+        )
         cut = ffprobe_duration(mp3_path) - ffprobe_duration(lead_trimmed)
         if 0 < cut < 1.0:  # guarda de sanidad: nunca recortar mas de 1s
             words = [(max(t - cut, 0.0), max(t2 - cut, 0.0), w) for t, t2, w in words]
@@ -1545,6 +1991,7 @@ def generate_audio(script: str, voice: str, rate: str, out_dir: Path) -> tuple[P
 
 
 # ------------------------------------------------------------ 3. SUBTITLES
+
 
 def _ass_time(seconds: float) -> str:
     h = int(seconds // 3600)
@@ -1607,10 +2054,31 @@ _CAP_RED_IDLE = r"{\c&H2222DD&\fscx100\fscy100}"
 # ("one of us", "not one", "thirty one") mucho mas que dato. Medido en el guion
 # de las recetas, solas subian el resaltado del 7,7% al 10,6% sin aportar nada.
 _AUTO_RED = {
-    "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN",
-    "ELEVEN", "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN", "SIXTEEN", "SEVENTEEN",
-    "EIGHTEEN", "NINETEEN", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY",
-    "SEVENTY", "EIGHTY", "NINETY", "MILLION",
+    "FOUR",
+    "FIVE",
+    "SIX",
+    "SEVEN",
+    "EIGHT",
+    "NINE",
+    "TEN",
+    "ELEVEN",
+    "TWELVE",
+    "THIRTEEN",
+    "FOURTEEN",
+    "FIFTEEN",
+    "SIXTEEN",
+    "SEVENTEEN",
+    "EIGHTEEN",
+    "NINETEEN",
+    "TWENTY",
+    "THIRTY",
+    "FORTY",
+    "FIFTY",
+    "SIXTY",
+    "SEVENTY",
+    "EIGHTY",
+    "NINETY",
+    "MILLION",
 }
 
 
@@ -1628,9 +2096,18 @@ def _keyword_tokens(keywords: list[str] | None) -> set[str]:
     return tokens
 
 
-def generate_subtitles(words: list[tuple[float, float, str]], out_dir: Path,
-                       lead_ms: int = 0, offset_ms: int = 0,
-                       keywords: list[str] | None = None) -> Path:
+def generate_subtitles(
+    words: list[tuple[float, float, str]],
+    out_dir: Path,
+    lead_ms: int = 0,
+    offset_ms: int = 0,
+    keywords: list[str] | None = None,
+    margin_v: int = 960,
+) -> Path:
+    """margin_v = pixeles desde abajo (alineacion 2, sobre 1920 de alto). El
+    default 960 deja el texto en el centro exacto, que es donde HiddenFacts lo
+    quiere sobre foto. Con un personaje en cuadro eso le tapa la cara: KOREX
+    baja a ~380 para dejarlo en el tercio inferior."""
     # Karaoke palabra-por-palabra: agrupa en bloques cortos (max 3 palabras / 18
     # chars, texto-como-imagen: lectura instantanea sin "leer" gramaticalmente)
     # para conservar contexto de 2 lineas, pero emite UN evento por palabra con
@@ -1667,8 +2144,10 @@ def generate_subtitles(words: list[tuple[float, float, str]], out_dir: Path,
         chunk_end = chunk[-1][1]
         if ci + 1 < len(chunks):
             chunk_end = max(chunk_end, chunks[ci + 1][0][0])
-        tokens = [x[2].upper().replace("\\", "").replace("{", "").replace("}", "")
-                  for x in chunk]
+        tokens = [
+            x[2].upper().replace("\\", "").replace("{", "").replace("}", "")
+            for x in chunk
+        ]
         split = _split_index(tokens)
         for wi, (ws, _we, _w) in enumerate(chunk):
             start = ws
@@ -1690,9 +2169,12 @@ def generate_subtitles(words: list[tuple[float, float, str]], out_dir: Path,
             line1 = " ".join(parts[:split])
             line2 = " ".join(parts[split:])
             text = line1 + ("\\N" + line2 if line2 else "")
-            events.append(f"Dialogue: 0,{_ass_time(start)},{_ass_time(end)},Cap,,0,0,0,,{text}")
+            events.append(
+                f"Dialogue: 0,{_ass_time(start)},{_ass_time(end)},Cap,,0,0,0,,{text}"
+            )
 
-    ass = f"""[Script Info]
+    ass = (
+        f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {WIDTH}
 PlayResY: {HEIGHT}
@@ -1700,11 +2182,14 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,Arial Black,96,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,7,3,2,60,60,960,1
+Style: Cap,Arial Black,96,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,7,3,2,60,60,{margin_v},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-""" + "\n".join(events) + "\n"
+"""
+        + "\n".join(events)
+        + "\n"
+    )
 
     ass_path = out_dir / "subs.ass"
     ass_path.write_text(ass, encoding="utf-8")
@@ -1715,27 +2200,63 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 # ---------------------------------------------------------------- 4. MEDIA
 
 GRADIENTS = [
-    ("0x0f2027", "0x2c5364"), ("0x1a2a6c", "0x3a6073"), ("0x232526", "0x414345"),
-    ("0x141e30", "0x243b55"), ("0x2c3e50", "0x4ca1af"), ("0x000428", "0x004e92"),
+    ("0x0f2027", "0x2c5364"),
+    ("0x1a2a6c", "0x3a6073"),
+    ("0x232526", "0x414345"),
+    ("0x141e30", "0x243b55"),
+    ("0x2c3e50", "0x4ca1af"),
+    ("0x000428", "0x004e92"),
 ]
 
 
 def _gradient_clip(index: int, duration: float, path: Path) -> None:
     c0, c1 = GRADIENTS[index % len(GRADIENTS)]
-    run([
-        "ffmpeg", "-y", "-f", "lavfi",
-        "-i", f"gradients=s={WIDTH}x{HEIGHT}:d={duration:.2f}:c0={c0}:c1={c1}:speed=0.03:r={FPS}",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
-        str(path),
-    ])
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            f"gradients=s={WIDTH}x{HEIGHT}:d={duration:.2f}:c0={c0}:c1={c1}:speed=0.03:r={FPS}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "21",
+            "-pix_fmt",
+            "yuv420p",
+            str(path),
+        ]
+    )
 
 
 # Palabras que aparecen en casi todo search_term ("close up hands ...") y
 # matchearian con cualquier clip: no aportan senal para medir relevancia.
 _PEXELS_STOPWORDS = {
-    "the", "and", "with", "for", "from", "into", "onto", "over", "out",
-    "close", "shot", "view", "video", "footage", "clip", "scene",
-    "slowly", "slow", "detail", "person", "people", "someone",
+    "the",
+    "and",
+    "with",
+    "for",
+    "from",
+    "into",
+    "onto",
+    "over",
+    "out",
+    "close",
+    "shot",
+    "view",
+    "video",
+    "footage",
+    "clip",
+    "scene",
+    "slowly",
+    "slow",
+    "detail",
+    "person",
+    "people",
+    "someone",
 }
 
 
@@ -1750,8 +2271,11 @@ def _pexels_relevance(term: str, video: dict) -> float:
     bloquea nada (el pipeline debe seguir fallando suave), solo hace visible en
     el log que el clip probablemente no corresponde al termino.
     """
-    words = {w for w in re.findall(r"[a-z]+", term.lower())
-             if len(w) > 2 and w not in _PEXELS_STOPWORDS}
+    words = {
+        w
+        for w in re.findall(r"[a-z]+", term.lower())
+        if len(w) > 2 and w not in _PEXELS_STOPWORDS
+    }
     if not words:
         return 1.0  # nada verificable: no penalizar
     haystack = (video.get("url") or "").lower()
@@ -1783,21 +2307,40 @@ def _apply_entry_zoom(path: Path) -> None:
     zexpr = f"if(lt(on,{rush}),1.0+(0.15/{rush})*on,1.15)"
     tmp = path.with_name(path.stem + "_zoom" + path.suffix)
     try:
-        run([
-            "ffmpeg", "-y", "-i", str(path),
-            # el fps= va ANTES de zoompan: los clips de Pexels vienen a 25fps y
-            # zoompan solo DECLARA la tasa sin remuestrear, asi que sin esto un
-            # clip de 4s salia de 3.33s (100 frames reproducidos a 30fps).
-            "-vf", (f"fps={FPS},"
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(path),
+                # el fps= va ANTES de zoompan: los clips de Pexels vienen a 25fps y
+                # zoompan solo DECLARA la tasa sin remuestrear, asi que sin esto un
+                # clip de 4s salia de 3.33s (100 frames reproducidos a 30fps).
+                "-vf",
+                (
+                    f"fps={FPS},"
                     f"scale={WIDTH * 2}:{HEIGHT * 2}:force_original_aspect_ratio=increase,"
                     f"crop={WIDTH * 2}:{HEIGHT * 2},"
-                    f"zoompan=z='{zexpr}':d=1:s={WIDTH}x{HEIGHT}:fps={FPS},setsar=1"),
-            "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
-            str(tmp),
-        ])
+                    f"zoompan=z='{zexpr}':d=1:s={WIDTH}x{HEIGHT}:fps={FPS},setsar=1"
+                ),
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "21",
+                "-pix_fmt",
+                "yuv420p",
+                str(tmp),
+            ]
+        )
         tmp.replace(path)
     except Exception as e:
-        log("media", f"AVISO: zoom de entrada de escena 1 fallo ({type(e).__name__}: {e}), sigo sin el")
+        log(
+            "media",
+            f"AVISO: zoom de entrada de escena 1 fallo ({type(e).__name__}: {e}), sigo sin el",
+        )
         tmp.unlink(missing_ok=True)
 
 
@@ -1805,7 +2348,12 @@ def _pexels_download(term: str, path: Path, api_key: str) -> bool:
     try:
         r = requests.get(
             "https://api.pexels.com/videos/search",
-            params={"query": term, "per_page": 5, "orientation": "portrait", "size": "medium"},
+            params={
+                "query": term,
+                "per_page": 5,
+                "orientation": "portrait",
+                "size": "medium",
+            },
             headers={"Authorization": api_key},
             timeout=30,
         )
@@ -1813,15 +2361,22 @@ def _pexels_download(term: str, path: Path, api_key: str) -> bool:
         for video in r.json().get("videos", []):
             if video.get("duration", 0) < 4:
                 continue
-            files = [f for f in video.get("video_files", [])
-                     if f.get("height", 0) >= 1280 and f.get("width", 0) <= f.get("height", 0)]
+            files = [
+                f
+                for f in video.get("video_files", [])
+                if f.get("height", 0) >= 1280
+                and f.get("width", 0) <= f.get("height", 0)
+            ]
             if not files:
                 continue
             best = min(files, key=lambda f: abs(f["height"] - HEIGHT))
             if _pexels_relevance(term, video) == 0:
-                log("media", f"AVISO: el clip de Pexels para '{term}' no coincide con "
-                             f"ninguna palabra del termino ({video.get('url', '?')}) -- "
-                             f"revisa visualmente, puede ser metraje aleatorio")
+                log(
+                    "media",
+                    f"AVISO: el clip de Pexels para '{term}' no coincide con "
+                    f"ninguna palabra del termino ({video.get('url', '?')}) -- "
+                    f"revisa visualmente, puede ser metraje aleatorio",
+                )
             with requests.get(best["link"], stream=True, timeout=120) as dl:
                 dl.raise_for_status()
                 with open(path, "wb") as f:
@@ -1833,10 +2388,13 @@ def _pexels_download(term: str, path: Path, api_key: str) -> bool:
             # esto se comprueba sobre el archivo ya descargado, no sobre el JSON.
             real = ffprobe_resolution(path)
             if real and real[0] < WIDTH:
-                log("media", f"AVISO: el clip para '{term}' es {real[0]}x{real[1]} real "
-                             f"(Pexels declaraba {best.get('width')}x{best.get('height')}), "
-                             f"por debajo de {WIDTH}x{HEIGHT} -- se reescalara hacia "
-                             f"arriba y perdera nitidez")
+                log(
+                    "media",
+                    f"AVISO: el clip para '{term}' es {real[0]}x{real[1]} real "
+                    f"(Pexels declaraba {best.get('width')}x{best.get('height')}), "
+                    f"por debajo de {WIDTH}x{HEIGHT} -- se reescalara hacia "
+                    f"arriba y perdera nitidez",
+                )
             return True
     except Exception as e:
         log("media", f"Pexels fallo para '{term}': {e}")
@@ -1914,8 +2472,20 @@ CHARACTERS_DIR = ROOT / "assets" / "characters"
 CHARACTERS_MANIFEST = CHARACTERS_DIR / "manifest.json"
 # palabras que marcan una FASE distinta del mismo personaje (ej. Viego rey vs
 # Viego fantasma) -- si ninguna aparece en la escena, se usa la fase "default"
-PHASE_KEYWORDS = ["ghost", "spectral", "skeletal", "phantom", "undead", "ruined",
-                  "child", "young", "prisoner", "warden", "possessed", "corrupted"]
+PHASE_KEYWORDS = [
+    "ghost",
+    "spectral",
+    "skeletal",
+    "phantom",
+    "undead",
+    "ruined",
+    "child",
+    "young",
+    "prisoner",
+    "warden",
+    "possessed",
+    "corrupted",
+]
 
 _CHARACTER_PATTERN = re.compile(r"^([A-Za-zÀ-ÿ][\w' -]*?) character:", re.IGNORECASE)
 
@@ -1948,8 +2518,14 @@ def _save_characters_manifest(data: dict) -> None:
     _atomic_write_json(CHARACTERS_MANIFEST, data)
 
 
-def _get_named_character_sheet(name: str, phase: str, style_directive: str,
-                                api_key: str, seed_term: str, api_key_style_id: str = "") -> Path | None:
+def _get_named_character_sheet(
+    name: str,
+    phase: str,
+    style_directive: str,
+    api_key: str,
+    seed_term: str,
+    api_key_style_id: str = "",
+) -> Path | None:
     """Hoja de personaje PERSISTENTE (entre videos, no solo dentro de una
     corrida) para cualquier personaje recurrente -- marca personal reconocible
     en ambos canales. Primera vez que aparece un personaje/fase: se genera y
@@ -1975,11 +2551,15 @@ def _get_named_character_sheet(name: str, phase: str, style_directive: str,
     # version distinta del personaje ya establecido
     if slug == "skick" and phase == "default" and SKICK_REFERENCE.exists():
         import shutil
+
         shutil.copyfile(SKICK_REFERENCE, sheet_path)
         entry["phases"][f"{phase}_{style_key}"] = sheet_path.name
         manifest[slug] = entry
         _save_characters_manifest(manifest)
-        log("media", f"personaje 'Skick' fase 'default': sembrado desde la referencia original")
+        log(
+            "media",
+            f"personaje 'Skick' fase 'default': sembrado desde la referencia original",
+        )
         return sheet_path
 
     # si ya existe la fase "default" de este personaje, la usamos como
@@ -1992,8 +2572,11 @@ def _get_named_character_sheet(name: str, phase: str, style_directive: str,
         if candidate.exists():
             seed_ref = candidate
 
-    log("media", f"generando hoja de personaje NUEVA para '{name}' fase '{phase}' "
-                  "(se guarda para siempre, se reusa en todos los videos futuros)...")
+    log(
+        "media",
+        f"generando hoja de personaje NUEVA para '{name}' fase '{phase}' "
+        "(se guarda para siempre, se reusa en todos los videos futuros)...",
+    )
     prompt = (
         f"A character reference sheet/turnaround for '{name}', shown three times "
         "side by side on a plain neutral background: front view, 3/4 view, and "
@@ -2003,7 +2586,9 @@ def _get_named_character_sheet(name: str, phase: str, style_directive: str,
         "Keep the identity (face, outfit, colors, silhouette) clearly consistent "
         "across the three views. Vertical 9:16, no text, no labels."
     )
-    ok = _seedream_generate_image(prompt, sheet_path, api_key, reference_image=seed_ref, attempts=3)
+    ok = _seedream_generate_image(
+        prompt, sheet_path, api_key, reference_image=seed_ref, attempts=3
+    )
     if not ok:
         return None
     entry["phases"][f"{phase}_{style_key}"] = sheet_path.name
@@ -2012,7 +2597,9 @@ def _get_named_character_sheet(name: str, phase: str, style_directive: str,
     return sheet_path
 
 
-def _get_character_sheet(splash: Path, style_directive: str, api_key: str) -> Path | None:
+def _get_character_sheet(
+    splash: Path, style_directive: str, api_key: str
+) -> Path | None:
     """Genera (o reutiliza) una 'hoja de personaje' Roblox: el mismo avatar en 3
     poses fijas sobre fondo neutro, generada UNA vez por campeon+estilo y cacheada
     en disco. Usarla como referencia (en vez del splash pintado original) mantiene
@@ -2027,12 +2614,15 @@ def _get_character_sheet(splash: Path, style_directive: str, api_key: str) -> Pa
         log("media", f"hoja de personaje '{champ_id}': reusando cache")
         return sheet_path
 
-    log("media", f"generando hoja de personaje para '{champ_id}' (una vez, se reusa en todas las escenas)...")
+    log(
+        "media",
+        f"generando hoja de personaje para '{champ_id}' (una vez, se reusa en todas las escenas)...",
+    )
     prompt = _character_sheet_prompt(champ_id, style_directive)
-    ok = _seedream_generate_image(prompt, sheet_path, api_key, reference_image=splash, attempts=3)
+    ok = _seedream_generate_image(
+        prompt, sheet_path, api_key, reference_image=splash, attempts=3
+    )
     return sheet_path if ok else None
-
-
 
 
 def _piapi_upload_temp(image_path: Path, api_key: str) -> str:
@@ -2051,11 +2641,15 @@ def _piapi_upload_temp(image_path: Path, api_key: str) -> str:
     return data.get("data", {}).get("url") or data["url"]
 
 
-def _seedream_generate_image(prompt: str, path: Path, api_key: str,
-                              reference_image: Path | None = None,
-                              reference_images: list[Path] | None = None,
-                              style_directive: str | None = None,
-                              attempts: int = 2) -> bool:
+def _seedream_generate_image(
+    prompt: str,
+    path: Path,
+    api_key: str,
+    reference_image: Path | None = None,
+    reference_images: list[Path] | None = None,
+    style_directive: str | None = None,
+    attempts: int = 2,
+) -> bool:
     """Generador de imagenes del pipeline: Seedream (ByteDance) via PiAPI -- mejor
     consistencia de personaje multi-referencia segun benchmarks (ver
     investigacion 19 jul 2026). Es el UNICO generador de imagenes del pipeline
@@ -2065,9 +2659,11 @@ def _seedream_generate_image(prompt: str, path: Path, api_key: str,
     all_refs = [r for r in all_refs if r]
     full_prompt = prompt + NANOBANANA_STYLE_SUFFIX
     if style_directive:
-        full_prompt = (f"CRITICAL: apply this exact art style to the ENTIRE frame, "
-                        f"overriding any style in the reference images: {style_directive}. "
-                        f"{full_prompt}")
+        full_prompt = (
+            f"CRITICAL: apply this exact art style to the ENTIRE frame, "
+            f"overriding any style in the reference images: {style_directive}. "
+            f"{full_prompt}"
+        )
 
     for attempt in range(attempts):
         try:
@@ -2086,21 +2682,27 @@ def _seedream_generate_image(prompt: str, path: Path, api_key: str,
             r = requests.post(
                 "https://api.piapi.ai/api/v1/task",
                 headers={"X-API-Key": api_key, "Content-Type": "application/json"},
-                json=payload, timeout=60,
+                json=payload,
+                timeout=60,
             )
             r.raise_for_status()
             task_id = r.json()["data"]["task_id"]
 
             for _ in range(60):  # hasta 2 min de polling (2s por intento)
                 time.sleep(2)
-                poll = requests.get(f"https://api.piapi.ai/api/v1/task/{task_id}",
-                                     headers={"X-API-Key": api_key}, timeout=30)
+                poll = requests.get(
+                    f"https://api.piapi.ai/api/v1/task/{task_id}",
+                    headers={"X-API-Key": api_key},
+                    timeout=30,
+                )
                 poll.raise_for_status()
                 task = poll.json()["data"]
                 status = task.get("status", "").lower()
                 if status in ("completed", "success"):
                     output = task.get("output", {})
-                    img_url = (output.get("image_urls") or output.get("images") or [None])[0]
+                    img_url = (
+                        output.get("image_urls") or output.get("images") or [None]
+                    )[0]
                     if not img_url:
                         raise RuntimeError("tarea completa sin imagen de salida")
                     img_resp = requests.get(img_url, timeout=60)
@@ -2112,16 +2714,27 @@ def _seedream_generate_image(prompt: str, path: Path, api_key: str,
             raise RuntimeError("timeout esperando la tarea de Seedream")
         except Exception as e:
             if attempt < attempts - 1:
-                log("media", f"Seedream fallo (intento {attempt + 1}), reintento en 5s: {e}")
+                log(
+                    "media",
+                    f"Seedream fallo (intento {attempt + 1}), reintento en 5s: {e}",
+                )
                 time.sleep(5)
             else:
                 log("media", f"Seedream fallo para '{prompt[:60]}...': {e}")
     return False
 
 
-def _static_image_clip(image_path: Path, duration: float, path: Path, zoom_in: bool = True,
-                        punch: bool = False, hook: bool = False, static: bool = False,
-                        hook_strong: bool = False, move: int = 0) -> None:
+def _static_image_clip(
+    image_path: Path,
+    duration: float,
+    path: Path,
+    zoom_in: bool = True,
+    punch: bool = False,
+    hook: bool = False,
+    static: bool = False,
+    hook_strong: bool = False,
+    move: int = 0,
+) -> None:
     """Convierte una imagen fija en un clip con efecto Ken Burns (zoom lento, gratis).
     move: indice de escena -- rota entre 6 movimientos distintos (zoom-in/out
     centrado + 4 paneos direccionales) para que dos escenas seguidas nunca se
@@ -2162,20 +2775,20 @@ def _static_image_clip(image_path: Path, duration: float, path: Path, zoom_in: b
         # progreso lineal -1 -> +1 a lo largo del clip, para los paneos
         prog = f"((2*on/{frames})-1)"
         variant = move % 6
-        if variant == 0:      # zoom-in centrado
+        if variant == 0:  # zoom-in centrado
             zexpr = "min(zoom+0.0015,1.18)"
-        elif variant == 1:    # zoom-out centrado
+        elif variant == 1:  # zoom-out centrado
             zexpr = "if(eq(on,1),1.18,max(zoom-0.0015,1.0))"
-        elif variant == 2:    # paneo izquierda -> derecha (zoom fijo)
+        elif variant == 2:  # paneo izquierda -> derecha (zoom fijo)
             zexpr = "1.12"
             xexpr = f"iw/2-(iw/zoom/2)+(iw*0.04)*{prog}"
-        elif variant == 3:    # paneo derecha -> izquierda
+        elif variant == 3:  # paneo derecha -> izquierda
             zexpr = "1.12"
             xexpr = f"iw/2-(iw/zoom/2)-(iw*0.04)*{prog}"
-        elif variant == 4:    # paneo arriba -> abajo (zoom fijo)
+        elif variant == 4:  # paneo arriba -> abajo (zoom fijo)
             zexpr = "1.12"
             yexpr = f"ih/2-(ih/zoom/2)+(ih*0.04)*{prog}"
-        else:                 # paneo abajo -> arriba
+        else:  # paneo abajo -> arriba
             zexpr = "1.12"
             yexpr = f"ih/2-(ih/zoom/2)-(ih*0.04)*{prog}"
     vf = (
@@ -2184,23 +2797,43 @@ def _static_image_clip(image_path: Path, duration: float, path: Path, zoom_in: b
         f"zoompan=z='{zexpr}':d={frames}:s={WIDTH}x{HEIGHT}:fps={FPS}:"
         f"x='{xexpr}':y='{yexpr}',setsar=1"
     )
-    run([
-        "ffmpeg", "-y", "-loop", "1", "-i", str(image_path), "-t", f"{duration:.2f}",
-        "-vf", vf,
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
-        str(path),
-    ])
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            "-loop",
+            "1",
+            "-i",
+            str(image_path),
+            "-t",
+            f"{duration:.2f}",
+            "-vf",
+            vf,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "21",
+            "-pix_fmt",
+            "yuv420p",
+            str(path),
+        ]
+    )
 
 
-def _scene_boundaries(words: list[tuple[float, float, str]], n_clips: int,
-                       audio_dur: float) -> list[float]:
+def _scene_boundaries(
+    words: list[tuple[float, float, str]], n_clips: int, audio_dur: float
+) -> list[float]:
     """Duracion de cada escena de modo que los cortes caigan en FIN DE FRASE
     (palabra terminada en ./!/?) en vez de en puntos equidistantes -- antes la
     imagen cambiaba a mitad de frase y se percibia como desfase voz/imagen
     (feedback del usuario). Para cada corte ideal (i*dur/n) se elige el fin de
     frase mas cercano; si una frase abarca varios cortes se cae al fin de
     palabra mas cercano para no dejar escenas vacias."""
-    sentence_ends = [w[1] for w in words if w[2].rstrip('"\')').endswith((".", "!", "?", "…"))]
+    sentence_ends = [
+        w[1] for w in words if w[2].rstrip("\"')").endswith((".", "!", "?", "…"))
+    ]
     word_ends = [w[1] for w in words]
     cuts: list[float] = []
     prev = 0.0
@@ -2212,8 +2845,9 @@ def _scene_boundaries(words: list[tuple[float, float, str]], n_clips: int,
         # candidato y un corte interno terminaba clavado en audio_dur, dejando
         # escenas de duracion 0 al final (visto en produccion con guiones
         # cortos / pocas frases).
-        cands = [t for t in sentence_ends if prev + 0.5 < t < audio_dur - 0.5] or \
-                [t for t in word_ends if prev + 0.5 < t < audio_dur - 0.5]
+        cands = [t for t in sentence_ends if prev + 0.5 < t < audio_dur - 0.5] or [
+            t for t in word_ends if prev + 0.5 < t < audio_dur - 0.5
+        ]
         if cands:
             cut = min(cands, key=lambda t: abs(t - ideal))
         else:
@@ -2230,13 +2864,22 @@ def _scene_boundaries(words: list[tuple[float, float, str]], n_clips: int,
     return [bounds[i + 1] - bounds[i] for i in range(n_clips)]
 
 
-def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
-                  out_dir: Path, media_source: str,
-                  punch_index: int | None = None, style: str | None = None,
-                  static: bool = False, hook_strong: bool = False,
-                  wan_hero_path: Path | None = None,
-                  character_terms: list[str] | None = None) -> list[Path]:
-    """media_source: 'seedream' | 'pexels' | 'gradient'. Siempre cae a gradiente si falla.
+def acquire_media(
+    search_terms: list[str],
+    n_clips: int,
+    durations: list[float],
+    out_dir: Path,
+    media_source: str,
+    punch_index: int | None = None,
+    style: str | None = None,
+    static: bool = False,
+    hook_strong: bool = False,
+    wan_hero_path: Path | None = None,
+    character_terms: list[str] | None = None,
+    flow_animate: bool = False,
+) -> list[Path]:
+    """media_source: 'flow' | 'comfy' | 'seedream' | 'pexels' | 'gradient'.
+    Siempre cae a gradiente si falla.
     punch_index: escena que recibe el zoom "golpe" (quieta y luego zoom rapido) para
     acentuar el remate/giro comico -- por defecto la penultima escena (ver
     RETENCION_PSICOLOGIA.md, feedback "falta energia visual").
@@ -2249,7 +2892,6 @@ def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
     pexels_key = os.getenv("PEXELS_API_KEY", "")
     piapi_key = os.getenv("PIAPI_API_KEY", "")
     clips: list[Path] = []
-
 
     terms = (search_terms * ((n_clips // max(len(search_terms), 1)) + 1))[:n_clips]
     # character_terms viaja en paralelo a search_terms y se recicla igual, para
@@ -2264,7 +2906,11 @@ def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
     # (ver memoria estilo-roblox-nanobanana, escrita cuando el generador era Nano Banana).
     sheet_cache: dict[str, Path] = {}
     named_char_cache: dict[tuple[str, str], Path] = {}
-    if media_source in ("seedream", "comfy") and (piapi_key or media_source == "comfy") and style:
+    if (
+        media_source in ("seedream", "comfy")
+        and (piapi_key or media_source == "comfy")
+        and style
+    ):
         all_splashes = {s for t in search_terms for s in _champion_references(t)}
         for splash in all_splashes:
             sheet = _get_character_sheet(splash, style, piapi_key)
@@ -2279,20 +2925,50 @@ def acquire_media(search_terms: list[str], n_clips: int, durations: list[float],
             if detected:
                 name, phase = detected
                 if (name, phase) not in named_char_cache:
-                    sheet = _get_named_character_sheet(name, phase, style, piapi_key, seed_term=t)
+                    sheet = _get_named_character_sheet(
+                        name, phase, style, piapi_key, seed_term=t
+                    )
                     if sheet:
                         named_char_cache[(name, phase)] = sheet
 
-    return _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
-                                punch_index, style, static, hook_strong,
-                                wan_hero_path, piapi_key, pexels_key,
-                                sheet_cache, named_char_cache, char_terms=char_terms)
+    return _acquire_clips_loop(
+        terms,
+        n_clips,
+        durations,
+        clips_dir,
+        media_source,
+        punch_index,
+        style,
+        static,
+        hook_strong,
+        wan_hero_path,
+        piapi_key,
+        pexels_key,
+        sheet_cache,
+        named_char_cache,
+        char_terms=char_terms,
+        flow_animate=flow_animate,
+    )
 
 
-def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
-                         punch_index, style, static, hook_strong,
-                         wan_hero_path, piapi_key, pexels_key,
-                         sheet_cache, named_char_cache, char_terms=None) -> list[Path]:
+def _acquire_clips_loop(
+    terms,
+    n_clips,
+    durations,
+    clips_dir,
+    media_source,
+    punch_index,
+    style,
+    static,
+    hook_strong,
+    wan_hero_path,
+    piapi_key,
+    pexels_key,
+    sheet_cache,
+    named_char_cache,
+    char_terms=None,
+    flow_animate=False,
+) -> list[Path]:
     clips: list[Path] = []
     char_terms = list(char_terms or [])
     for i, term in enumerate(terms):
@@ -2302,26 +2978,49 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
         if i == 0 and wan_hero_path is not None:
             # hero local (Wan 2.2 via ComfyUI, gratis): solo la escena 0, para
             # maxima retencion (ver plan de gancho + ComfyUI local).
-            run(["ffmpeg", "-y", "-i", str(wan_hero_path),
-                 "-vf", f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
-                        f"crop={WIDTH}:{HEIGHT},setsar=1",
-                 "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
-                 "-pix_fmt", "yuv420p", str(raw)])
+            run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-i",
+                    str(wan_hero_path),
+                    "-vf",
+                    f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
+                    f"crop={WIDTH}:{HEIGHT},setsar=1",
+                    "-an",
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "veryfast",
+                    "-crf",
+                    "21",
+                    "-pix_fmt",
+                    "yuv420p",
+                    str(raw),
+                ]
+            )
             got = True
             log("media", f"clip 1/{n_clips}: hero local Wan 2.2 OK")
 
-        if not got and (media_source == "comfy" or (media_source == "seedream" and piapi_key)):
+        if not got and (
+            media_source in ("comfy", "flow")
+            or (media_source == "seedream" and piapi_key)
+        ):
             img_path = clips_dir / f"nb_{i}.png"
             detected = _detect_named_character(term)
             if detected and detected in named_char_cache:
                 char_ref = named_char_cache[detected]
             elif "skick" in term.lower():
-                char_ref = SKICK_REFERENCE  # fallback si el guion no usa 'Skick character:'
+                char_ref = (
+                    SKICK_REFERENCE  # fallback si el guion no usa 'Skick character:'
+                )
             else:
                 char_ref = None
             raw_champ_refs = _champion_references(term)
             if sheet_cache:
-                champ_refs = [sheet_cache.get(_champion_id(s), s) for s in raw_champ_refs]
+                champ_refs = [
+                    sheet_cache.get(_champion_id(s), s) for s in raw_champ_refs
+                ]
             else:
                 champ_refs = raw_champ_refs
             # DOS PLACAS: el fondo se pide vacio y el personaje aparte, en pose
@@ -2335,24 +3034,69 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
             # el empalme final->inicio dejo de existir.
             explicit = i < len(char_terms)
             raw_char = (char_terms[i] if explicit else None) or None
+            # KOREX: un character_term con forma "tadeo/codicia" nombra una pose
+            # YA dibujada en assets/kx_cast/. Esa lamina se usa como imagen de
+            # referencia de la escena -- es lo unico que mantiene a Tadeo
+            # identico entre escenas y entre videos. Y no hace falta generar la
+            # placa de personaje: korex_engine prefiere la pose de biblioteca.
+            import kx_cast
+
+            lib_pose = None
+            if raw_char and "/" in raw_char:
+                _c, _, _p = raw_char.partition("/")
+                try:
+                    lib_pose = kx_cast.pick(_c, _p, i) or kx_cast.get_pose(_c, _p)
+                except Exception as e:
+                    log(
+                        "media",
+                        f"clip {i + 1}/{n_clips}: pose '{raw_char}' no resuelta ({e})",
+                    )
+                if lib_pose and Path(lib_pose).exists():
+                    char_ref = Path(lib_pose)
+                    # Una sola referencia no aguanta cuando cambia la escena: se
+                    # suma la hoja canonica del personaje, que es la que define
+                    # la identidad, ademas de la pose concreta de esta escena.
+                    try:
+                        sheet = kx_cast._canonical_sheet(_c)
+                        if (
+                            sheet
+                            and Path(sheet).exists()
+                            and Path(sheet) != Path(lib_pose)
+                        ):
+                            champ_refs = list(champ_refs) + [Path(sheet)]
+                    except Exception:
+                        pass
+                else:
+                    lib_pose = None
+
             if i == 0:
                 bg_term, plate_term = term, None
             elif explicit and not raw_char:
                 bg_term, plate_term = term, None
+            elif lib_pose:
+                bg_term, plate_term = term, None
             else:
                 bg_term, plate_term = _plate_terms(term, raw_char)
             gen_term = bg_term
+            # el bloque de identidad va literal en toda escena con personaje de
+            # biblioteca, siempre con las mismas palabras (ver kx_cast)
+            if lib_pose:
+                gen_term = f"{gen_term}. {kx_cast.CHARACTER_LOCK}"
             if i == 0:
                 # pattern interrupt (segundo 0-1): encuadre inesperado que rompe lo
                 # "familiar" del feed antes de que el pulgar decida seguir scrolleando
-                gen_term += (", unexpected framing: extreme low angle or dramatically "
-                             "disproportionate scale between subject and surroundings")
+                gen_term += (
+                    ", unexpected framing: extreme low angle or dramatically "
+                    "disproportionate scale between subject and surroundings"
+                )
             elif i % 2 == 1:
                 # movimiento organico (humo/polvo/tela) alternado con el Ken Burns
                 # mecanico -- el ojo sigue mucho mas el movimiento fluido/organico
                 # que el zoom rigido (percepcion de movimiento biologico)
-                gen_term += (", include drifting smoke, dust, mist, or fabric/hair "
-                             "moving gently in the scene")
+                gen_term += (
+                    ", include drifting smoke, dust, mist, or fabric/hair "
+                    "moving gently in the scene"
+                )
             # Dos generadores desde el 3 ago 2026: Seedream (PiAPI, de pago) y
             # ComfyUI local (gratis, sin limite, ver comfy_client.py). No hay
             # respaldo cruzado automatico: si el elegido falla, la escena cae al
@@ -2360,29 +3104,66 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
             # sin nb_*.png y no puede renderizar.
             if media_source == "comfy":
                 import comfy_client
+
                 gen_fn, gen_key = comfy_client.generate_image, ""
+            elif media_source == "flow":
+                # Google Flow por navegador (gratis con la cuenta Pro). Es el
+                # unico generador disponible que acepta imagen de referencia:
+                # FLUX schnell no, y PiAPI/Seedream esta sin saldo.
+                import flow_automation
+
+                gen_fn, gen_key = flow_automation.generate_image, ""
             else:
                 gen_fn, gen_key = _seedream_generate_image, piapi_key
             # CACHE DE ESCENAS GENERICAS: una escena sin nombres propios ni fechas
             # sirve igual en cualquier video -> se genera una vez y se reusa (cero
             # llamada de imagen). Las escenas con personaje de referencia quedan
             # fuera: dependen del sheet, no son intercambiables.
+            # ...y las de un video con reparto propio TAMBIEN quedan fuera,
+            # aunque esta escena concreta no declare personaje. El 4 ago 2026 la
+            # escena 0 de KOREX tenia `character_terms[0]` vacio, cayo en la
+            # cache y devolvio un mapache de otra corrida: no era Tadeo. Salia
+            # en el primer plano del video y, por la regla del bucle, tambien en
+            # el ultimo -- los dos sitios donde mas se nota.
             gen_ok = False
             cache_hit = None
-            if not char_ref and not champ_refs:
+            tiene_reparto = any("/" in (c or "") for c in char_terms)
+            if not char_ref and not champ_refs and not tiene_reparto:
                 try:
                     from visual_cache import scene_cache_lookup, scene_cache_store
+
                     cache_hit = scene_cache_lookup(gen_term, style)
                 except Exception:
                     cache_hit = None
             if cache_hit:
                 shutil.copyfile(cache_hit, img_path)
                 gen_ok = True
-                log("media", f"clip {i + 1}/{n_clips}: escena cacheada (sin coste de API)")
+                log(
+                    "media",
+                    f"clip {i + 1}/{n_clips}: escena cacheada (sin coste de API)",
+                )
             else:
-                gen_ok = gen_fn(gen_term, img_path, gen_key, reference_image=char_ref,
-                                reference_images=champ_refs, style_directive=style)
-                if gen_ok and not char_ref and not champ_refs:
+                # Reintentos: una escena perdida deja un hueco en el montaje (la
+                # corrida del 4 ago se quedo sin nb_2 y el video salio con 11
+                # escenas de 12). Flow falla de vez en cuando por timeout de la
+                # UI, no por el prompt, asi que reintentar arregla la mayoria.
+                attempts = 3 if media_source == "flow" else 1
+                for attempt in range(1, attempts + 1):
+                    gen_ok = gen_fn(
+                        gen_term,
+                        img_path,
+                        gen_key,
+                        reference_image=char_ref,
+                        reference_images=champ_refs,
+                        style_directive=style,
+                    )
+                    if gen_ok:
+                        break
+                    log(
+                        "media",
+                        f"clip {i + 1}/{n_clips}: intento {attempt}/{attempts} fallo",
+                    )
+                if gen_ok and not char_ref and not champ_refs and not tiene_reparto:
                     try:
                         scene_cache_store(gen_term, style, img_path)
                     except Exception:
@@ -2399,27 +3180,44 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                 # propia, ej. Tadeo el mapache) ese texto contradice la imagen
                 # de referencia y el modelo empieza a titubear entre las dos --
                 # se retira solo en ese caso, nunca para figuras sin referencia.
-                plate_style = (PLATE_STYLE.replace(
-                    " Only human characters, never humanoid animals.", "")
-                    if char_ref else PLATE_STYLE)
+                plate_style = (
+                    PLATE_STYLE.replace(
+                        " Only human characters, never humanoid animals.", ""
+                    )
+                    if char_ref
+                    else PLATE_STYLE
+                )
                 ch_prompt = f"{plate_term}. {CHARACTER_PLATE}"
                 ch_hit = None
                 try:
                     from visual_cache import scene_cache_lookup, scene_cache_store
+
                     ch_hit = scene_cache_lookup(ch_prompt, PLATE_STYLE)
                 except Exception:
                     ch_hit = None
                 if ch_hit:
                     shutil.copyfile(ch_hit, ch_path)
-                    log("media", f"clip {i + 1}/{n_clips}: personaje cacheado '{plate_term[:40]}'")
+                    log(
+                        "media",
+                        f"clip {i + 1}/{n_clips}: personaje cacheado '{plate_term[:40]}'",
+                    )
                 else:
-                    ch_ok = gen_fn(ch_prompt, ch_path, gen_key, reference_image=char_ref,
-                                   reference_images=champ_refs, style_directive=plate_style)
-                    if not ch_ok and alt_key:
-                        ch_ok = alt_fn(ch_prompt, ch_path, alt_key, reference_image=char_ref,
-                                       reference_images=champ_refs, style_directive=plate_style)
+                    # sin respaldo cruzado: el generador alternativo era Nano
+                    # Banana y se elimino del repo, asi que si esta falla la
+                    # escena va sin personaje (antes tiraba NameError)
+                    ch_ok = gen_fn(
+                        ch_prompt,
+                        ch_path,
+                        gen_key,
+                        reference_image=char_ref,
+                        reference_images=champ_refs,
+                        style_directive=plate_style,
+                    )
                     if ch_ok:
-                        log("media", f"clip {i + 1}/{n_clips}: placa personaje '{plate_term[:40]}'")
+                        log(
+                            "media",
+                            f"clip {i + 1}/{n_clips}: placa personaje '{plate_term[:40]}'",
+                        )
                         if not char_ref and not champ_refs:
                             try:
                                 scene_cache_store(ch_prompt, PLATE_STYLE, ch_path)
@@ -2427,12 +3225,64 @@ def _acquire_clips_loop(terms, n_clips, durations, clips_dir, media_source,
                                 pass
                     else:
                         ch_path.unlink(missing_ok=True)
-                        log("media", f"clip {i + 1}/{n_clips}: placa personaje fallo, solo fondo")
+                        log(
+                            "media",
+                            f"clip {i + 1}/{n_clips}: placa personaje fallo, solo fondo",
+                        )
+            # ANIMACION EN FLOW: la escena deja de ser un Ken Burns sobre una
+            # foto y pasa a ser movimiento real generado a partir de esa misma
+            # imagen, asi que el personaje no cambia de diseño al moverse. Cae
+            # al Ken Burns si Flow falla: nunca bloquea el render.
+            if gen_ok and flow_animate and not got:
+                import flow_automation
+
+                anim = clips_dir / f"fx_{i}.mp4"
+                motion = (
+                    "Slow, controlled camera move. The character stays "
+                    "on model, no morphing, no cuts."
+                )
+                if flow_automation.animate_image(img_path, motion, anim):
+                    run(
+                        [
+                            "ffmpeg",
+                            "-y",
+                            "-i",
+                            str(anim),
+                            "-vf",
+                            f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
+                            f"crop={WIDTH}:{HEIGHT},setsar=1",
+                            "-an",
+                            "-c:v",
+                            "libx264",
+                            "-preset",
+                            "veryfast",
+                            "-crf",
+                            "21",
+                            "-pix_fmt",
+                            "yuv420p",
+                            str(raw),
+                        ]
+                    )
+                    got = True
+                    log("media", f"clip {i + 1}/{n_clips}: Flow animado '{term[:40]}'")
+                else:
+                    log(
+                        "media",
+                        f"clip {i + 1}/{n_clips}: animacion fallo, queda estatica",
+                    )
+
             if gen_ok:
                 if not got:
-                    _static_image_clip(img_path, durations[i] + 1.0, raw, move=i,
-                                        punch=(i == punch_index), hook=(i == 0), static=static,
-                                        hook_strong=hook_strong)
+                    _static_image_clip(
+                        img_path,
+                        durations[i] + 1.0,
+                        raw,
+                        move=i,
+                        punch=(i == punch_index),
+                        hook=(i == 0),
+                        static=static,
+                        hook_strong=hook_strong,
+                    )
                     got = True
                     log("media", f"clip {i + 1}/{n_clips}: {media_source} '{term}'")
         elif media_source == "pexels" and pexels_key:
@@ -2465,18 +3315,36 @@ SFX_DIR = ROOT / "assets" / "sfx"
 # se sienta "puesto por ponerlo": UN solo sonido consistente (firma del canal),
 # volumen bajo bajo la narracion, y se OMITE entero si el tono del video es
 # sombrio. Capa separada de pick_sfx_cues (que sigue siendo 100% diegetico).
-STICKER_SFX_DEFAULT = "Paper___book_ManualTurnPage_AP1.1244.mp3"  # swish de papel, 0.58s
+STICKER_SFX_DEFAULT = (
+    "Paper___book_ManualTurnPage_AP1.1244.mp3"  # swish de papel, 0.58s
+)
 STICKER_SFX_VOLUME = 0.16
-_SOMBER_TONE_WORDS = ("sad", "tragic", "mournful", "grief", "sorrow", "solemn",
-                       "melancholy", "funeral", "elegy", "lament", "somber", "sombre",
-                       "requiem", "heartbreaking")
+_SOMBER_TONE_WORDS = (
+    "sad",
+    "tragic",
+    "mournful",
+    "grief",
+    "sorrow",
+    "solemn",
+    "melancholy",
+    "funeral",
+    "elegy",
+    "lament",
+    "somber",
+    "sombre",
+    "requiem",
+    "heartbreaking",
+)
 
 
 def _list_sfx() -> list[Path]:
     if not SFX_DIR.exists():
         return []
-    return [p for p in SFX_DIR.iterdir()
-            if p.suffix.lower() in (".mp3", ".wav", ".m4a", ".ogg")]
+    return [
+        p
+        for p in SFX_DIR.iterdir()
+        if p.suffix.lower() in (".mp3", ".wav", ".m4a", ".ogg")
+    ]
 
 
 def _load_sfx_manifest() -> dict:
@@ -2491,10 +3359,12 @@ def _load_sfx_manifest() -> dict:
         return {}
 
 
-def pick_sfx_cues(words: list[tuple[float, float, str]],
-                   tone: str | None = None,
-                   script: str | None = None,
-                   search_terms: list[str] | None = None) -> list[tuple[float, Path, str]]:
+def pick_sfx_cues(
+    words: list[tuple[float, float, str]],
+    tone: str | None = None,
+    script: str | None = None,
+    search_terms: list[str] | None = None,
+) -> list[tuple[float, Path, str]]:
     """Usa Claude para colocar SFX SOLO donde la narracion describe literalmente
     el evento sonoro (espada, trueno, golpe...) -- feedback del usuario: los
     efectos 'decorativos' parecen puestos por ponerlos. Cada cue debe citar la
@@ -2516,8 +3386,10 @@ def pick_sfx_cues(words: list[tuple[float, float, str]],
                     "properties": {
                         "word_index": {"type": "integer"},
                         "sfx_file": {"type": "string"},
-                        "trigger_word": {"type": "string",
-                                          "description": "la palabra EXACTA del guion (en word_index o adyacente) que describe el evento sonoro"},
+                        "trigger_word": {
+                            "type": "string",
+                            "description": "la palabra EXACTA del guion (en word_index o adyacente) que describe el evento sonoro",
+                        },
                     },
                     "required": ["word_index", "sfx_file", "trigger_word"],
                     "additionalProperties": False,
@@ -2532,8 +3404,14 @@ def pick_sfx_cues(words: list[tuple[float, float, str]],
     catalog = {f.name: manifest.get(f.name, {"suena_como": f.stem}) for f in sfx_files}
     tone_line = f"\nTono/musica de este video: {tone!r}\n" if tone else ""
     script_line = f"\nGuion completo (con puntuacion):\n{script}\n" if script else ""
-    scenes_line = (f"\nQue se VE en pantalla en cada escena (en orden):\n"
-                   f"{json.dumps(search_terms, ensure_ascii=False)}\n") if search_terms else ""
+    scenes_line = (
+        (
+            f"\nQue se VE en pantalla en cada escena (en orden):\n"
+            f"{json.dumps(search_terms, ensure_ascii=False)}\n"
+        )
+        if search_terms
+        else ""
+    )
     prompt = (
         "Eres editor de sonido para Shorts de gaming. Tu regla es de DISENO DE "
         "SONIDO DIEGETICO: un efecto solo puede sonar si la narracion en ese punto "
@@ -2563,7 +3441,9 @@ def pick_sfx_cues(words: list[tuple[float, float, str]],
     # _claude_json_call ya convierte eso en un RuntimeError legible en vez
     # de la StopIteration silenciosa que habia antes.
     try:
-        data = with_retries(_claude_json_call, 4000, schema, prompt, attempts=2, delay=3.0)
+        data = with_retries(
+            _claude_json_call, 4000, schema, prompt, attempts=2, delay=3.0
+        )
     except Exception as e:
         log("sfx", f"Seleccion de SFX fallo: {type(e).__name__}: {e}")
         return []
@@ -2581,36 +3461,49 @@ def pick_sfx_cues(words: list[tuple[float, float, str]],
             continue
         # el trigger_word debe ser una palabra REAL del guion en word_index o
         # inmediatamente adyacente -- descarta cues decorativos inventados
-        window = [_norm(words[j][2]) for j in range(max(0, idx - 1), min(len(words), idx + 2))]
+        window = [
+            _norm(words[j][2]) for j in range(max(0, idx - 1), min(len(words), idx + 2))
+        ]
         if _norm(trigger) not in window:
-            log("sfx", f"cue descartado: '{trigger}' no esta junto a la palabra {idx} "
-                        f"('{words[idx][2]}')")
+            log(
+                "sfx",
+                f"cue descartado: '{trigger}' no esta junto a la palabra {idx} "
+                f"('{words[idx][2]}')",
+            )
             continue
         cues.append((words[idx][0], name_to_path[fname], trigger))
         log("sfx", f"  {words[idx][0]:6.2f}s  {fname}  <- '{trigger}'")
     cues.sort(key=lambda c: c[0])
     cues = cues[:4]  # tope duro (la API no soporta maxItems en el schema)
-    log("sfx", f"{len(cues)} efectos de sonido colocados (regla: solo eventos narrados)")
+    log(
+        "sfx", f"{len(cues)} efectos de sonido colocados (regla: solo eventos narrados)"
+    )
     return cues
 
 
 # ------------------------------------------------------------- 5. ASSEMBLY
 
-def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
-             music_mood: str | None = None,
-             sfx_cues: list[tuple[float, Path]] | None = None,
-             durations: list[float] | None = None,
-             watermark: str | None = "ImPixxel",
-             cta_text: str | None = None,
-             cta_position: str | None = None,
-             intro_stinger: bool = False,
-             split_first_clip: bool = False,
-             caption_header: str | None = None,
-             caption_text: str | None = None,
-             caption_keywords: list[str] | None = None,
-             hook_card: str | None = None,
-             hook_card_mode: str = "overlay",
-             hook_punch: bool = False) -> Path:
+
+def assemble(
+    clips: list[Path],
+    audio: Path,
+    ass_path: Path,
+    out_dir: Path,
+    music_mood: str | None = None,
+    sfx_cues: list[tuple[float, Path]] | None = None,
+    durations: list[float] | None = None,
+    watermark: str | None = "ImPixxel",
+    cta_text: str | None = None,
+    cta_position: str | None = None,
+    intro_stinger: bool = False,
+    split_first_clip: bool = False,
+    caption_header: str | None = None,
+    caption_text: str | None = None,
+    caption_keywords: list[str] | None = None,
+    hook_card: str | None = None,
+    hook_card_mode: str = "overlay",
+    hook_punch: bool = False,
+) -> Path:
     """durations: duracion por escena (de _scene_boundaries, cortes en fin de
     frase). Sin ella, reparto uniforme (comportamiento anterior).
     hook_card: premisa en pantalla (~2.2s, alto contraste, curiosity gap) al
@@ -2646,13 +3539,30 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         seg = durations[i]
         clip_dur = ffprobe_duration(clip)
         loop_args = ["-stream_loop", "-1"] if clip_dur < seg else []
-        run([
-            "ffmpeg", "-y", *loop_args, "-i", str(clip), "-t", f"{seg:.3f}",
-            "-vf", f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
-                   f"crop={WIDTH}:{HEIGHT},fps={FPS},setsar=1",
-            "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
-            "-pix_fmt", "yuv420p", str(norm),
-        ])
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                *loop_args,
+                "-i",
+                str(clip),
+                "-t",
+                f"{seg:.3f}",
+                "-vf",
+                f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
+                f"crop={WIDTH}:{HEIGHT},fps={FPS},setsar=1",
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "21",
+                "-pix_fmt",
+                "yuv420p",
+                str(norm),
+            ]
+        )
         norm_paths.append(norm)
 
     loop_frame = None
@@ -2664,7 +3574,9 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         # (antes del wipe/flash de entrada) para usarlo como destino del loop al
         # final, sin importar que efectos de entrada se apliquen despues.
         loop_frame = out_dir / "clips" / "loop_frame.png"
-        run(["ffmpeg", "-y", "-i", str(norm_paths[0]), "-vframes", "1", str(loop_frame)])
+        run(
+            ["ffmpeg", "-y", "-i", str(norm_paths[0]), "-vframes", "1", str(loop_frame)]
+        )
 
     if read_mode:
         # beat de lectura primero: congelar el primer frame del clip 0 durante
@@ -2672,8 +3584,17 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         # tiempo en el filtro de audio; los subs ya llegan con offset_ms desde
         # main. El premise card se dibuja encima de este segmento (0-2.2s).
         first_frame = out_dir / "clips" / "hookcard_frame.png"
-        run(["ffmpeg", "-y", "-i", str(norm_paths[0]), "-vframes", "1",
-             str(first_frame)])
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(norm_paths[0]),
+                "-vframes",
+                "1",
+                str(first_frame),
+            ]
+        )
         freeze = out_dir / "clips" / "seg_hookcard.mp4"
         _static_image_clip(first_frame, HOOK_CARD_DUR, freeze, static=True)
         norm_paths = [freeze, *norm_paths]
@@ -2682,8 +3603,19 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         # sostiene el ultimo frame +1s al final para compensar el retraso de voz
         # (asi no se corta el ultimo segundo de narracion) -- ver OVERLAY_VOICE_DELAY.
         last_frame = out_dir / "clips" / "hookcard_last_frame.png"
-        run(["ffmpeg", "-y", "-sseof", "-0.1", "-i", str(norm_paths[-1]),
-             "-vframes", "1", str(last_frame)])
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                "-sseof",
+                "-0.1",
+                "-i",
+                str(norm_paths[-1]),
+                "-vframes",
+                "1",
+                str(last_frame),
+            ]
+        )
         hold = out_dir / "clips" / "seg_holdend.mp4"
         _static_image_clip(last_frame, OVERLAY_VOICE_DELAY, hold, static=True)
         norm_paths = [*norm_paths, hold]
@@ -2697,26 +3629,57 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         entry_clip = norm_paths[0]
         punch_dur = 0.3
         wiped = out_dir / "clips" / "seg_punch_wipe.mp4"
-        run([
-            "ffmpeg", "-y",
-            "-f", "lavfi", "-i", f"color=c=white:s={WIDTH}x{HEIGHT}:d={punch_dur}:r={FPS}",
-            "-i", str(entry_clip),
-            "-filter_complex",
-            f"[1:v]trim=0:{punch_dur},setpts=PTS-STARTPTS,fps={FPS}[headv];"
-            f"[0:v][headv]xfade=transition=circleopen:duration={punch_dur}:offset=0[wv]",
-            "-map", "[wv]", "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
-            "-pix_fmt", "yuv420p", str(wiped),
-        ])
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                f"color=c=white:s={WIDTH}x{HEIGHT}:d={punch_dur}:r={FPS}",
+                "-i",
+                str(entry_clip),
+                "-filter_complex",
+                f"[1:v]trim=0:{punch_dur},setpts=PTS-STARTPTS,fps={FPS}[headv];"
+                f"[0:v][headv]xfade=transition=circleopen:duration={punch_dur}:offset=0[wv]",
+                "-map",
+                "[wv]",
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "21",
+                "-pix_fmt",
+                "yuv420p",
+                str(wiped),
+            ]
+        )
         rest = out_dir / "clips" / "seg_punch_rest.mp4"
-        run([
-            "ffmpeg", "-y", "-i", str(entry_clip), "-ss", f"{punch_dur:.3f}",
-            # NUNCA "-c copy" aca -- el clip fuente (libx264 veryfast, GOP largo)
-            # suele no tener keyframe en 0.3s, y el copy silenciosamente produce
-            # un archivo casi vacio que trunca el concat entero (bug real, visto
-            # 20 jul 2026: video final de 23.6s en vez de ~39s). Reencodear.
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
-            "-pix_fmt", "yuv420p", str(rest),
-        ])
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(entry_clip),
+                "-ss",
+                f"{punch_dur:.3f}",
+                # NUNCA "-c copy" aca -- el clip fuente (libx264 veryfast, GOP largo)
+                # suele no tener keyframe en 0.3s, y el copy silenciosamente produce
+                # un archivo casi vacio que trunca el concat entero (bug real, visto
+                # 20 jul 2026: video final de 23.6s en vez de ~39s). Reencodear.
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "21",
+                "-pix_fmt",
+                "yuv420p",
+                str(rest),
+            ]
+        )
         norm_paths = [wiped, rest, *norm_paths[1:]]
 
     if loop_frame is not None:
@@ -2731,14 +3694,31 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         looped = out_dir / "clips" / "seg_loop_xfade.mp4"
         last_dur = ffprobe_duration(last_clip)
         xfade_offset = max(last_dur - loop_dur, 0)
-        run([
-            "ffmpeg", "-y", "-i", str(last_clip), "-i", str(loop_still),
-            "-filter_complex",
-            f"[0:v]fps={FPS}[v0];[1:v]fps={FPS}[v1];"
-            f"[v0][v1]xfade=transition=fade:duration={loop_dur}:offset={xfade_offset:.3f}[v]",
-            "-map", "[v]", "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
-            "-pix_fmt", "yuv420p", str(looped),
-        ])
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(last_clip),
+                "-i",
+                str(loop_still),
+                "-filter_complex",
+                f"[0:v]fps={FPS}[v0];[1:v]fps={FPS}[v1];"
+                f"[v0][v1]xfade=transition=fade:duration={loop_dur}:offset={xfade_offset:.3f}[v]",
+                "-map",
+                "[v]",
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "21",
+                "-pix_fmt",
+                "yuv420p",
+                str(looped),
+            ]
+        )
         norm_paths = [*norm_paths[:-1], looped]
 
     concat_list = out_dir / "clips" / "concat.txt"
@@ -2746,8 +3726,22 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         "".join(f"file '{p.name}'\n" for p in norm_paths), encoding="utf-8"
     )
     concat_path = out_dir / "clips" / "concat.mp4"
-    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_list.name,
-         "-c", "copy", concat_path.name], cwd=out_dir / "clips")
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            concat_list.name,
+            "-c",
+            "copy",
+            concat_path.name,
+        ],
+        cwd=out_dir / "clips",
+    )
 
     # cwd = out_dir con rutas relativas: evita escapar rutas de Windows en el filtro ass
     final = out_dir / "video.mp4"
@@ -2758,11 +3752,19 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         # gancho auditivo en el frame 0, independiente de trigger_word (que
         # nunca dispara nada antes de que se diga la primera palabra) -- test
         # de si un whoosh/riser generico al inicio baja el swipe inmediato.
-        candidates = [p for p in SFX_DIR.iterdir()
-                      if p.suffix.lower() in (".mp3", ".wav")
-                      and re.search(r"whoosh|riser|swoosh", p.name, re.I)] if SFX_DIR.exists() else []
+        candidates = (
+            [
+                p
+                for p in SFX_DIR.iterdir()
+                if p.suffix.lower() in (".mp3", ".wav")
+                and re.search(r"whoosh|riser|swoosh", p.name, re.I)
+            ]
+            if SFX_DIR.exists()
+            else []
+        )
         if candidates:
             import random
+
             stinger_path = random.choice(candidates)
 
     # La musica generada (Lyria) se elimino con el resto de Gemini el 3 ago 2026:
@@ -2775,13 +3777,17 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
     # memoria musica-trending-videos-solo-lectura). No caer al fallback de
     # libreria local en ese caso.
     if not music and music_mood is not None:
-        music = _pick_music()
+        music = _pick_music(text=hook_card)
 
     watermark_filter = (
-        f"drawtext=fontfile='C\\:/Windows/Fonts/arialbd.ttf':text='{_drawtext_escape(watermark)}'"
-        ":fontcolor=white@0.55:fontsize=34:borderw=2:bordercolor=black@0.4"
-        ":x=w-text_w-28:y=110,"
-    ) if watermark else ""
+        (
+            f"drawtext=fontfile='C\\:/Windows/Fonts/arialbd.ttf':text='{_drawtext_escape(watermark)}'"
+            ":fontcolor=white@0.55:fontsize=34:borderw=2:bordercolor=black@0.4"
+            ":x=w-text_w-28:y=110,"
+        )
+        if watermark
+        else ""
+    )
 
     cta_filter = ""
     if cta_text and cta_position:
@@ -2801,8 +3807,8 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
             f"drawtext=fontfile='C\\:/Windows/Fonts/arialbd.ttf':text='{safe_text}'"
             ":fontcolor=white:fontsize=44:borderw=3:bordercolor=black@0.6"
             ":x=(w-text_w)/2:y=h-320"
-            f":alpha='if(lt(t,{cta_start}),0,if(lt(t,{cta_start+0.3}),(t-{cta_start})/0.3,"
-            f"if(lt(t,{cta_end-0.3}),1,if(lt(t,{cta_end}),({cta_end}-t)/0.3,0))))'"
+            f":alpha='if(lt(t,{cta_start}),0,if(lt(t,{cta_start + 0.3}),(t-{cta_start})/0.3,"
+            f"if(lt(t,{cta_end - 0.3}),1,if(lt(t,{cta_end}),({cta_end}-t)/0.3,0))))'"
             f":enable='between(t,{cta_start},{cta_end})',"
         )
 
@@ -2866,7 +3872,9 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         for i, line in enumerate(card_lines):
             y = c_y0 + i * c_gap
             start_s = i * line_stagger_s
-            line_colored = re.sub(r"\d+", lambda m: f"{{\\c&H4AD2FF&}}{m.group(0)}{{\\c&HFFFFFF&}}", line)
+            line_colored = re.sub(
+                r"\d+", lambda m: f"{{\\c&H4AD2FF&}}{m.group(0)}{{\\c&HFFFFFF&}}", line
+            )
             card_events.append(
                 f"Dialogue: 0,{_ass_time(start_s)},0:00:02.20,Cap,,0,0,0,,"
                 f"{{\\an5\\pos({cx},{y})\\fs60\\c&HFFFFFF&\\fad(250,200)}}{line_colored}"
@@ -2892,7 +3900,9 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         # lateral (antes quedaban en una columna angosta con mucho margen a los
         # costados). width_chars mas alto = lineas mas largas = usa mas ancho
         # del cuadro con el mismo tamano de fuente.
-        header_lines = _wrap_caption(_ass_clean(caption_header or ""), width_chars=18).split("\n")
+        header_lines = _wrap_caption(
+            _ass_clean(caption_header or ""), width_chars=18
+        ).split("\n")
 
         # bug real (20 jul 2026): al envolver el parrafo, una keyword de varias
         # palabras (ej. "cryptic message") podia terminar partida entre dos
@@ -2904,10 +3914,12 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         body_text = _ass_clean(caption_text)
         JOINER = "⁠"
         joined_keywords = []
-        for kw in (caption_keywords or []):
+        for kw in caption_keywords or []:
             kw_clean = _ass_clean(kw)
             joined = kw_clean.replace(" ", JOINER)
-            body_text = re.sub(re.escape(kw_clean), joined, body_text, flags=re.IGNORECASE)
+            body_text = re.sub(
+                re.escape(kw_clean), joined, body_text, flags=re.IGNORECASE
+            )
             joined_keywords.append(joined)
 
         body_lines = _wrap_caption(body_text, width_chars=38).split("\n")
@@ -2916,7 +3928,9 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         for joined in joined_keywords:
             pattern = re.compile(re.escape(joined), re.IGNORECASE)
             body_lines = [
-                pattern.sub(lambda m: f"{RED}{m.group(0).replace(JOINER, ' ')}{WHITE}", line)
+                pattern.sub(
+                    lambda m: f"{RED}{m.group(0).replace(JOINER, ' ')}{WHITE}", line
+                )
                 for line in body_lines
             ]
 
@@ -2938,7 +3952,9 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
         body_size, body_gap = 48, 62
         block_gap = 50  # separacion entre el header y el body
 
-        total_h = len(header_lines) * header_gap + block_gap + len(body_lines) * body_gap
+        total_h = (
+            len(header_lines) * header_gap + block_gap + len(body_lines) * body_gap
+        )
         available_h = img_y - margin * 2
         if total_h > available_h and available_h > 0:
             scale = available_h / total_h
@@ -2947,7 +3963,9 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
             body_size = max(int(body_size * scale), 22)
             body_gap = max(int(body_gap * scale), 28)
             block_gap = max(int(block_gap * scale), 20)
-            total_h = len(header_lines) * header_gap + block_gap + len(body_lines) * body_gap
+            total_h = (
+                len(header_lines) * header_gap + block_gap + len(body_lines) * body_gap
+            )
 
         start_y = margin + max((available_h - total_h) / 2, 0)
         header_y0 = int(start_y + header_gap / 2)
@@ -3008,7 +4026,11 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
     # la voz (y los sfx atados a palabras) se retrasan card_ms; la musica y el
     # stinger arrancan en 0 (suenan durante el card). total_dur incluye el card
     # para que el fade-out de la musica caiga al final real, no 2.2s antes.
-    voice_delay_s = HOOK_CARD_DUR if read_mode else (OVERLAY_VOICE_DELAY if overlay_delay_mode else 0.0)
+    voice_delay_s = (
+        HOOK_CARD_DUR
+        if read_mode
+        else (OVERLAY_VOICE_DELAY if overlay_delay_mode else 0.0)
+    )
     card_ms = int(voice_delay_s * 1000)
     total_dur = audio_dur + voice_delay_s + (LOOP_DUR if hook_punch else 0.0)
 
@@ -3028,7 +4050,11 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
             f"afade=t=in:st=0:d={fade_dur:.2f},"
             f"afade=t=out:st={fade_out_start:.2f}:d={fade_dur:.2f}[bg];"
             "[bg][voice_trigger]sidechaincompress="
-            "threshold=0.03:ratio=8:attack=20:release=400[bg_ducked];"
+            # attack 50ms / release 300ms: fila "contenido rapido" de la tabla
+            # de ducking (SOUND_DESIGN_RETENCION.md, 9 ago 2026). Release corto
+            # para que la musica vuelva rapido entre frases staccato y el Short
+            # no se sienta vacio en las pausas (antes attack=20:release=400).
+            "threshold=0.03:ratio=8:attack=50:release=300[bg_ducked];"
         )
         audio_labels += ["[voice_mix]", "[bg_ducked]"]
     else:
@@ -3053,35 +4079,126 @@ def assemble(clips: list[Path], audio: Path, ass_path: Path, out_dir: Path,
     audio_filters += (
         f"{''.join(audio_labels)}amix=inputs={len(audio_labels)}:"
         "duration=first:dropout_transition=0:normalize=0,"
-        f"loudnorm=I=-14:TP=-1.5:LRA=11{pad_filter}[aout]"
+        # TP=-1.0 dBTP: estandar de plataformas (SOUND_DESIGN_RETENCION.md;
+        # antes -1.5). I=-14 LUFS se mantiene.
+        f"loudnorm=I=-14:TP=-1.0:LRA=11{pad_filter}[aout]"
     )
 
     label = "musica + " if music else ""
     label += f"{len(sfx_cues)} sfx" if sfx_cues else "sin sfx"
     log("assembly", f"Render final (subtitulos + voz + {label})...")
-    run([
-        "ffmpeg", "-y", *inputs,
-        "-filter_complex", video_filter + audio_filters,
-        "-map", "[v]", "-map", "[aout]",
-        "-c:v", "libx264", "-preset", "medium", "-crf", "21", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
-        "-shortest", final.name,
-    ], cwd=out_dir)
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            *inputs,
+            "-filter_complex",
+            video_filter + audio_filters,
+            "-map",
+            "[v]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "21",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-ar",
+            "44100",
+            "-shortest",
+            final.name,
+        ],
+        cwd=out_dir,
+    )
     return final
 
 
 MUSIC_DIR = ROOT / "assets" / "music"
 
 
-def _pick_music() -> Path | None:
-    """Elige una pista al azar de assets/music/ (mp3/m4a/wav/ogg). None si esta vacia."""
+# era detectada por palabra clave en el texto del video (hook_card/title) ->
+# tag de assets/music/manifest.json. Heuristica barata a proposito: falla en
+# silencio (cae al sorteo generico) en vez de forzar un match malo.
+_ERA_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
+    (
+        "early20c",
+        (
+            "1900s",
+            "1910s",
+            "1920s",
+            "1930s",
+            "1940s",
+            "1950s",
+            "world war",
+            "wwi",
+            "ww1",
+            "wwii",
+            "ww2",
+            "nazi",
+            "gestapo",
+            "third reich",
+            "d-day",
+            "pearl harbor",
+            "holocaust",
+            "spy ring",
+            "resistance",
+            "prohibition",
+            "great depression",
+            "roaring twenties",
+        ),
+    ),
+]
+
+
+def _detect_era(text: str | None) -> str | None:
+    if not text:
+        return None
+    t = text.lower()
+    for era, keywords in _ERA_KEYWORDS:
+        if any(kw in t for kw in keywords):
+            return era
+    return None
+
+
+def _pick_music(text: str | None = None) -> Path | None:
+    """Elige una pista de assets/music/ (mp3/m4a/wav/ogg). None si esta vacia.
+
+    Si `text` (hook_card/title del video) menciona una epoca reconocida en
+    manifest.json, prefiere una pista tageada con esa era -- si no hay match,
+    o el tema no trae ninguna palabra de epoca, cae al sorteo uniforme entre
+    TODAS las pistas (comportamiento anterior, no se rompe nada para las
+    pistas sin entrada en el manifest)."""
     if not MUSIC_DIR.exists():
         return None
-    tracks = [p for p in MUSIC_DIR.iterdir()
-              if p.suffix.lower() in (".mp3", ".m4a", ".wav", ".ogg", ".flac")]
+    tracks = [
+        p
+        for p in MUSIC_DIR.iterdir()
+        if p.suffix.lower() in (".mp3", ".m4a", ".wav", ".ogg", ".flac")
+    ]
     if not tracks:
         return None
+    import json
     import random
+
+    era = _detect_era(text)
+    if era:
+        manifest_path = MUSIC_DIR / "manifest.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception:
+            manifest = {}
+        matches = [
+            p for p in tracks if era in (manifest.get(p.name, {}).get("era") or [])
+        ]
+        if matches:
+            return random.choice(matches)
     return random.choice(tracks)
 
 
@@ -3094,24 +4211,24 @@ MOTION_DIR = ROOT / "motion_graphics"
 # icono refuerce visualmente lo mismo que ya dice el SFX (ver HISTORIAL_MEJORAS.md
 # 21 jul 2026, patron "icono+SFX por cada beat" de los videos de referencia).
 _EMOJI_CATEGORIES: list[tuple[tuple[str, ...], str]] = [
-    (("radio", "transmission", "signal", "broadcast"), "\U0001F4FB"),
-    (("shot", "gun", "gunfire", "rifle", "pistol"), "\U0001F4A5"),
-    (("sword", "blade", "knife"), "\U0001F5E1"),
-    (("explosion", "bomb", "blast"), "\U0001F4A3"),
-    (("fire", "burn", "burned", "flame"), "\U0001F525"),
-    (("water", "lake", "river", "flood", "drown"), "\U0001F30A"),
-    (("money", "cash", "gold", "banknote", "currency", "counterfeit"), "\U0001F4B0"),
-    (("key", "lock", "unlock", "locked"), "\U0001F513"),
-    (("letter", "paper", "document", "telegram", "note"), "\U0001F4C4"),
-    (("phone", "call", "telephone"), "\U0000260E"),
-    (("bell", "alarm", "siren"), "\U0001F514"),
-    (("clock", "time", "minutes", "hours"), "\U000023F0"),
-    (("plates", "engraving", "printing", "press"), "\U0001F5A8"),
+    (("radio", "transmission", "signal", "broadcast"), "\U0001f4fb"),
+    (("shot", "gun", "gunfire", "rifle", "pistol"), "\U0001f4a5"),
+    (("sword", "blade", "knife"), "\U0001f5e1"),
+    (("explosion", "bomb", "blast"), "\U0001f4a3"),
+    (("fire", "burn", "burned", "flame"), "\U0001f525"),
+    (("water", "lake", "river", "flood", "drown"), "\U0001f30a"),
+    (("money", "cash", "gold", "banknote", "currency", "counterfeit"), "\U0001f4b0"),
+    (("key", "lock", "unlock", "locked"), "\U0001f513"),
+    (("letter", "paper", "document", "telegram", "note"), "\U0001f4c4"),
+    (("phone", "call", "telephone"), "\U0000260e"),
+    (("bell", "alarm", "siren"), "\U0001f514"),
+    (("clock", "time", "minutes", "hours"), "\U000023f0"),
+    (("plates", "engraving", "printing", "press"), "\U0001f5a8"),
     (("glider", "plane", "aircraft", "flight"), "\U00002708"),
-    (("kidnap", "kidnapped", "captured", "capture"), "\U0001F6A8"),
-    (("dead", "died", "death", "killed"), "\U0001F480"),
+    (("kidnap", "kidnapped", "captured", "capture"), "\U0001f6a8"),
+    (("dead", "died", "death", "killed"), "\U0001f480"),
     (("never", "found", "unsolved", "mystery"), "\U00002753"),
-    (("cigar", "smoke"), "\U0001F6AC"),
+    (("cigar", "smoke"), "\U0001f6ac"),
 ]
 
 
@@ -3134,8 +4251,14 @@ _PHOTO_QUERY_CATEGORIES: list[tuple[tuple[str, ...], str]] = [
     (("sword", "blade", "knife"), "antique military sword"),
     (("explosion", "bomb", "blast"), "explosion black and white photo"),
     (("fire", "burn", "burned", "flame"), "fire vintage photo"),
-    (("water", "lake", "river", "flood", "drown"), None),  # paisaje generico, mejor emoji
-    (("money", "cash", "gold", "banknote", "currency", "counterfeit"), "banknote 1940s"),
+    (
+        ("water", "lake", "river", "flood", "drown"),
+        None,
+    ),  # paisaje generico, mejor emoji
+    (
+        ("money", "cash", "gold", "banknote", "currency", "counterfeit"),
+        "banknote 1940s",
+    ),
     (("key", "lock", "unlock", "locked"), "antique lock"),
     (("letter", "paper", "document", "telegram", "note"), "declassified document"),
     (("phone", "call", "telephone"), "vintage telephone"),
@@ -3181,11 +4304,15 @@ def _photo_sticker(query: str, clips_dir: Path, tag: str) -> str | None:
     if not candidates:
         return None
     import urllib.request
+
     fname = f"scene_sticker_{tag}.png"
     out_path = MOTION_DIR / "public" / fname
     for i, cand in enumerate(candidates[:6]):
         raw_path = clips_dir / f"scene_raw_{tag}_{i}.jpg"
-        req = urllib.request.Request(cand["url"], headers={"User-Agent": "HiddenFactsBot/1.0 (contact@example.com)"})
+        req = urllib.request.Request(
+            cand["url"],
+            headers={"User-Agent": "HiddenFactsBot/1.0 (contact@example.com)"},
+        )
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 raw_path.write_bytes(resp.read())
@@ -3196,10 +4323,16 @@ def _photo_sticker(query: str, clips_dir: Path, tag: str) -> str | None:
     return None
 
 
-def add_scene_stickers(video_path: Path, search_terms: list[str], durations: list[float],
-                        out_dir: Path, words: list[tuple[float, float, str]] | None = None,
-                        sticker_sfx: bool = False, tone: str | None = None,
-                        sticker_sfx_file: str | None = None) -> Path:
+def add_scene_stickers(
+    video_path: Path,
+    search_terms: list[str],
+    durations: list[float],
+    out_dir: Path,
+    words: list[tuple[float, float, str]] | None = None,
+    sticker_sfx: bool = False,
+    tone: str | None = None,
+    sticker_sfx_file: str | None = None,
+) -> Path:
     """Sticker por cada palabra clave REALMENTE narrada (words, con timestamp
     real de TTS) usando la libreria pre-generada de sticker_library.py --
     pedido usuario 22 jul 2026: 'asegurate de usarlo en cada palabra clave
@@ -3209,14 +4342,21 @@ def add_scene_stickers(video_path: Path, search_terms: list[str], durations: lis
     no perder densidad visual. Si Remotion/Node no esta disponible o falla,
     devuelve el video sin tocar."""
     if not (MOTION_DIR / "node_modules").exists():
-        log("motion", "motion_graphics/node_modules no existe, salteando (correr npm install)")
+        log(
+            "motion",
+            "motion_graphics/node_modules no existe, salteando (correr npm install)",
+        )
         return video_path
 
     clips_dir = out_dir / "clips"
     video_dur = ffprobe_duration(video_path)
     fps = FPS
 
-    library_cues = sticker_library.prepare_render_cues(words, MOTION_DIR / "public") if words else []
+    library_cues = (
+        sticker_library.prepare_render_cues(words, MOTION_DIR / "public")
+        if words
+        else []
+    )
     log("motion", f"{len(library_cues)} stickers de la libreria (keywords narradas)")
 
     cues = list(library_cues)
@@ -3233,13 +4373,18 @@ def add_scene_stickers(video_path: Path, search_terms: list[str], durations: lis
         photo = _photo_sticker(photo_query, clips_dir, str(i)) if photo_query else None
         cues.append({"time": mid, "keyword": keyword, "emoji": emoji, "photo": photo})
         if photo:
-            log("motion", f"escena {i+1}: foto real ({photo_query})")
+            log("motion", f"escena {i + 1}: foto real ({photo_query})")
         else:
-            log("motion", f"escena {i+1}: emoji fallback ({keyword or '?'})")
+            log("motion", f"escena {i + 1}: emoji fallback ({keyword or '?'})")
     cues.sort(key=lambda c: c["time"])
 
-    props = {"cues": cues, "durationInFrames": max(int(round(video_dur * fps)), 1), "fps": fps,
-              "width": WIDTH, "height": HEIGHT}
+    props = {
+        "cues": cues,
+        "durationInFrames": max(int(round(video_dur * fps)), 1),
+        "fps": fps,
+        "width": WIDTH,
+        "height": HEIGHT,
+    }
     props_path = clips_dir / "motion_props.json"
     props_path.write_text(json.dumps(props, ensure_ascii=False), encoding="utf-8")
 
@@ -3254,13 +4399,23 @@ def add_scene_stickers(video_path: Path, search_terms: list[str], durations: lis
     # ejecutable real sin necesitar shell=True para todo el resto de run().
     npx_bin = shutil.which("npx") or "npx"
     try:
-        run([
-            npx_bin, "remotion", "render",
-            "--image-format=png", "--pixel-format=yuva444p10le",
-            "--codec=prores", "--prores-profile=4444",
-            "--props", str(props_path.resolve()),
-            "src/index.jsx", "AutoOverlay", str(overlay_path.resolve()),
-        ], cwd=str(MOTION_DIR))
+        run(
+            [
+                npx_bin,
+                "remotion",
+                "render",
+                "--image-format=png",
+                "--pixel-format=yuva444p10le",
+                "--codec=prores",
+                "--prores-profile=4444",
+                "--props",
+                str(props_path.resolve()),
+                "src/index.jsx",
+                "AutoOverlay",
+                str(overlay_path.resolve()),
+            ],
+            cwd=str(MOTION_DIR),
+        )
     except Exception as e:
         log("motion", f"Render de Remotion fallo, se sigue sin motion graphics: {e}")
         return video_path
@@ -3274,7 +4429,9 @@ def add_scene_stickers(video_path: Path, search_terms: list[str], durations: lis
     sfx_path = SFX_DIR / (sticker_sfx_file or STICKER_SFX_DEFAULT)
     somber = bool(tone) and any(w in tone.lower() for w in _SOMBER_TONE_WORDS)
     sfx_cue_times = [c["time"] for c in cues]
-    use_sticker_sfx = bool(sticker_sfx and sfx_cue_times and sfx_path.exists() and not somber)
+    use_sticker_sfx = bool(
+        sticker_sfx and sfx_cue_times and sfx_path.exists() and not somber
+    )
     if sticker_sfx and somber:
         log("motion", "sticker-sfx omitido: tono sombrio")
     elif sticker_sfx and not sfx_path.exists():
@@ -3291,26 +4448,65 @@ def add_scene_stickers(video_path: Path, search_terms: list[str], durations: lis
             for k, t in enumerate(sfx_cue_times):
                 inputs += ["-i", str(sfx_path)]
                 ms = int(round(t * 1000))
-                fc += f"[{2 + k}:a]adelay={ms}|{ms},volume={STICKER_SFX_VOLUME}[ssf{k}];"
+                fc += (
+                    f"[{2 + k}:a]adelay={ms}|{ms},volume={STICKER_SFX_VOLUME}[ssf{k}];"
+                )
                 labels += f"[ssf{k}]"
             fc += f"{labels}amix=inputs={1 + len(sfx_cue_times)}:normalize=0:duration=first[a]"
-            run([
-                "ffmpeg", "-y", *inputs,
-                "-filter_complex", fc,
-                "-map", "[v]", "-map", "[a]",
-                "-c:a", "aac", "-b:a", "192k",
-                "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-                str(composited),
-            ])
+            run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    *inputs,
+                    "-filter_complex",
+                    fc,
+                    "-map",
+                    "[v]",
+                    "-map",
+                    "[a]",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "192k",
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "veryfast",
+                    "-crf",
+                    "20",
+                    "-pix_fmt",
+                    "yuv420p",
+                    str(composited),
+                ]
+            )
         else:
-            run([
-                "ffmpeg", "-y", "-i", str(video_path), "-i", str(overlay_path),
-                "-filter_complex",
-                "[1:v]format=yuva420p[ov];[0:v][ov]overlay=0:0[v]",
-                "-map", "[v]", "-map", "0:a", "-c:a", "copy",
-                "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-                str(composited),
-            ])
+            run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-i",
+                    str(video_path),
+                    "-i",
+                    str(overlay_path),
+                    "-filter_complex",
+                    "[1:v]format=yuva420p[ov];[0:v][ov]overlay=0:0[v]",
+                    "-map",
+                    "[v]",
+                    "-map",
+                    "0:a",
+                    "-c:a",
+                    "copy",
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "veryfast",
+                    "-crf",
+                    "20",
+                    "-pix_fmt",
+                    "yuv420p",
+                    str(composited),
+                ]
+            )
     except Exception as e:
         log("motion", f"Composicion ffmpeg fallo, se sigue sin motion graphics: {e}")
         return video_path
@@ -3321,6 +4517,7 @@ def add_scene_stickers(video_path: Path, search_terms: list[str], durations: lis
 
 
 # -------------------------------------------------------------- REAL PHOTO COLLAGE
+
 
 def _wikimedia_commons_search(term: str, bias_portrait: bool = True) -> list[dict]:
     """Busca fotos de dominio publico/CC en Wikimedia Commons para `term`.
@@ -3335,6 +4532,7 @@ def _wikimedia_commons_search(term: str, bias_portrait: bool = True) -> list[dic
     ID/strike). Wikimedia/NARA/LoC tienen API propia con licencia explicita
     por archivo (ver HISTORIAL_MEJORAS.md 21 jul 2026)."""
     import urllib.request, urllib.parse
+
     # se refuerza la query con "portrait" (si no la trae ya) para sesgar la
     # busqueda hacia fotos de una sola persona desde el vamos -- no reemplaza
     # la heuristica de abajo, solo mejora el orden de los candidatos.
@@ -3342,10 +4540,14 @@ def _wikimedia_commons_search(term: str, bias_portrait: bool = True) -> list[dic
     if bias_portrait and "portrait" not in term.lower():
         term_q = f"{term} portrait"
     q = urllib.parse.quote(term_q)
-    url = (f"https://commons.wikimedia.org/w/api.php?action=query&generator=search"
-           f"&gsrsearch={q}&gsrnamespace=6&gsrlimit=12&prop=imageinfo"
-           f"&iiprop=url|extmetadata|mime|size&format=json")
-    req = urllib.request.Request(url, headers={"User-Agent": "HiddenFactsBot/1.0 (contact@example.com)"})
+    url = (
+        f"https://commons.wikimedia.org/w/api.php?action=query&generator=search"
+        f"&gsrsearch={q}&gsrnamespace=6&gsrlimit=12&prop=imageinfo"
+        f"&iiprop=url|extmetadata|mime|size&format=json"
+    )
+    req = urllib.request.Request(
+        url, headers={"User-Agent": "HiddenFactsBot/1.0 (contact@example.com)"}
+    )
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.load(resp)
@@ -3364,8 +4566,14 @@ def _wikimedia_commons_search(term: str, bias_portrait: bool = True) -> list[dic
         meta = ii.get("extmetadata", {})
         lic = meta.get("LicenseShortName", {}).get("value", "")
         artist = re.sub(r"<[^>]+>", "", meta.get("Artist", {}).get("value", ""))
-        candidates.append({"url": ii.get("url"), "license": lic,
-                            "title": p.get("title", ""), "artist": artist})
+        candidates.append(
+            {
+                "url": ii.get("url"),
+                "license": lic,
+                "title": p.get("title", ""),
+                "artist": artist,
+            }
+        )
     return candidates
 
 
@@ -3378,6 +4586,7 @@ def _is_single_subject(alpha_channel) -> bool:
     busqueda a mano (ver HISTORIAL_MEJORAS.md 21 jul 2026)."""
     import numpy as np
     from skimage import measure
+
     mask = np.array(alpha_channel) > 40
     if mask.sum() < 500:
         return False
@@ -3410,9 +4619,13 @@ def _cutout_and_halftone(image_path: Path, out_path: Path) -> str:
     try:
         from rembg import remove
     except ImportError:
-        log("collage", "rembg no instalado (py -m pip install rembg onnxruntime), salteando collage")
+        log(
+            "collage",
+            "rembg no instalado (py -m pip install rembg onnxruntime), salteando collage",
+        )
         return "no_rembg"
     from PIL import Image, ImageOps
+
     im = Image.open(image_path)
     cutout = remove(im)
     alpha = cutout.split()[3]
@@ -3420,7 +4633,9 @@ def _cutout_and_halftone(image_path: Path, out_path: Path) -> str:
         return "multi_subject"
     rgb = cutout.convert("RGB")
     gray = ImageOps.autocontrast(rgb.convert("L"), cutoff=2)
-    small = gray.resize((max(gray.width // 4, 1), max(gray.height // 4, 1)), Image.BILINEAR)
+    small = gray.resize(
+        (max(gray.width // 4, 1), max(gray.height // 4, 1)), Image.BILINEAR
+    )
     dotted = small.resize(gray.size, Image.NEAREST)
     halftone = Image.blend(gray, dotted, 0.35)
     out = Image.merge("RGBA", (halftone, halftone, halftone, alpha))
@@ -3428,8 +4643,12 @@ def _cutout_and_halftone(image_path: Path, out_path: Path) -> str:
     return "ok"
 
 
-def add_real_photo_collage(video_path: Path, collage_subject: str, out_dir: Path,
-                            collage_time: float | None = None) -> Path:
+def add_real_photo_collage(
+    video_path: Path,
+    collage_subject: str,
+    out_dir: Path,
+    collage_time: float | None = None,
+) -> Path:
     """Inserta una escena de collage con FOTO REAL recortada (estilo 'recorte
     de periodico', pedido por el usuario 21 jul 2026) en un unico momento del
     video (default: ~66% de la duracion, el beat de 'reveal'). Fuente: solo
@@ -3437,15 +4656,22 @@ def add_real_photo_collage(video_path: Path, collage_subject: str, out_dir: Path
     imagenes con copyright. Si falla cualquier paso (sin resultado, sin
     rembg, sin Remotion), devuelve el video sin tocar."""
     if not (MOTION_DIR / "node_modules").exists():
-        log("collage", "motion_graphics/node_modules no existe, salteando (correr npm install)")
+        log(
+            "collage",
+            "motion_graphics/node_modules no existe, salteando (correr npm install)",
+        )
         return video_path
 
     candidates = _wikimedia_commons_search(collage_subject)
     if not candidates:
-        log("collage", f"Sin resultado libre en Wikimedia para '{collage_subject}', salteando")
+        log(
+            "collage",
+            f"Sin resultado libre en Wikimedia para '{collage_subject}', salteando",
+        )
         return video_path
 
     import urllib.request
+
     clips_dir = out_dir / "clips"
     photo_path = MOTION_DIR / "public" / "collage_photo.png"
     hit = None
@@ -3456,7 +4682,10 @@ def add_real_photo_collage(video_path: Path, collage_subject: str, out_dir: Path
     # usuario pidio automatizacion 100%, ver HISTORIAL_MEJORAS.md 21 jul 2026).
     for i, cand in enumerate(candidates):
         raw_path = clips_dir / f"collage_raw_{i}.jpg"
-        req = urllib.request.Request(cand["url"], headers={"User-Agent": "HiddenFactsBot/1.0 (contact@example.com)"})
+        req = urllib.request.Request(
+            cand["url"],
+            headers={"User-Agent": "HiddenFactsBot/1.0 (contact@example.com)"},
+        )
         try:
             with urllib.request.urlopen(req, timeout=20) as resp:
                 raw_path.write_bytes(resp.read())
@@ -3469,14 +4698,23 @@ def add_real_photo_collage(video_path: Path, collage_subject: str, out_dir: Path
             break
         if status == "ok":
             hit = cand
-            log("collage", f"Candidato {i+1}/{len(candidates)} aceptado: {cand['title']}")
+            log(
+                "collage",
+                f"Candidato {i + 1}/{len(candidates)} aceptado: {cand['title']}",
+            )
             break
-        log("collage", f"Candidato {i+1}/{len(candidates)} descartado (foto grupal/multi-sujeto): {cand['title']}")
+        log(
+            "collage",
+            f"Candidato {i + 1}/{len(candidates)} descartado (foto grupal/multi-sujeto): {cand['title']}",
+        )
 
     if no_rembg:
         return video_path
     if hit is None:
-        log("collage", f"Ningun candidato de '{collage_subject}' paso el filtro de sujeto unico, salteando")
+        log(
+            "collage",
+            f"Ningun candidato de '{collage_subject}' paso el filtro de sujeto unico, salteando",
+        )
         return video_path
 
     # credito de atribucion: CC-BY/CC-BY-SA lo exigen -- se guarda para agregar
@@ -3485,58 +4723,104 @@ def add_real_photo_collage(video_path: Path, collage_subject: str, out_dir: Path
     credit_path.write_text(
         f"Foto: {hit['title']} ({hit['license']}), autor: {hit.get('artist') or 'desconocido'}, "
         f"via Wikimedia Commons — {hit['url']}",
-        encoding="utf-8")
+        encoding="utf-8",
+    )
 
     video_dur = ffprobe_duration(video_path)
     scene_dur = 2.4
-    t0 = collage_time if collage_time is not None else max(video_dur * 0.66 - scene_dur / 2, 0)
+    t0 = (
+        collage_time
+        if collage_time is not None
+        else max(video_dur * 0.66 - scene_dur / 2, 0)
+    )
     t0 = min(t0, max(video_dur - scene_dur, 0))
 
-    props = {"photo": "collage_photo.png", "clipping": None, "stampText": "DECLASSIFIED",
-              "durationInFrames": int(round(scene_dur * FPS)), "fps": FPS, "width": WIDTH, "height": HEIGHT}
+    props = {
+        "photo": "collage_photo.png",
+        "clipping": None,
+        "stampText": "DECLASSIFIED",
+        "durationInFrames": int(round(scene_dur * FPS)),
+        "fps": FPS,
+        "width": WIDTH,
+        "height": HEIGHT,
+    }
     props_path = clips_dir / "collage_props.json"
     props_path.write_text(json.dumps(props, ensure_ascii=False), encoding="utf-8")
 
     overlay_path = clips_dir / "collage_overlay.mov"
     npx_bin = shutil.which("npx") or "npx"
     try:
-        run([
-            npx_bin, "remotion", "render",
-            "--image-format=png", "--pixel-format=yuva444p10le",
-            "--codec=prores", "--prores-profile=4444",
-            "--props", str(props_path.resolve()),
-            "src/index.jsx", "RealCollage", str(overlay_path.resolve()),
-        ], cwd=str(MOTION_DIR))
+        run(
+            [
+                npx_bin,
+                "remotion",
+                "render",
+                "--image-format=png",
+                "--pixel-format=yuva444p10le",
+                "--codec=prores",
+                "--prores-profile=4444",
+                "--props",
+                str(props_path.resolve()),
+                "src/index.jsx",
+                "RealCollage",
+                str(overlay_path.resolve()),
+            ],
+            cwd=str(MOTION_DIR),
+        )
     except Exception as e:
         log("collage", f"Render de Remotion fallo, se sigue sin collage: {e}")
         return video_path
 
     composited = clips_dir / "video_with_collage.mp4"
     try:
-        run([
-            "ffmpeg", "-y", "-i", str(video_path), "-i", str(overlay_path),
-            "-filter_complex",
-            # el overlay .mov arranca SU PROPIO timeline en t=0 (dura solo
-            # scene_dur); sin el setpts, al llegar t0 en el video principal el
-            # stream corto ya esta agotado (EOF) y el collage nunca aparece --
-            # bug real detectado 21 jul 2026 en QA visual. setpts+t0 corre el
-            # overlay para que sus frames coincidan con el instante correcto.
-            f"[1:v]format=yuva420p,setpts=PTS+{t0}/TB[ov];"
-            f"[0:v][ov]overlay=0:0:enable='between(t,{t0},{t0 + scene_dur})'[v]",
-            "-map", "[v]", "-map", "0:a", "-c:a", "copy",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-            str(composited),
-        ])
+        run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(video_path),
+                "-i",
+                str(overlay_path),
+                "-filter_complex",
+                # el overlay .mov arranca SU PROPIO timeline en t=0 (dura solo
+                # scene_dur); sin el setpts, al llegar t0 en el video principal el
+                # stream corto ya esta agotado (EOF) y el collage nunca aparece --
+                # bug real detectado 21 jul 2026 en QA visual. setpts+t0 corre el
+                # overlay para que sus frames coincidan con el instante correcto.
+                f"[1:v]format=yuva420p,setpts=PTS+{t0}/TB[ov];"
+                f"[0:v][ov]overlay=0:0:enable='between(t,{t0},{t0 + scene_dur})'[v]",
+                "-map",
+                "[v]",
+                "-map",
+                "0:a",
+                "-c:a",
+                "copy",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "20",
+                "-pix_fmt",
+                "yuv420p",
+                str(composited),
+            ]
+        )
     except Exception as e:
         log("collage", f"Composicion ffmpeg fallo, se sigue sin collage: {e}")
         return video_path
 
     shutil.copyfile(composited, video_path)
-    log("collage", f"Collage de foto real insertado en t={t0:.1f}s ({hit['title']}, {hit['license']})")
+    log(
+        "collage",
+        f"Collage de foto real insertado en t={t0:.1f}s ({hit['title']}, {hit['license']})",
+    )
     return video_path
 
 
-def add_real_photo_collages(video_path: Path, subjects: list[dict], out_dir: Path) -> Path:
+def add_real_photo_collages(
+    video_path: Path, subjects: list[dict], out_dir: Path
+) -> Path:
     """Version multi-sujeto de add_real_photo_collage -- el guion puede listar
     varias fotos reales ({"subject": ..., "time": opcional}) en vez de una
     sola (pedido usuario 21 jul 2026: 'mas stickers/fotos completas'). Si un
@@ -3560,116 +4844,231 @@ def add_real_photo_collages(video_path: Path, subjects: list[dict], out_dir: Pat
     ordered = sorted(subjects, key=lambda s: s.get("time", s.get("_auto_time", 0)))
     for s in ordered:
         t = s.get("time", s.get("_auto_time"))
-        video_path = add_real_photo_collage(video_path, s["subject"], out_dir, collage_time=t)
+        video_path = add_real_photo_collage(
+            video_path, s["subject"], out_dir, collage_time=t
+        )
     return video_path
 
 
 # ------------------------------------------------------------------- MAIN
+
 
 def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40] or "short"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Genera un YouTube Short desde un tema")
+    parser = argparse.ArgumentParser(
+        description="Genera un YouTube Short desde un tema"
+    )
     parser.add_argument("topic", nargs="?", help="Tema del video (en ingles o espanol)")
-    parser.add_argument("--script-file", help="JSON con script/search_terms/title/description (omite Claude)")
+    parser.add_argument(
+        "--script-file",
+        help="JSON con script/search_terms/title/description (omite Claude)",
+    )
     parser.add_argument("--voice", default=DEFAULT_VOICE)
-    parser.add_argument("--trim-silence", dest="trim_silence", action="store_true",
-                        help="recorta las pausas de la narracion antes de calcular escenas "
-                             "y subtitulos (edge-tts deja ~0.4s por oracion; medido 13,9%% "
-                             "del video). Guarda el original en voice_raw.mp3")
-    parser.add_argument("--trim-keep", dest="trim_keep", type=float, default=0.10,
-                        help="hueco a conservar en cada silencio (default 0.10s). A 0 las "
-                             "palabras se pisan y suena peor que el original")
+    parser.add_argument(
+        "--trim-silence",
+        dest="trim_silence",
+        action="store_true",
+        help="recorta las pausas de la narracion antes de calcular escenas "
+        "y subtitulos (edge-tts deja ~0.4s por oracion; medido 13,9%% "
+        "del video). Guarda el original en voice_raw.mp3",
+    )
+    parser.add_argument(
+        "--trim-keep",
+        dest="trim_keep",
+        type=float,
+        default=0.10,
+        help="hueco a conservar en cada silencio (default 0.10s). A 0 las "
+        "palabras se pisan y suena peor que el original",
+    )
     parser.add_argument("--rate", default=DEFAULT_RATE)
-    parser.add_argument("--clips", type=int, default=None,
-                        help=f"escenas del video. Por defecto, UNA POR search_term "
-                             f"(regla 1:1 frase<->imagen); {DEFAULT_CLIPS} si el guion no trae.")
-    parser.add_argument("--no-pexels", action="store_true", help="Usa gradientes en vez de Pexels")
-    parser.add_argument("--no-sfx", action="store_true",
-                        help="No coloca efectos de sonido automaticos (requiere ANTHROPIC_API_KEY "
-                             "y archivos en assets/sfx/)")
-    parser.add_argument("--no-motion", action="store_true",
-                        help="Desactiva los graficos de movimiento automaticos (icono+texto "
-                             "kinetico via Remotion) que se agregan por cada sfx_cue detectado.")
-    parser.add_argument("--no-collage", action="store_true",
-                        help="Desactiva la escena de collage con foto real recortada aunque el "
-                             "guion tenga 'collage_subject'.")
-    parser.add_argument("--sticker-sfx", action="store_true",
-                        help="Capa opcional (opt-in, para A/B): un swish de papel suave en el "
-                             "frame en que cada sticker hace pop -- el 'sonido del collage "
-                             "armandose', motivado por la estetica de recortes. Volumen bajo, "
-                             "se omite entero si el music_mood del video es sombrio. NO toca "
-                             "pick_sfx_cues (que sigue siendo puramente diegetico).")
-    parser.add_argument("--sticker-sfx-file", default=None, metavar="NOMBRE",
-                        help="Nombre de archivo dentro de assets/sfx/ para reemplazar el swish "
-                             f"de papel por defecto ({STICKER_SFX_DEFAULT}). Para probar de oido "
-                             "otro sonido sin tocar el codigo.")
-    parser.add_argument("--comfy", action="store_true",
-                        help="Genera las imagenes en LOCAL con ComfyUI + FLUX.1-schnell "
-                             "(gratis, sin limite de cuota, licencia Apache-2.0 apta para uso "
-                             "comercial). No soporta imagen de referencia, asi que NO da "
-                             "consistencia de personaje -- ver comfy_client.py.")
-    parser.add_argument("--seedream", action="store_true",
-                        help="Usa imagenes estaticas generadas con Seedream (ByteDance, via PiAPI) "
-                             "en vez de Pexels/gradiente. Es el unico generador de imagenes del "
-                             "repo desde el 3 ago 2026. Requiere PIAPI_API_KEY.")
-    parser.add_argument("--wan-hero", type=Path, default=None, metavar="PATH",
-                        help="Usa un video ya animado localmente (Wan 2.2 via ComfyUI, gratis) "
-                             "como escena 0 en vez de generarla; el resto sigue estatico.")
-    parser.add_argument("--watermark", default="",
-                        help="Texto de marca de agua (esquina superior derecha). Vacio por "
-                             "defecto -- especifica explicitamente '--watermark ImPixxel' para "
-                             "ese canal (antes el default era 'ImPixxel' fijo y se colaba por "
-                             "error en videos de HiddenFacts, ver bug 19 jul 2026).")
-    parser.add_argument("--cta-text", default=None,
-                        help="Texto de CTA en pantalla (nunca narrado, evita el 'Cliff' de "
-                             "retencion del CTA hablado). Requiere --cta-position.")
-    parser.add_argument("--cta-position", choices=["start", "middle", "end"], default=None,
-                        help="Donde aparece --cta-text: 'start' (~0.5s), 'middle' (mitad del "
-                             "video), o 'end' (ultimos ~3.5s). Test de posicion del CTA.")
-    parser.add_argument("--punch-index", type=int, default=None, metavar="N",
-                        help="Escena (0-indexed) que recibe el zoom 'golpe' para acentuar el "
-                             "remate/giro comico. Por defecto la penultima escena.")
-    parser.add_argument("--intro-stinger", action="store_true",
-                        help="Agrega un whoosh/riser generico en el frame 0 (gancho auditivo "
-                             "independiente de la narracion). Test de primeros 2 segundos.")
-    parser.add_argument("--subs-lead-ms", type=int, default=0, metavar="MS",
-                        help="Adelanta el texto de los subtitulos MS milisegundos respecto al "
-                             "audio (no afecta el audio). Test de primeros 2 segundos.")
-    parser.add_argument("--split-first-clip", action="store_true",
-                        help="Corta la escena 1 en dos mitades (mismo clip) para agregar un "
-                             "corte extra de ritmo en el primer segundo. Test de primeros 2 segundos.")
-    parser.add_argument("--hook-max", dest="hook_max", action="store_true", default=True,
-                        help="Bundle de gancho de los primeros 2s: activa golpe auditivo en "
-                             "frame 0 (stinger), texto adelantado 150ms, zoom de entrada fuerte, "
-                             "wipe circular de entrada, y el premise card si el guion trae "
-                             "'hook_card'. Default ON desde el 19 jul 2026 (paso de test A/B a "
-                             "estandar de produccion). Usa --no-hook-max para desactivarlo.")
-    parser.add_argument("--no-hook-max", dest="hook_max", action="store_false",
-                        help="Desactiva --hook-max (vuelve al comportamiento clasico sin bundle de gancho).")
-    parser.add_argument("--hook-card-mode", choices=["overlay", "read"], default="overlay",
-                        help="Modo del premise card (campo 'hook_card' del guion): 'overlay' "
-                             "(se superpone mientras ya narra) o 'read' (frame congelado 2.2s, "
-                             "solo musica/stinger, la narracion arranca despues).")
-    parser.add_argument("--archivo", action="store_true",
-                        help="Renderiza con el motor visual 'Archivo Vivo' (Remotion, "
-                             "collage documental punchy) en vez del ensamblado FFmpeg "
-                             "clasico. Requiere imagenes de escena (--seedream/--comfy). "
-                             "Ver archivo_engine.py.")
-    parser.add_argument("--korex", action="store_true",
-                        help="Renderiza con el motor visual de KOREX (Remotion): set fijo "
-                             "con parallax, paleta cerrada de 3 tonos + acento por villano, "
-                             "personaje troquelado con squash-stretch. Es la piel del canal "
-                             "de finanzas satiricas (Tadeo), NO el expediente de HiddenFacts. "
-                             "Requiere imagenes de escena (--seedream). Ver korex_engine.py.")
-    parser.add_argument("--ideas", action="store_true",
-                        help="Genera 5 ideas de tema nuevas (usando topics.txt como referencia) y termina")
-    parser.add_argument("--auto", action="store_true",
-                        help="Modo automatico: toma el siguiente tema no usado de topics.txt "
-                             "(genera mas si se agotan) y corre el pipeline completo. "
-                             "Pensado para tareas programadas sin supervision.")
+    parser.add_argument(
+        "--clips",
+        type=int,
+        default=None,
+        help=f"escenas del video. Por defecto, UNA POR search_term "
+        f"(regla 1:1 frase<->imagen); {DEFAULT_CLIPS} si el guion no trae.",
+    )
+    parser.add_argument(
+        "--no-pexels", action="store_true", help="Usa gradientes en vez de Pexels"
+    )
+    parser.add_argument(
+        "--no-sfx",
+        action="store_true",
+        help="No coloca efectos de sonido automaticos (requiere ANTHROPIC_API_KEY "
+        "y archivos en assets/sfx/)",
+    )
+    parser.add_argument(
+        "--no-motion",
+        action="store_true",
+        help="Desactiva los graficos de movimiento automaticos (icono+texto "
+        "kinetico via Remotion) que se agregan por cada sfx_cue detectado.",
+    )
+    parser.add_argument(
+        "--no-collage",
+        action="store_true",
+        help="Desactiva la escena de collage con foto real recortada aunque el "
+        "guion tenga 'collage_subject'.",
+    )
+    parser.add_argument(
+        "--sticker-sfx",
+        action="store_true",
+        help="Capa opcional (opt-in, para A/B): un swish de papel suave en el "
+        "frame en que cada sticker hace pop -- el 'sonido del collage "
+        "armandose', motivado por la estetica de recortes. Volumen bajo, "
+        "se omite entero si el music_mood del video es sombrio. NO toca "
+        "pick_sfx_cues (que sigue siendo puramente diegetico).",
+    )
+    parser.add_argument(
+        "--sticker-sfx-file",
+        default=None,
+        metavar="NOMBRE",
+        help="Nombre de archivo dentro de assets/sfx/ para reemplazar el swish "
+        f"de papel por defecto ({STICKER_SFX_DEFAULT}). Para probar de oido "
+        "otro sonido sin tocar el codigo.",
+    )
+    parser.add_argument(
+        "--comfy",
+        action="store_true",
+        help="Genera las imagenes en LOCAL con ComfyUI + FLUX.1-schnell "
+        "(gratis, sin limite de cuota, licencia Apache-2.0 apta para uso "
+        "comercial). No soporta imagen de referencia, asi que NO da "
+        "consistencia de personaje -- ver comfy_client.py.",
+    )
+    parser.add_argument(
+        "--seedream",
+        action="store_true",
+        help="Usa imagenes estaticas generadas con Seedream (ByteDance, via PiAPI) "
+        "en vez de Pexels/gradiente. Es el unico generador de imagenes del "
+        "repo desde el 3 ago 2026. Requiere PIAPI_API_KEY.",
+    )
+    parser.add_argument(
+        "--flow",
+        action="store_true",
+        help="Genera las imagenes con Google Flow por navegador (Playwright, "
+        "cuenta Pro ya logueada). Es el UNICO generador disponible que "
+        "acepta imagen de referencia, o sea el unico que replica a Tadeo "
+        "identico entre escenas. Setup: py flow_automation.py --login.",
+    )
+    parser.add_argument(
+        "--flow-animate",
+        action="store_true",
+        help="Ademas de generar cada escena, la anima en Flow (imagen->video de "
+        "8s, una por escena). Lento: son varios minutos por escena.",
+    )
+    parser.add_argument(
+        "--wan-hero",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="Usa un video ya animado localmente (Wan 2.2 via ComfyUI, gratis) "
+        "como escena 0 en vez de generarla; el resto sigue estatico.",
+    )
+    parser.add_argument(
+        "--watermark",
+        default="",
+        help="Texto de marca de agua (esquina superior derecha). Vacio por "
+        "defecto -- especifica explicitamente '--watermark ImPixxel' para "
+        "ese canal (antes el default era 'ImPixxel' fijo y se colaba por "
+        "error en videos de HiddenFacts, ver bug 19 jul 2026).",
+    )
+    parser.add_argument(
+        "--cta-text",
+        default=None,
+        help="Texto de CTA en pantalla (nunca narrado, evita el 'Cliff' de "
+        "retencion del CTA hablado). Requiere --cta-position.",
+    )
+    parser.add_argument(
+        "--cta-position",
+        choices=["start", "middle", "end"],
+        default=None,
+        help="Donde aparece --cta-text: 'start' (~0.5s), 'middle' (mitad del "
+        "video), o 'end' (ultimos ~3.5s). Test de posicion del CTA.",
+    )
+    parser.add_argument(
+        "--punch-index",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Escena (0-indexed) que recibe el zoom 'golpe' para acentuar el "
+        "remate/giro comico. Por defecto la penultima escena.",
+    )
+    parser.add_argument(
+        "--intro-stinger",
+        action="store_true",
+        help="Agrega un whoosh/riser generico en el frame 0 (gancho auditivo "
+        "independiente de la narracion). Test de primeros 2 segundos.",
+    )
+    parser.add_argument(
+        "--subs-lead-ms",
+        type=int,
+        default=0,
+        metavar="MS",
+        help="Adelanta el texto de los subtitulos MS milisegundos respecto al "
+        "audio (no afecta el audio). Test de primeros 2 segundos.",
+    )
+    parser.add_argument(
+        "--split-first-clip",
+        action="store_true",
+        help="Corta la escena 1 en dos mitades (mismo clip) para agregar un "
+        "corte extra de ritmo en el primer segundo. Test de primeros 2 segundos.",
+    )
+    parser.add_argument(
+        "--hook-max",
+        dest="hook_max",
+        action="store_true",
+        default=True,
+        help="Bundle de gancho de los primeros 2s: activa golpe auditivo en "
+        "frame 0 (stinger), texto adelantado 150ms, zoom de entrada fuerte, "
+        "wipe circular de entrada, y el premise card si el guion trae "
+        "'hook_card'. Default ON desde el 19 jul 2026 (paso de test A/B a "
+        "estandar de produccion). Usa --no-hook-max para desactivarlo.",
+    )
+    parser.add_argument(
+        "--no-hook-max",
+        dest="hook_max",
+        action="store_false",
+        help="Desactiva --hook-max (vuelve al comportamiento clasico sin bundle de gancho).",
+    )
+    parser.add_argument(
+        "--hook-card-mode",
+        choices=["overlay", "read"],
+        default="overlay",
+        help="Modo del premise card (campo 'hook_card' del guion): 'overlay' "
+        "(se superpone mientras ya narra) o 'read' (frame congelado 2.2s, "
+        "solo musica/stinger, la narracion arranca despues).",
+    )
+    parser.add_argument(
+        "--archivo",
+        action="store_true",
+        help="Renderiza con el motor visual 'Archivo Vivo' (Remotion, "
+        "collage documental punchy) en vez del ensamblado FFmpeg "
+        "clasico. Requiere imagenes de escena (--seedream/--comfy). "
+        "Ver archivo_engine.py.",
+    )
+    parser.add_argument(
+        "--korex",
+        action="store_true",
+        help="Renderiza con el motor visual de KOREX (Remotion): set fijo "
+        "con parallax, paleta cerrada de 3 tonos + acento por villano, "
+        "personaje troquelado con squash-stretch. Es la piel del canal "
+        "de finanzas satiricas (Tadeo), NO el expediente de HiddenFacts. "
+        "Requiere imagenes de escena (--seedream). Ver korex_engine.py.",
+    )
+    parser.add_argument(
+        "--ideas",
+        action="store_true",
+        help="Genera 5 ideas de tema nuevas (usando topics.txt como referencia) y termina",
+    )
+    parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Modo automatico: toma el siguiente tema no usado de topics.txt "
+        "(genera mas si se agotan) y corre el pipeline completo. "
+        "Pensado para tareas programadas sin supervision.",
+    )
     args = parser.parse_args()
 
     if args.ideas:
@@ -3677,20 +5076,39 @@ def main() -> int:
             print("ERROR: falta ANTHROPIC_API_KEY. Copia .env.example a .env")
             return 1
         topics_path = ROOT / "topics.txt"
-        existing = [
-            line.strip() for line in topics_path.read_text(encoding="utf-8").splitlines()
-            if line.strip() and not line.startswith("#")
-        ] if topics_path.exists() else []
+        existing = (
+            [
+                line.strip()
+                for line in topics_path.read_text(encoding="utf-8").splitlines()
+                if line.strip() and not line.startswith("#")
+            ]
+            if topics_path.exists()
+            else []
+        )
         ideas = generate_ideas(existing)
         print("\nIdeas generadas:")
         for i, idea in enumerate(ideas, 1):
             print(f"  {i}. {idea}")
-        print(f"\nAgregalas a topics.txt o corre: py pipeline.py \"{ideas[0]}\"")
+        print(f'\nAgregalas a topics.txt o corre: py pipeline.py "{ideas[0]}"')
         return 0
 
     if args.script_file:
         data = json.loads(Path(args.script_file).read_text(encoding="utf-8"))
         topic = args.topic or data.get("title", "short")
+        # UN PROYECTO DE FLOW POR GUION (3 ago 2026): sin esto cada corrida
+        # pulsaba "Proyecto nuevo", y un guion pasa por Flow varias veces
+        # (pipeline + korex_fill + korex_animate + reintentos), asi que la
+        # cuenta se llenaba de proyectos con dos imagenes cada uno.
+        # La clave es el TITULO, no el nombre del archivo: korex_animate.py lee
+        # el script.json ya copiado a output/ y no sabe de que --script-file
+        # vino. Si cada uno atara por su lado, el mismo guion acabaria en dos
+        # proyectos distintos, que es justo lo que se quiere evitar.
+        try:
+            import flow_projects
+
+            flow_projects.use_project(data.get("title") or Path(args.script_file).stem)
+        except Exception as e:
+            log("flow", f"no pude atar el proyecto de Flow (no critico): {e}")
     elif args.auto:
         if not os.getenv("ANTHROPIC_API_KEY"):
             print("ERROR: falta ANTHROPIC_API_KEY. Copia .env.example a .env")
@@ -3704,7 +5122,9 @@ def main() -> int:
             return 1
     elif args.topic:
         if not os.getenv("ANTHROPIC_API_KEY"):
-            print("ERROR: falta ANTHROPIC_API_KEY (o usa --script-file). Copia .env.example a .env")
+            print(
+                "ERROR: falta ANTHROPIC_API_KEY (o usa --script-file). Copia .env.example a .env"
+            )
             return 1
         topic = args.topic
         data = generate_script(topic)
@@ -3713,8 +5133,10 @@ def main() -> int:
         return 1
 
     if args.seedream and not os.getenv("PIAPI_API_KEY"):
-        print("ERROR: falta PIAPI_API_KEY en .env. Registrate en https://piapi.ai y anda a "
-              "Workspace > Settings > API Keys.")
+        print(
+            "ERROR: falta PIAPI_API_KEY en .env. Registrate en https://piapi.ai y anda a "
+            "Workspace > Settings > API Keys."
+        )
         return 1
 
     base_slug = f"{date.today().isoformat()}-{slugify(topic)}"
@@ -3739,12 +5161,19 @@ def main() -> int:
             suffix += 1
     _atomic_write_json(out_dir / "script.json", data)
 
-    # SEEDREAM ES EL UNICO GENERADOR (3 ago 2026). Gemini/Nano Banana, Veo, Lyria
-    # y la automatizacion de Flow se eliminaron del repo por pedido del usuario;
-    # antes Nano Banana ya habia quedado como respaldo al agotarse sus creditos.
-    media_source = ("comfy" if args.comfy else
-                    "seedream" if args.seedream else
-                    ("gradient" if args.no_pexels else "pexels"))
+    # Tres generadores (4 ago 2026): Flow por navegador (gratis con la cuenta
+    # Pro, el unico con imagen de referencia), ComfyUI local con FLUX schnell
+    # (gratis pero sin referencia) y Seedream via PiAPI (de pago, sin saldo).
+    # Gemini/Nano Banana, Veo y Lyria se eliminaron del repo.
+    media_source = (
+        "flow"
+        if args.flow
+        else "comfy"
+        if args.comfy
+        else "seedream"
+        if args.seedream
+        else ("gradient" if args.no_pexels else "pexels")
+    )
 
     # --hook-max: bundle de palancas del gancho de los primeros 2s (opt-in, para
     # A/B). Fuerza stinger + texto adelantado + zoom fuerte; el premise card se
@@ -3775,36 +5204,71 @@ def main() -> int:
         if silent_card_mode:
             words = []
             audio_path = out_dir / "voice.mp3"
-            run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono",
-                 "-t", f"{card_duration:.2f}", "-q:a", "9", "-acodec", "libmp3lame",
-                 str(audio_path)])
-            ass_path = generate_subtitles(words, out_dir, lead_ms=0, offset_ms=0,
-                                          keywords=data.get("caption_keywords"))
+            run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "anullsrc=r=44100:cl=mono",
+                    "-t",
+                    f"{card_duration:.2f}",
+                    "-q:a",
+                    "9",
+                    "-acodec",
+                    "libmp3lame",
+                    str(audio_path),
+                ]
+            )
+            ass_path = generate_subtitles(
+                words,
+                out_dir,
+                lead_ms=0,
+                offset_ms=0,
+                keywords=data.get("caption_keywords"),
+            )
             audio_dur = float(card_duration)
             durations = [audio_dur]
             n_clips = 1
         else:
             _check_pacing(data["script"])
-            _check_script_lint(data["script"], data.get("title", ""), args.voice,
-                               search_terms=data.get("search_terms"))
-            _check_open_hook(data["script"], data.get("title", ""),
-                               data.get("hook_card", "") or "")
+            _check_script_lint(
+                data["script"],
+                data.get("title", ""),
+                args.voice,
+                search_terms=data.get("search_terms"),
+            )
+            _check_open_hook(
+                data["script"], data.get("title", ""), data.get("hook_card", "") or ""
+            )
             _check_hook_beats(data["script"])
             _check_payoff_spacing(data["script"], data.get("payoffs"))
+            _check_giro_posicion(
+                data["script"], data.get("twist_phrase"), data.get("target_emotion")
+            )
             _check_relleno_inicial(data["script"])
             _check_ventana_critica(data["script"], data.get("payoffs"))
             _check_but_therefore(data["script"])
             _check_sentence_rhythm(data["script"])
-            audio_path, words = with_retries(generate_audio, data["script"], args.voice, args.rate, out_dir)
+            audio_path, words = with_retries(
+                generate_audio, data["script"], args.voice, args.rate, out_dir
+            )
             # El recorte va AQUI, entre la voz y todo lo demas: los subtitulos y
             # las duraciones de escena se calculan despues, asi que ambos salen
             # ya sobre el eje recortado. Hacerlo al final (sobre el video ya
             # armado) desincroniza las imagenes hasta 7s -- medido 30 jul 2026.
             if args.trim_silence:
                 audio_path, words = trim_silence_inplace(
-                    audio_path, words, keep=args.trim_keep)
-            ass_path = generate_subtitles(words, out_dir, lead_ms=subs_lead, offset_ms=subs_offset,
-                                          keywords=data.get("caption_keywords"))
+                    audio_path, words, keep=args.trim_keep
+                )
+            ass_path = generate_subtitles(
+                words,
+                out_dir,
+                lead_ms=subs_lead,
+                offset_ms=subs_offset,
+                keywords=data.get("caption_keywords"),
+            )
 
             audio_dur = ffprobe_duration(audio_path)
             # UNA ESCENA POR search_term (28 jul 2026). Antes se fijaba a
@@ -3822,13 +5286,20 @@ def main() -> int:
                 audio_dur = float(card_duration)
                 durations = [audio_dur]
 
-        clips = acquire_media(data["search_terms"], n_clips, durations,
-                              out_dir, media_source=media_source,
-                              punch_index=args.punch_index, style=data.get("style") or HIDDENFACTS_STYLE,
-                              static=bool(data.get("caption_text")) or silent_card_mode,
-                              character_terms=data.get("character_terms"),
-                              hook_strong=hook_strong,
-                              wan_hero_path=args.wan_hero)
+        clips = acquire_media(
+            data["search_terms"],
+            n_clips,
+            durations,
+            out_dir,
+            media_source=media_source,
+            punch_index=args.punch_index,
+            style=data.get("style") or HIDDENFACTS_STYLE,
+            static=bool(data.get("caption_text")) or silent_card_mode,
+            character_terms=data.get("character_terms"),
+            hook_strong=hook_strong,
+            wan_hero_path=args.wan_hero,
+            flow_animate=args.flow_animate,
+        )
 
         if args.korex and not silent_card_mode:
             # Motor KOREX (3 ago 2026): piel propia del canal de finanzas
@@ -3836,53 +5307,83 @@ def main() -> int:
             # HiddenFacts (polaroid REAL / EXHIBIT B / N. de caso) y sobre un
             # mapache comico se lee absurdo. Ver korex_engine.py.
             import korex_engine
+
             final = korex_engine.render_from_parts(
-                out_dir, data, [(ws, w) for ws, _we, w in words], audio_path)
+                out_dir, data, [(ws, w) for ws, _we, w in words], audio_path
+            )
         elif args.archivo and not silent_card_mode:
             # Motor "Archivo Vivo" (23 jul 2026): la composicion Remotion
             # manifest-driven reemplaza ensamblado FFmpeg + ASS + stickers +
             # collage (ver archivo_engine.py y memoria estilo-archivo-vivo)
             import archivo_engine
+
             final = archivo_engine.render_from_parts(
-                out_dir, data, [(ws, w) for ws, _we, w in words], audio_path)
+                out_dir, data, [(ws, w) for ws, _we, w in words], audio_path
+            )
         else:
-            sfx_cues_full = ([] if (args.no_sfx or silent_card_mode) else
-                        pick_sfx_cues(words, tone=data.get("music_mood"),
-                                      script=data.get("script"),
-                                      search_terms=data.get("search_terms")))
+            sfx_cues_full = (
+                []
+                if (args.no_sfx or silent_card_mode)
+                else pick_sfx_cues(
+                    words,
+                    tone=data.get("music_mood"),
+                    script=data.get("script"),
+                    search_terms=data.get("search_terms"),
+                )
+            )
             sfx_cues = [(t, p) for t, p, _ in sfx_cues_full]
             # silent_card_mode (sin narrador, card de texto largo): NO generar musica
             # propia -- estos videos se pensaron para reemplazar la musica con un
             # audio trending del nicho, agregado a mano en el editor de Shorts de
             # Studio (ver memoria musica-trending-videos-solo-lectura).
-            final = assemble(clips, audio_path, ass_path, out_dir,
-                              music_mood=(None if silent_card_mode else data.get("music_mood")),
-                              sfx_cues=sfx_cues,
-                              durations=durations, watermark=args.watermark or None,
-                              cta_text=args.cta_text, cta_position=args.cta_position,
-                              intro_stinger=intro_stinger,
-                              split_first_clip=args.split_first_clip,
-                              caption_header=data.get("caption_header"),
-                              caption_text=data.get("caption_text"),
-                              caption_keywords=data.get("caption_keywords"),
-                              hook_card=hook_card, hook_card_mode=args.hook_card_mode,
-                              hook_punch=hook_strong)
+            final = assemble(
+                clips,
+                audio_path,
+                ass_path,
+                out_dir,
+                music_mood=(None if silent_card_mode else data.get("music_mood")),
+                sfx_cues=sfx_cues,
+                durations=durations,
+                watermark=args.watermark or None,
+                cta_text=args.cta_text,
+                cta_position=args.cta_position,
+                intro_stinger=intro_stinger,
+                split_first_clip=args.split_first_clip,
+                caption_header=data.get("caption_header"),
+                caption_text=data.get("caption_text"),
+                caption_keywords=data.get("caption_keywords"),
+                hook_card=hook_card,
+                hook_card_mode=args.hook_card_mode,
+                hook_punch=hook_strong,
+            )
 
             # stickers automaticos (21 jul 2026): UNO por escena (search_term), no
             # atado a sfx_cues -- mas denso, y cada uno intenta foto real recortada
             # antes de caer a emoji (ver HISTORIAL_MEJORAS.md). No aplica al modo
             # silent_card_mode (sin escenas narradas) ni si el usuario paso --no-motion.
             if not silent_card_mode and not args.no_motion:
-                final = add_scene_stickers(final, data["search_terms"], durations, out_dir, words=words,
-                                           sticker_sfx=args.sticker_sfx, tone=data.get("music_mood"),
-                                           sticker_sfx_file=args.sticker_sfx_file)
+                final = add_scene_stickers(
+                    final,
+                    data["search_terms"],
+                    durations,
+                    out_dir,
+                    words=words,
+                    sticker_sfx=args.sticker_sfx,
+                    tone=data.get("music_mood"),
+                    sticker_sfx_file=args.sticker_sfx_file,
+                )
 
             # collage de foto real (21 jul 2026): campo del guion 'collage_subjects'
             # (lista de {"subject", "time" opcional}) o el viejo 'collage_subject'
             # singular (compatibilidad) -- ver add_real_photo_collages().
             collage_subjects = data.get("collage_subjects")
             if collage_subjects is None and data.get("collage_subject"):
-                collage_subjects = [{"subject": data["collage_subject"], "time": data.get("collage_time")}]
+                collage_subjects = [
+                    {
+                        "subject": data["collage_subject"],
+                        "time": data.get("collage_time"),
+                    }
+                ]
             if collage_subjects and not args.no_collage and not silent_card_mode:
                 final = add_real_photo_collages(final, collage_subjects, out_dir)
     except Exception:
@@ -3892,6 +5393,11 @@ def main() -> int:
 
     (out_dir / "title.txt").write_text(data["title"], encoding="utf-8")
     (out_dir / "description.txt").write_text(data["description"], encoding="utf-8")
+    # El guion completo (con target_emotion/twist_phrase/comment_cta de la
+    # regla 11) queda guardado para reuso aguas abajo: post_question_comment.py
+    # lee de aqui la pregunta fijada, y el analisis de outliers correlaciona
+    # emocion/posicion del giro con shares y retencion.
+    _atomic_write_json(out_dir / "guion.json", data)
 
     if args.auto:
         _mark_topic_used(topic)
@@ -3907,7 +5413,10 @@ def _log_auto_failure(topic: str) -> None:
     with log_path.open("a", encoding="utf-8") as f:
         f.write(f"\n[{datetime.now().isoformat()}] Tema: {topic}\n")
         f.write(traceback.format_exc())
-    log("auto", f"FALLO registrado en {log_path} (el tema NO se marca como usado; se reintentara)")
+    log(
+        "auto",
+        f"FALLO registrado en {log_path} (el tema NO se marca como usado; se reintentara)",
+    )
 
 
 if __name__ == "__main__":

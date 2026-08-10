@@ -13,27 +13,142 @@ lo que quedó a medias, y qué sigue. Se lee al empezar y se actualiza al termin
 
 ---
 
+## Actualizado: 9 ago 2026 — Regla 11 (investigaciones multiidioma) aplicada, también a KOREX
+
+**Esto lo hizo la sesión de Kimi, no la de Claude.** Contexto: Fabián pidió
+investigaciones profundas multiidioma (EN/ES/ZH/JA/KO) y aplicarlas al pipeline.
+Resultado: **9 documentos en la raíz** — `INVESTIGACION_MULTIIDIOMA_2026.md`
+(síntesis madre) + 8 temáticos: `PSICOLOGIA_COMPARTIR.md`,
+`ANALISIS_OUTLIERS_PROPIOS.md` (**nuestros datos: sweet spot 80-120 palabras,
+mediana de shares = 0 en 51 videos**), `SOUND_DESIGN_RETENCION.md`,
+`VOZ_TTS_EMOCIONAL.md`, `MINIATURAS_SHORTS_2026.md`,
+`HUMOR_LOCALIZACION_LATAM.md`, `SERIES_LORE_PERSONAJES.md`,
+`COMENTARIOS_ENGAGEMENT.md`. Cada uno termina con sección de aplicación al
+pipeline. **Regla del corpus: nuestros datos medidos ganan sobre benchmarks
+externos.**
+
+### Cambios en código (compilan, ruff limpio en lo tocado, probados en smoke test)
+
+- **`SCRIPT_SCHEMA` exige 3 campos nuevos**: `target_emotion`
+  (awe/surprise/humor/outrage), `twist_phrase` (4-8 palabras literales del giro)
+  y `comment_cta` (pregunta de elección para comentario fijado, NUNCA hablada).
+- **Regla 11 en `SCRIPT_PROMPT`** (share engineering: emoción de alta
+  activación, giro al 30-60%, dato reenarrable en ≤15 palabras, humor que
+  golpea hacia arriba). Ojo: el prompt es contexto HiddenFacts; KOREX usa
+  guiones a mano, así que ↓
+- **Para KOREX: los guiones `scripts/korex-*.json` nuevos hay que ESCRIBIRLOS ya
+  con los 3 campos.** El lint `_check_giro_posicion` corre en la rama
+  `--script-file` (antes del split de motores) y avisa si faltan o si el giro
+  cae fuera de la banda 25-75% — es el mecanismo de enforcement para guiones a
+  mano.
+- **Ducking/loudnorm aplicado en los DOS motores**: `assemble()` (clásico) y
+  **`korex_engine.py`** — el motor KOREX tenía su propia mezcla con los
+  parámetros viejos (volume 0.06, attack=20:release=400) y SIN loudnorm. Ahora
+  ambos: volume 0.09, attack=50/release=300, loudnorm I=-14/TP=-1.0
+  (SOUND_DESIGN_RETENCION.md).
+- **`guion.json` se guarda en cada carpeta output** (todas las rutas, incluida
+  `--korex`); `post_question_comment.py` lee `comment_cta` de ahí (fallback:
+  parsear la descripción como antes).
+
+### Pendiente (es el siguiente paso)
+
+**Ningún video generado todavía con la regla 11** — Fabián decidió que la
+validación de punta a punta la hace la sesión de Claude. Hipótesis registrada
+en la entrada 2026-08-09 de `HISTORIAL_MEJORAS.md`: mediana de shares > 0 en la
+próxima tanda, comentarios/1000 vistas subiendo, retención igual o mejor con
+release 300ms.
+
+---
+
 ## Actualizado: 4 ago 2026 — KOREX (línea activa)
 
 Todo el día fue **KOREX** (finanzas satíricas, Tadeo el mapache). Nada subido a
 YouTube. Rama `claude/sticker-library-ai-vxifx9`, sin commitear.
 
-### LA TAREA ABIERTA — conectar Google Flow
+### Google Flow conectado — CERRADO (4 ago, tarde)
 
-Objetivo: que Flow (1) genere cada escena **replicando a Tadeo y el fondo** vía
-imagen de referencia, y (2) **anime escena por escena** después.
+Las dos capacidades que faltaban están escritas y **probadas contra Flow real**,
+no solo compiladas:
 
-Bloqueado: Flow está logueado en **otra cuenta de Google**, no en el perfil de
-Playwright de esta máquina. Por eso el traspaso a la otra sesión.
+```powershell
+py pipeline.py --script-file scripts/korex-interbolsa.json --flow --korex
+py pipeline.py ... --flow --flow-animate        # + anima cada escena (8s, lento)
+py flow_automation.py --inspect                 # revalidar selectores si Google cambia el build
+```
 
-`flow_automation.py` existe (recuperado de git hoy) pero le faltan justo las dos
-capacidades: **no sube imagen de referencia** (es solo texto→imagen) y **no tiene
-modo video**. Sus selectores se verificaron el 20 jul, y como la UI de Flow es una
-SPA con clases hasheadas, hay que revalidarlos contra el DOM real antes de confiar.
+- **Referencia de personaje**: un `character_term` con forma `tadeo/<pose>` ahora
+  resuelve la lámina de `assets/kx_cast/` y la manda como ingrediente del prompt.
+  Verificado en el vídeo de abajo: Tadeo mantiene el diseño entre escenas **y**
+  actúa dentro del plano, en vez de ir troquelado encima.
+- **Animación**: `animate()` / `--flow-animate` devuelve un mp4 de 8s a partir de
+  la imagen de la escena. Probado sobre `clips/nb_1.png`: mismo plano, mismo
+  personaje, con movimiento real.
 
-Secuencia: `py flow_automation.py --login` (lo hace Fabián, nunca Claude) → script
-de inspección que vuelque botones/placeholders reales → escribir subir-referencia
-y modo video sobre selectores verificados.
+**Lo que costó tres vueltas y no hay que volver a descubrir:** el
+`input[type=file]` oculto **solo sube el archivo a la biblioteca**; el modelo lo
+ignora. La referencia solo cuenta si se engancha por el selector `+` →
+*Agregar a la instrucción*. El fallo es silencioso: la llamada devuelve OK y baja
+un archivo válido, pero el resultado sale de texto puro (el primer "vídeo de
+Tadeo" fue un mapache fotorrealista en un bosque). Todo el detalle en la entrada
+del 4 ago de `HISTORIAL_MEJORAS.md`.
+
+**Salida de la corrida real**:
+`output/2026-08-04-la-firma-mas-grande-de-colombia-se-cayo-/video.mp4`, 79,3s,
+1080x1920. **Nada subido a YouTube.**
+
+### LO QUE ESTÁ ROTO AHORA (4 ago, tarde) — leer antes de tocar Flow
+
+**Flow rechaza generaciones de forma intermitente y no conseguí aislar por qué.**
+Gasté muchas vueltas en esto; lo que sigue es lo que está *medido* y lo que está
+*descartado*, para no repetir el camino.
+
+Medido y arreglado:
+- **Referencia con canal alfa → rechazo.** Misma escena, misma pose, única
+  variable el alfa: RGBA falla, aplanada sobre blanco pasa. Las 33 láminas de
+  `assets/kx_cast/tadeo/` están recortadas. Arreglado en
+  `flow_automation._flatten_alpha` (caché en `assets/cache/flow_refs/`).
+- **Mi propio detector de rechazo tumbó una corrida entera.** El regex llevaba
+  `error`/`blocked` y hacía match con el blob JSON de Next.js que Flow incrusta
+  en la página: 12/12 escenas a gradiente por rechazos inexistentes. Ahora sólo
+  busca el texto exacto del tile fallido y sólo dentro de los tiles.
+
+Descartado con datos, no por intuición:
+- **No es la velocidad.** Con 60s de enfriamiento entre envíos falla igual.
+- **No es cuota.** El diálogo de la cuenta marca **846 créditos**.
+- **No es la IP de Disney en el prompt** (el estilo nombra Mickey/Oswald): el A/B
+  con estilo limpio falla y pasa en la misma proporción.
+- **No es el bloque `CHARACTER_LOCK`** ni la segunda referencia.
+- **Recargar el proyecto entre escenas lo empeora** (de 9/12 a 0/12). Ese camino
+  ya está probado y revertido; no volver a intentarlo.
+
+Sí bloqueada de verdad: la escena 11 (`cara de pánico gritando directo a cámara,
+contacto visual intenso`) falló 6/6. Usa la imagen de la escena 0, que lleva el
+**mismo `search_term`** por la regla del bucle — eso es correcto por diseño, no
+un parche.
+
+Otro fallo distinto, sin resolver: a veces Flow devuelve una imagen que **no
+corresponde al prompt** (`nb_1` salió un primer plano de pánico en vez del piso
+de bolsa). Por eso hay que mirar cada imagen antes de montar.
+
+### Dónde retomar
+
+Carpeta viva: `output/2026-08-04-la-firma-mas-grande-de-colombia-se-cayo--8`,
+con **10 de 12** escenas. Faltan `nb_1` y `nb_5`.
+
+```powershell
+py korex_fill.py output/2026-08-04-la-firma-mas-grande-de-colombia-se-cayo--8
+py korex_engine.py output/2026-08-04-la-firma-mas-grande-de-colombia-se-cayo--8
+py korex_animate.py output/2026-08-04-la-firma-mas-grande-de-colombia-se-cayo--8 --voice cb_es
+```
+
+`korex_fill.py` insiste por rondas sólo en las que faltan (converger por fuera
+funciona mejor que reintentar más fuerte dentro de la corrida).
+`korex_animate.py` anima cada escena y monta con voz, música con *ducking* y
+SFX; **aborta si falta alguna imagen** en vez de montar con huecos.
+
+Sin decidir: si el `--flow-animate` completo (12 escenas × varios minutos) vale
+la espera, y si el movimiento real retiene mejor que el Ken Burns. Hoy es
+oficio, no dato.
 
 ### Terminado hoy
 
@@ -59,13 +174,13 @@ y modo video sobre selectores verificados.
 ### Ojo con esto
 
 - **No hay generador de imágenes de pago.** Gemini borrado y PiAPI/Seedream da
-  `insufficient credits`. Solo queda ComfyUI local (`--comfy`) o Flow.
+  `insufficient credits`. Quedan ComfyUI local (`--comfy`) y Flow (`--flow`).
 - **FLUX schnell no acepta imagen de referencia** → no da consistencia de
-  personaje. Por eso la consistencia se resolvió por reutilización de poses. Para
-  fondos sin personaje va perfecto.
-- `scripts/korex-interbolsa.json` está validado (12 frases = 12 `search_terms` =
-  12 `set_terms`) pero **`character_terms` todavía son descripciones**; hay que
-  pasarlas a claves `tadeo/<pose>` para que tome la biblioteca.
+  personaje. Para fondos sin personaje va perfecto. Flow sí la acepta, y por eso
+  es ahora el camino por defecto de KOREX.
+- `scripts/korex-interbolsa.json`: sus `character_terms` ya son claves
+  `tadeo/<pose>` (9 de 12 resuelven a lámina de biblioteca; `El Millonario` sigue
+  siendo descripción porque no tiene poses dibujadas todavía).
 - Los tres renders fallidos de ese video fueron por falta de imágenes, no por el
   motor. La voz está cacheada por hash: regenerar no la vuelve a sintetizar.
 - El efecto "TV vieja" que pidió Fabián (ver

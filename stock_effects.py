@@ -20,6 +20,7 @@ de un sitio y automatizar el scraping del boton de descarga rompe los terminos
 de la mayoria de estos bancos (Videezy/Vecteezy no tienen API publica gratis).
 Pixabay si la tiene, por eso es la fuente elegida.
 """
+
 from __future__ import annotations
 
 import os
@@ -37,16 +38,40 @@ EFFECTS_DIR.mkdir(parents=True, exist_ok=True)
 # explosion y humo ya los cubre la capa de accion existente con FX dibujado;
 # esto los reemplaza por footage REAL cuando hay clip cacheado.
 EFFECTS = {
-    "fire":      {"query": "fire green screen", "kw": r"burn|fire|flame|ablaze|torch"},
-    "water":     {"query": "ocean waves green screen", "kw": r"\bsea\b|ocean|harbor|wave|flood|drown|underwater"},
-    "smoke":     {"query": "smoke green screen", "kw": r"\bsmoke\b|smoulder|smoke-filled|haze"},
-    "explosion": {"query": "explosion green screen", "kw": r"explod|explos|detonat|blast|erupt"},
-    "rain":      {"query": "rain green screen", "kw": r"\brain\b|storm|downpour|thunderstorm"},
-    "lightning": {"query": "lightning green screen", "kw": r"lightning|thunderbolt|struck by lightning"},
-    "snow":      {"query": "snow falling green screen", "kw": r"\bsnow\b|blizzard|frost|freezing"},
-    "sparks":    {"query": "sparks green screen", "kw": r"\bspark|ember|gunfire flash|muzzle flash"},
-    "fog":       {"query": "fog mist green screen", "kw": r"\bfog\b|\bmist\b|foggy"},
-    "dust":      {"query": "dust storm green screen", "kw": r"\bdust\b|sandstorm|debris cloud"},
+    "fire": {"query": "fire green screen", "kw": r"burn|fire|flame|ablaze|torch"},
+    "water": {
+        "query": "ocean waves green screen",
+        "kw": r"\bsea\b|ocean|harbor|wave|flood|drown|underwater",
+    },
+    "smoke": {
+        "query": "smoke green screen",
+        "kw": r"\bsmoke\b|smoulder|smoke-filled|haze",
+    },
+    "explosion": {
+        "query": "explosion green screen",
+        "kw": r"explod|explos|detonat|blast|erupt",
+    },
+    "rain": {
+        "query": "rain green screen",
+        "kw": r"\brain\b|storm|downpour|thunderstorm",
+    },
+    "lightning": {
+        "query": "lightning green screen",
+        "kw": r"lightning|thunderbolt|struck by lightning",
+    },
+    "snow": {
+        "query": "snow falling green screen",
+        "kw": r"\bsnow\b|blizzard|frost|freezing",
+    },
+    "sparks": {
+        "query": "sparks green screen",
+        "kw": r"\bspark|ember|gunfire flash|muzzle flash",
+    },
+    "fog": {"query": "fog mist green screen", "kw": r"\bfog\b|\bmist\b|foggy"},
+    "dust": {
+        "query": "dust storm green screen",
+        "kw": r"\bdust\b|sandstorm|debris cloud",
+    },
 }
 
 
@@ -102,7 +127,9 @@ def fetch_effect(category: str, count: int = 3) -> list[Path]:
     import urllib.request
 
     if category not in EFFECTS:
-        raise ValueError(f"categoria desconocida: {category} (opciones: {list(EFFECTS)})")
+        raise ValueError(
+            f"categoria desconocida: {category} (opciones: {list(EFFECTS)})"
+        )
     out_dir = EFFECTS_DIR / category
     out_dir.mkdir(parents=True, exist_ok=True)
     existing = sorted(out_dir.glob("raw_*.mp4"))
@@ -111,6 +138,7 @@ def fetch_effect(category: str, count: int = 3) -> list[Path]:
 
     key = _pixabay_key()
     import urllib.parse as _uparse
+
     q = _uparse.quote(EFFECTS[category]["query"])
     url = f"https://pixabay.com/api/videos/?key={key}&q={q}&per_page={count * 2}"
     # Pixabay bloquea el User-Agent por defecto de urllib con 403
@@ -135,9 +163,22 @@ def fetch_effect(category: str, count: int = 3) -> list[Path]:
 
 def _pix_fmt(path: Path) -> str:
     r = subprocess.run(
-        ["ffprobe", "-v", "error", "-select_streams", "v:0",
-         "-show_entries", "stream=pix_fmt", "-of", "csv=p=0", str(path)],
-        capture_output=True, text=True, timeout=60)
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=pix_fmt",
+            "-of",
+            "csv=p=0",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     return r.stdout.strip()
 
 
@@ -148,19 +189,37 @@ def is_greenscreen(src: Path, min_ratio: float = 0.25) -> bool:
     en vez del efecto recortado. Mide el area verde de un fotograma del
     medio con el mismo umbral que usa el chromakey."""
     import tempfile
+
     with tempfile.TemporaryDirectory() as td:
         png = Path(td) / "probe.png"
         # el frame 0 suele ser negro/fundido: se muestrea al 40% del clip
         r = subprocess.run(
-            ["ffmpeg", "-y", "-v", "error", "-i", str(src),
-             "-vf", "select=eq(n\\,25),scale=160:-1", "-frames:v", "1", str(png)],
-            capture_output=True, text=True, timeout=120)
+            [
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                "-i",
+                str(src),
+                "-vf",
+                "select=eq(n\\,25),scale=160:-1",
+                "-frames:v",
+                "1",
+                str(png),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
         if r.returncode != 0 or not png.exists():
             return False
         from PIL import Image
+
         im = Image.open(png).convert("RGB")
         px = list(im.getdata())
-        green = sum(1 for (r_, g_, b_) in px if g_ > 90 and g_ > r_ * 1.5 and g_ > b_ * 1.5)
+        green = sum(
+            1 for (r_, g_, b_) in px if g_ > 90 and g_ > r_ * 1.5 and g_ > b_ * 1.5
+        )
         return (green / max(len(px), 1)) >= min_ratio
 
 
@@ -200,14 +259,29 @@ def alpha_coverage(mov: Path) -> float:
     chromakey dejo algo -- FFmpeg no da error cuando borra el clip entero."""
     import tempfile
     from PIL import Image
+
     best = 0.0
     with tempfile.TemporaryDirectory() as td:
         for n in (10, 40, 80):
             png = Path(td) / f"a{n}.png"
             r = subprocess.run(
-                ["ffmpeg", "-y", "-v", "error", "-i", str(mov),
-                 "-vf", f"select=eq(n\\,{n}),scale=200:-1", "-frames:v", "1", str(png)],
-                capture_output=True, text=True, timeout=120)
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-v",
+                    "error",
+                    "-i",
+                    str(mov),
+                    "-vf",
+                    f"select=eq(n\\,{n}),scale=200:-1",
+                    "-frames:v",
+                    "1",
+                    str(png),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
             if r.returncode != 0 or not png.exists():
                 continue
             px = list(Image.open(png).convert("RGBA").getdata())
@@ -215,8 +289,9 @@ def alpha_coverage(mov: Path) -> float:
     return best
 
 
-def chromakey_to_alpha(src: Path, color: str = "0x00FF00",
-                       similarity: float | None = None) -> Path:
+def chromakey_to_alpha(
+    src: Path, color: str = "0x00FF00", similarity: float | None = None
+) -> Path:
     """Quita el verde con FFmpeg y guarda un .mov ProRes 4444 con ALPHA REAL,
     reusable en cualquier composicion. Se hace UNA vez por clip y se cachea.
 
@@ -245,11 +320,27 @@ def chromakey_to_alpha(src: Path, color: str = "0x00FF00",
     last = "sin candidatos"
     for sim in cands:
         cmd = [
-            "ffmpeg", "-y", "-t", str(FX_SECONDS), "-i", str(src),
-            "-vf", (f"scale={FX_WIDTH}:-2,chromakey={color}:{sim}:0.12,"
-                    f"despill{negate},format=yuva444p10le"),
-            "-c:v", "prores_ks", "-profile:v", "4444", "-qscale:v", "18",
-            "-pix_fmt", "yuva444p10le", "-an", str(dst),
+            "ffmpeg",
+            "-y",
+            "-t",
+            str(FX_SECONDS),
+            "-i",
+            str(src),
+            "-vf",
+            (
+                f"scale={FX_WIDTH}:-2,chromakey={color}:{sim}:0.12,"
+                f"despill{negate},format=yuva444p10le"
+            ),
+            "-c:v",
+            "prores_ks",
+            "-profile:v",
+            "4444",
+            "-qscale:v",
+            "18",
+            "-pix_fmt",
+            "yuva444p10le",
+            "-an",
+            str(dst),
         ]
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         if r.returncode != 0:
@@ -261,11 +352,13 @@ def chromakey_to_alpha(src: Path, color: str = "0x00FF00",
             continue
         cov = alpha_coverage(dst)
         if cov > MAX_COVERAGE:
-            last = f"el verde sigue ahi (cobertura {cov * 100:.0f}% con similarity {sim})"
-            continue          # subir similarity: falta quitar fondo
+            last = (
+                f"el verde sigue ahi (cobertura {cov * 100:.0f}% con similarity {sim})"
+            )
+            continue  # subir similarity: falta quitar fondo
         if cov < MIN_COVERAGE:
             last = f"clip borrado por el key (cobertura {cov * 100:.1f}% con similarity {sim})"
-            break             # ya se paso: subir mas solo borra mas
+            break  # ya se paso: subir mas solo borra mas
         return dst
     dst.unlink(missing_ok=True)
     raise RuntimeError(f"{src.parent.name}/{src.name}: {last}")
@@ -275,6 +368,7 @@ def pick_effect_clip(category: str) -> Path | None:
     """Un clip ya listo (alpha) de una categoria, o None si la biblioteca esta
     vacia para esa categoria (sin API key o sin haberla poblado aun)."""
     import random
+
     out_dir = EFFECTS_DIR / category
     clips = sorted(out_dir.glob("alpha_*.mov"))
     return random.choice(clips) if clips else None

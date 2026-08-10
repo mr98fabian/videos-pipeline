@@ -12,6 +12,7 @@ Etica/legal: los clips son de otros creadores. Se acredita el canal de origen
 en pantalla (esquina) y en la descripcion final -- no es opcional, hacerlo es
 lo correcto y ademas reduce (no elimina) el riesgo de reclamo de copyright.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -21,12 +22,23 @@ from datetime import date
 from pathlib import Path
 
 from pipeline import (
-    ROOT, OUTPUT_ROOT, WIDTH, HEIGHT, FPS, log, run, ffprobe_duration,
-    generate_audio, generate_subtitles, _list_sfx,
+    ROOT,
+    OUTPUT_ROOT,
+    WIDTH,
+    HEIGHT,
+    FPS,
+    log,
+    run,
+    ffprobe_duration,
+    generate_audio,
+    generate_subtitles,
+    _list_sfx,
     slugify,
 )
 
-CLIP_TRIM_SECONDS = 7.0  # cuanto se usa de cada clip (el final suele tener el highlight)
+CLIP_TRIM_SECONDS = (
+    7.0  # cuanto se usa de cada clip (el final suele tener el highlight)
+)
 MAX_CANDIDATES = 20
 
 
@@ -35,10 +47,21 @@ def search_clips(query: str, n: int, max_duration: int = 110) -> list[dict]:
     cumplen el limite de duracion -- proxy simple de 'impacto/calidad'."""
     log("rankings", f"Buscando '{query}' en YouTube...")
     proc = subprocess.run(
-        ["py", "-m", "yt_dlp", f"ytsearch{MAX_CANDIDATES}:{query}",
-         "--dump-json", "--no-warnings", "--flat-playlist",
-         "--match-filter", f"duration < {max_duration} & duration > 10"],
-        capture_output=True, text=True, encoding="utf-8", errors="ignore",
+        [
+            "py",
+            "-m",
+            "yt_dlp",
+            f"ytsearch{MAX_CANDIDATES}:{query}",
+            "--dump-json",
+            "--no-warnings",
+            "--flat-playlist",
+            "--match-filter",
+            f"duration < {max_duration} & duration > 10",
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="ignore",
     )
     candidates = []
     for line in proc.stdout.splitlines():
@@ -48,15 +71,18 @@ def search_clips(query: str, n: int, max_duration: int = 110) -> list[dict]:
             continue
         if not d.get("id"):
             continue
-        candidates.append({
-            "id": d["id"],
-            "url": d.get("webpage_url") or f"https://www.youtube.com/watch?v={d['id']}",
-            "title": d.get("title", "").strip(),
-            "channel": d.get("channel") or d.get("uploader") or "canal desconocido",
-            "channel_url": d.get("channel_url") or d.get("uploader_url") or "",
-            "view_count": d.get("view_count") or 0,
-            "duration": d.get("duration") or 0,
-        })
+        candidates.append(
+            {
+                "id": d["id"],
+                "url": d.get("webpage_url")
+                or f"https://www.youtube.com/watch?v={d['id']}",
+                "title": d.get("title", "").strip(),
+                "channel": d.get("channel") or d.get("uploader") or "canal desconocido",
+                "channel_url": d.get("channel_url") or d.get("uploader_url") or "",
+                "view_count": d.get("view_count") or 0,
+                "duration": d.get("duration") or 0,
+            }
+        )
     candidates.sort(key=lambda c: c["view_count"], reverse=True)
     # dedupe por canal para no repetir el mismo uploader varias veces en el top
     seen_channels = set()
@@ -68,16 +94,31 @@ def search_clips(query: str, n: int, max_duration: int = 110) -> list[dict]:
         picked.append(c)
         if len(picked) >= n:
             break
-    log("rankings", f"{len(picked)} clips seleccionados de {len(candidates)} candidatos")
+    log(
+        "rankings", f"{len(picked)} clips seleccionados de {len(candidates)} candidatos"
+    )
     return picked
 
 
 def download_clip(clip: dict, out_path: Path) -> bool:
     proc = subprocess.run(
-        ["py", "-m", "yt_dlp", clip["url"],
-         "-f", "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-         "-o", str(out_path), "--no-warnings", "--merge-output-format", "mp4"],
-        capture_output=True, text=True, encoding="utf-8", errors="ignore",
+        [
+            "py",
+            "-m",
+            "yt_dlp",
+            clip["url"],
+            "-f",
+            "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+            "-o",
+            str(out_path),
+            "--no-warnings",
+            "--merge-output-format",
+            "mp4",
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="ignore",
     )
     ok = out_path.exists() and out_path.stat().st_size > 10_000
     if not ok:
@@ -85,7 +126,9 @@ def download_clip(clip: dict, out_path: Path) -> bool:
     return ok
 
 
-def _prep_ranked_clip(raw_path: Path, out_path: Path, rank: int, credit: str, sfx_path: Path | None) -> None:
+def _prep_ranked_clip(
+    raw_path: Path, out_path: Path, rank: int, credit: str, sfx_path: Path | None
+) -> None:
     """Recorta el final del clip (donde suele estar el highlight), lo pasa a
     vertical 9:16, y le quema el numero de puesto gigante + credito discreto."""
     dur = ffprobe_duration(raw_path)
@@ -103,15 +146,33 @@ def _prep_ranked_clip(raw_path: Path, out_path: Path, rank: int, credit: str, sf
         f"x=30:y=h-70"
     )
     cmd = [
-        "ffmpeg", "-y", "-ss", f"{start:.2f}", "-i", str(raw_path), "-t", f"{trim:.2f}",
-        "-vf", vf, "-an",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
+        "ffmpeg",
+        "-y",
+        "-ss",
+        f"{start:.2f}",
+        "-i",
+        str(raw_path),
+        "-t",
+        f"{trim:.2f}",
+        "-vf",
+        vf,
+        "-an",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "21",
+        "-pix_fmt",
+        "yuv420p",
         str(out_path),
     ]
     run(cmd)
 
 
-def assemble_ranking(clips_meta: list[dict], clip_paths: list[Path], title: str, out_dir: Path) -> Path:
+def assemble_ranking(
+    clips_meta: list[dict], clip_paths: list[Path], title: str, out_dir: Path
+) -> Path:
     # 1. narracion: solo el titulo
     audio_path, words = generate_audio(title, "em_alex", "+0%", out_dir)
     ass_path = generate_subtitles(words, out_dir)
@@ -122,15 +183,37 @@ def assemble_ranking(clips_meta: list[dict], clip_paths: list[Path], title: str,
     # del protocolo concat se resuelven contra el cwd del proceso, no el archivo)
     prep_dir = clip_paths[0].parent
     concat_list = prep_dir / "clips_concat.txt"
-    concat_list.write_text("".join(f"file '{p.name}'\n" for p in clip_paths), encoding="utf-8")
+    concat_list.write_text(
+        "".join(f"file '{p.name}'\n" for p in clip_paths), encoding="utf-8"
+    )
     concat_path = out_dir / "clips_concat.mp4"
-    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_list.name,
-         "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
-         str(concat_path)], cwd=prep_dir)
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            concat_list.name,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "21",
+            "-pix_fmt",
+            "yuv420p",
+            str(concat_path),
+        ],
+        cwd=prep_dir,
+    )
 
     # 3. musica de fondo: biblioteca local. La generacion con Lyria se elimino
     # junto con el resto de Gemini el 3 ago 2026.
     from pipeline import _pick_music
+
     music = _pick_music()
 
     # 4. SFX de transicion en cada corte entre clips
@@ -193,21 +276,47 @@ def assemble_ranking(clips_meta: list[dict], clip_paths: list[Path], title: str,
 
     video_filter = f"[0:v]ass={ass_path.name}[v];"
 
-    run([
-        "ffmpeg", "-y", *inputs,
-        "-filter_complex", video_filter + audio_filters,
-        "-map", "[v]", "-map", "[aout]",
-        "-c:v", "libx264", "-preset", "medium", "-crf", "21", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
-        "-shortest", final.name,
-    ], cwd=out_dir)
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            *inputs,
+            "-filter_complex",
+            video_filter + audio_filters,
+            "-map",
+            "[v]",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "21",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-ar",
+            "44100",
+            "-shortest",
+            final.name,
+        ],
+        cwd=out_dir,
+    )
     return final
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("query", help="Tema de busqueda en YouTube (ej. 'robo de baron clutch')")
-    ap.add_argument("--title", required=True, help="Titulo del ranking, se narra al inicio")
+    ap.add_argument(
+        "query", help="Tema de busqueda en YouTube (ej. 'robo de baron clutch')"
+    )
+    ap.add_argument(
+        "--title", required=True, help="Titulo del ranking, se narra al inicio"
+    )
     ap.add_argument("--n", type=int, default=5)
     args = ap.parse_args()
 
@@ -248,8 +357,9 @@ def main() -> int:
     (out_dir / "title.txt").write_text(args.title, encoding="utf-8")
     desc = (
         f"{args.title}\n\n"
-        "Creditos de los clips usados:\n" + "\n".join(credits) +
-        "\n\n#leagueoflegends #shorts #ranking #lol"
+        "Creditos de los clips usados:\n"
+        + "\n".join(credits)
+        + "\n\n#leagueoflegends #shorts #ranking #lol"
     )
     (out_dir / "description.txt").write_text(desc, encoding="utf-8")
 

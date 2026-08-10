@@ -16,6 +16,7 @@ Necesita en esa carpeta: script.json (con `counter` y `beats_s`, ver
 storage-unit-headstone.json o wedding-photos-father.json como ejemplo),
 voice.mp3, gameplay.mp4, hookcard.png.
 """
+
 import argparse
 import json
 import shutil
@@ -33,9 +34,21 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 
 def ffprobe_dur(p: Path) -> float:
-    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                       "-of", "default=nk=1:nw=1", str(p)],
-                       capture_output=True, text=True, timeout=30)
+    r = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=nk=1:nw=1",
+            str(p),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
     return float(r.stdout.strip())
 
 
@@ -44,11 +57,12 @@ def align_words(voice_mp3: Path) -> list[tuple[float, float, str]]:
     whisper -- lo mismo que hace viral_lab._align_words, reusado aqui para no
     depender de que el word-list original siga vivo en memoria."""
     from faster_whisper import WhisperModel
+
     m = WhisperModel("base", device="cpu", compute_type="int8")
     segs, _ = m.transcribe(str(voice_mp3), word_timestamps=True)
     out = []
     for s in segs:
-        for w in (s.words or []):
+        for w in s.words or []:
             out.append((float(w.start), float(w.end), w.word.strip()))
     return out
 
@@ -56,7 +70,9 @@ def align_words(voice_mp3: Path) -> list[tuple[float, float, str]]:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("out_dir")
-    ap.add_argument("--out", help="nombre del mp4 final (por defecto video_remotion.mp4)")
+    ap.add_argument(
+        "--out", help="nombre del mp4 final (por defecto video_remotion.mp4)"
+    )
     args = ap.parse_args()
 
     out_dir = Path(args.out_dir)
@@ -65,8 +81,10 @@ def main() -> None:
 
     for campo in ("counter", "beats_s"):
         if campo not in data:
-            print(f"AVISO: script.json no tiene '{campo}'. Ver wedding-photos-father.json "
-                  f"como ejemplo de como declararlo. Sigo sin el.")
+            print(
+                f"AVISO: script.json no tiene '{campo}'. Ver wedding-photos-father.json "
+                f"como ejemplo de como declararlo. Sigo sin el."
+            )
 
     voice = out_dir / "voice.mp3"
     gameplay = out_dir / "gameplay.mp4"
@@ -93,15 +111,22 @@ def main() -> None:
     counter = None
     if data.get("counter"):
         c = data["counter"]
-        counter = {"label": c["label"], "total": c["total"],
-                  "keys": [[round(t * FPS), v] for t, v in c["keys_s"]]}
-    beats = [{"frame": round(b["t"] * FPS), "dur": round(b.get("dur", 0.5) * FPS)}
-             for b in data.get("beats_s", [])]
+        counter = {
+            "label": c["label"],
+            "total": c["total"],
+            "keys": [[round(t * FPS), v] for t, v in c["keys_s"]],
+        }
+    beats = [
+        {"frame": round(b["t"] * FPS), "dur": round(b.get("dur", 0.5) * FPS)}
+        for b in data.get("beats_s", [])
+    ]
 
     props = {
         "gameplaySrc": f"story/{slug}/gameplay.mp4",
         "voiceSrc": f"story/{slug}/voice.mp3",
-        "musicSrc": f"story/{slug}/music.mp3" if (music_src and music_src.exists()) else None,
+        "musicSrc": f"story/{slug}/music.mp3"
+        if (music_src and music_src.exists())
+        else None,
         "words": words_js,
         "redWords": data.get("caption_keywords", []),
         "hookCardSrc": f"story/{slug}/hookcard.png",
@@ -113,15 +138,29 @@ def main() -> None:
     }
     props_path = out_dir / "remotion_props.json"
     props_path.write_text(json.dumps(props, ensure_ascii=False), encoding="utf-8")
-    print(f"props: {len(words_js)} palabras, {len(beats)} beats, "
-          f"contador={'si' if counter else 'no'}, duracion {dur_frames} frames")
+    print(
+        f"props: {len(words_js)} palabras, {len(beats)} beats, "
+        f"contador={'si' if counter else 'no'}, duracion {dur_frames} frames"
+    )
 
     final = out_dir / (args.out or "video_remotion.mp4")
     npx = shutil.which("npx") or "npx"
     print("renderizando en Remotion (esto tarda unos minutos)...")
-    subprocess.run([npx, "remotion", "render", "src/index.jsx", "StoryVideo",
-                    str(final.resolve()), "--props", str(props_path.resolve())],
-                   cwd=MOTION, check=True, timeout=1800)
+    subprocess.run(
+        [
+            npx,
+            "remotion",
+            "render",
+            "src/index.jsx",
+            "StoryVideo",
+            str(final.resolve()),
+            "--props",
+            str(props_path.resolve()),
+        ],
+        cwd=MOTION,
+        check=True,
+        timeout=1800,
+    )
     print(f"\nlisto -> {final}")
 
 

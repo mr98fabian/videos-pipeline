@@ -1,5 +1,5 @@
 {
-  "style": "Animacion vectorial plana estilo 'rubber hose' anos 30 (Mickey/Oswald viejo), blanco y negro con grano de film vintage y parpadeo sutil, protagonista Tadeo el mapache con guantes blancos de boton",
+  "style": "Animacion vectorial plana estilo 'rubber hose' anos 30, ESTRICTAMENTE en blanco y negro puro con grises neutros: cero sepia, cero tono crema, cero papel amarillento, cero color de ningun tipo. Grano de film vintage y parpadeo sutil. Protagonista Tadeo el mapache con guantes blancos de boton",
   "title": "La firma mas grande de Colombia se cayo en un dia (con Tadeo)",
   "description": "Tadeo el mapache te explica el truco que tumbo a Interbolsa: empenar la misma accion una y otra vez hasta inflarla. Caso real, Colombia 2012. Canal KoreX.",
   "hook_card": "Confiaste tu plata a la firma mas grande del pais. El lunes ya no existia.",
@@ -25,26 +25,26 @@
     "Tadeo character: cuarto simple con una mesa de madera vacia, luz tenue",
     "Tadeo character: mostrador de casa de empeno con un reloj de bolsillo sobre el mostrador",
     "Tadeo character: mostrador de casa de empeno, billetes sobre el mostrador",
-    "INSERT infografico minimalista serio tipo Vox: espiral de flechas subiendo, mismo objeto empenado varias veces, fondo blanco",
-    "Millonario character: fabrica textil antigua con telares y rollos de tela apilados",
+    "Tadeo character: Tadeo senalando un diagrama en una pizarra, espiral de flechas subiendo y el mismo reloj empenado varias veces, fondo blanco limpio",
+    "Tadeo character: Tadeo mirando de lejos, en primer plano, como un magnate de sombrero de copa apila billetes sobre rollos de tela en una fabrica textil antigua con telares",
     "Tadeo character: fabrica textil con una accion de papel inflandose como globo",
     "Tadeo character: calendario de pared marcando noviembre, papeles cayendo",
-    "INSERT infografico minimalista serio tipo Vox: grafico de linea desplomandose a cero, fondo blanco",
+    "Tadeo character: Tadeo delante de un grafico de linea desplomandose a cero, fondo blanco limpio",
     "Tadeo character: close-up cara de panico gritando directo a camara, contacto visual intenso"
   ],
   "script": "Confiaste tu plata a la firma más grande de Colombia y un lunes ya no existía. Miren a Tadeo, el genio, invirtiendo con la comisionista que movía el treinta y cinco por ciento del mercado. Interbolsa tenía veintidós años de prestigio, y a Tadeo eso le pareció garantía suficiente. Ahora el truco, despacito, a ver si le entra. Imagina que empeñas tu reloj; con esa plata compras el mismo reloj otra vez, y lo vuelves a empeñar. Cada vuelta el reloj vale más, porque tú eres el único que lo está comprando. Repite eso mil veces y el precio ya no es un precio, es un rumor con testigos. Eso hicieron con las acciones de Fabricato, una textilera de toda la vida, inflándola con plata prestada. El papel subía, los dueños del truco cobraban, y el mercado entero aplaudía el milagro antioqueño. En noviembre de dos mil doce no pudieron pagar un préstamo de veinte mil millones, y la rueda paró en seco. Se perdieron cerca de trescientos cuarenta mil millones de pesos, de fundaciones, de empresas y hasta de conventos. Confiaste tu plata a la firma más grande de Colombia, ¿y quién te dijo que la tuya está a salvo?",
   "character_terms": [
-    "",
-    "Tadeo, con maletin de inversionista, cara de payaso orgulloso",
-    "Tadeo, senalando los diplomas de la pared, cara confiada",
-    "Tadeo, gesticulando hacia camara, cara de sorpresa comica",
-    "Tadeo, entregando un reloj de bolsillo en la casa de empeno, cara confundida",
-    "Tadeo, recibiendo billetes, cara de codicia comica",
-    "",
-    "El Millonario, apilando billetes sobre rollos de tela, riendose malvado",
-    "Tadeo, mirando la accion inflarse, cara de asombro ingenuo",
-    "Tadeo, cara de payaso estafado, ojos llorosos comicos, close-up",
-    "",
-    "Tadeo, cara de panico gritando directo a camara, contacto visual intenso"
+    "tadeo/grito",
+    "tadeo/triunfo",
+    "tadeo/senalando",
+    "tadeo/explicando",
+    "tadeo/confundido",
+    "tadeo/codicia",
+    "tadeo/senalando",
+    "tadeo/confundido",
+    "tadeo/confundido",
+    "tadeo/estafado",
+    "tadeo/estafado",
+    "tadeo/grito"
   ]
 }

@@ -37,9 +37,21 @@ SFX_DIR = ROOT / "assets" / "sfx"
 
 def ffprobe_duration(path: Path) -> float:
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
-        capture_output=True, text=True, check=True, timeout=60)
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60,
+    )
     return float(out.stdout.strip())
 
 
@@ -51,9 +63,14 @@ def scene_cut_times(clips_dir: Path) -> list[float]:
     concat_txt = clips_dir / "concat.txt"
     if not concat_txt.exists():
         # fallback: todos los seg_*.mp4 en orden numerico
-        segs = sorted(clips_dir.glob("seg_*.mp4"),
-                      key=lambda p: int(re.search(r"seg_(\d+)", p.stem).group(1))
-                      if re.search(r"seg_(\d+)", p.stem) else 0)
+        segs = sorted(
+            clips_dir.glob("seg_*.mp4"),
+            key=lambda p: (
+                int(re.search(r"seg_(\d+)", p.stem).group(1))
+                if re.search(r"seg_(\d+)", p.stem)
+                else 0
+            ),
+        )
     else:
         segs = []
         for line in concat_txt.read_text(encoding="utf-8").splitlines():
@@ -96,49 +113,106 @@ def build(out_dir: Path, volume: float, single_pick: str | None, seed: int) -> P
         inputs += ["-i", str(f)]
         delay_ms = max(0, int((t - 0.06) * 1000))  # ~60ms antes del corte
         lbl = f"w{i}"
-        filters.append(f"[{i + 1}:a]adelay={delay_ms}|{delay_ms},volume={volume}[{lbl}];")
+        filters.append(
+            f"[{i + 1}:a]adelay={delay_ms}|{delay_ms},volume={volume}[{lbl}];"
+        )
         labels.append(f"[{lbl}]")
 
-    mix = "".join(filters) + "".join(labels) + f"amix=inputs={len(labels)}:duration=longest:dropout_transition=0[whooshes];"
+    mix = (
+        "".join(filters)
+        + "".join(labels)
+        + f"amix=inputs={len(labels)}:duration=longest:dropout_transition=0[whooshes];"
+    )
     # cuenta cuantas cuentas de fondo (voz + lo que ya venga en video.mp4) hay
     # que sumar -- aqui se monta sobre voice.mp3 solo, para mezclar luego con
     # el video ya armado via un segundo paso simple (mas facil de razonar que
     # meterlo todo en un solo filtro gigante)
     out_path = out_dir / "whooshes_track.mp3"
-    cmd = ["ffmpeg", "-y", "-v", "error", "-i", str(voice)] + inputs + [
-        "-filter_complex", mix, "-map", "[whooshes]",
-        "-t", f"{total:.3f}", "-c:a", "libmp3lame", "-q:a", "2", str(out_path)]
+    cmd = (
+        ["ffmpeg", "-y", "-v", "error", "-i", str(voice)]
+        + inputs
+        + [
+            "-filter_complex",
+            mix,
+            "-map",
+            "[whooshes]",
+            "-t",
+            f"{total:.3f}",
+            "-c:a",
+            "libmp3lame",
+            "-q:a",
+            "2",
+            str(out_path),
+        ]
+    )
     subprocess.run(cmd, check=True, timeout=600)
     print(f"{len(cuts)} whoosh colocados, pista en {out_path.name}")
     return out_path
 
 
-def mux_with_video(out_dir: Path, base_video: Path, whooshes: Path,
-                    dst_name: str = "video_rhythmic.mp4") -> Path:
+def mux_with_video(
+    out_dir: Path,
+    base_video: Path,
+    whooshes: Path,
+    dst_name: str = "video_rhythmic.mp4",
+) -> Path:
     """Mezcla la pista de whooshes sobre el audio YA existente del video base
     (voz + musica + sfx literal), sin re-decidir nada de eso -- solo suma."""
     dst = out_dir / dst_name
-    subprocess.run([
-        "ffmpeg", "-y", "-v", "error",
-        "-i", str(base_video), "-i", str(whooshes),
-        "-filter_complex", "[0:a][1:a]amix=inputs=2:duration=first:dropout_transition=0[a]",
-        "-map", "0:v", "-map", "[a]",
-        "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", str(dst),
-    ], check=True, timeout=600)
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-i",
+            str(base_video),
+            "-i",
+            str(whooshes),
+            "-filter_complex",
+            "[0:a][1:a]amix=inputs=2:duration=first:dropout_transition=0[a]",
+            "-map",
+            "0:v",
+            "-map",
+            "[a]",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(dst),
+        ],
+        check=True,
+        timeout=600,
+    )
     return dst
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("out_dir")
-    ap.add_argument("--video", default="video.mp4",
-                    help="video base ya armado sobre el que mezclar (default video.mp4)")
-    ap.add_argument("--volume", type=float, default=0.35,
-                    help="volumen del whoosh relativo (default 0.35)")
-    ap.add_argument("--pick", default=None,
-                    help="usar SIEMPRE este archivo de assets/sfx/ en vez de rotar al azar")
-    ap.add_argument("--seed", type=int, default=1, help="semilla para la rotacion aleatoria")
+    ap.add_argument(
+        "--video",
+        default="video.mp4",
+        help="video base ya armado sobre el que mezclar (default video.mp4)",
+    )
+    ap.add_argument(
+        "--volume",
+        type=float,
+        default=0.35,
+        help="volumen del whoosh relativo (default 0.35)",
+    )
+    ap.add_argument(
+        "--pick",
+        default=None,
+        help="usar SIEMPRE este archivo de assets/sfx/ en vez de rotar al azar",
+    )
+    ap.add_argument(
+        "--seed", type=int, default=1, help="semilla para la rotacion aleatoria"
+    )
     args = ap.parse_args()
 
     d = Path(args.out_dir)

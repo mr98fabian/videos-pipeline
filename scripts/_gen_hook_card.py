@@ -1,6 +1,7 @@
 """Genera una card estilo post-social (Reddit_Gossipz look) para overlay de gancho.
 Uso local: py scripts/_gen_hook_card.py "pregunta" "Canal" out.png [avatar.png]
 """
+
 import sys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
@@ -14,6 +15,7 @@ W = 1040
 PAD = 36
 RADIUS = 40
 
+
 def load_font(size, bold=False):
     names = ["seguisb.ttf", "segoeuib.ttf"] if bold else ["segoeui.ttf"]
     for n in names:
@@ -23,11 +25,13 @@ def load_font(size, bold=False):
             continue
     return ImageFont.truetype("arial.ttf", size)
 
+
 def emoji_font(size):
     try:
         return ImageFont.truetype("seguiemj.ttf", size)
     except Exception:
         return load_font(size)
+
 
 def wrap_text(draw, text, font, max_width):
     words = text.split()
@@ -43,6 +47,7 @@ def wrap_text(draw, text, font, max_width):
     if cur:
         lines.append(cur)
     return lines
+
 
 def paste_avatar(img, avatar_path, x, y, size):
     """Pega el logo del canal recortado en circulo. Si no se puede cargar,
@@ -63,13 +68,25 @@ def draw_verified(draw, x, y, r=13):
     """Check azul de verificado, como el del ejemplo de referencia."""
     draw.ellipse([x, y, x + r * 2, y + r * 2], fill=(29, 155, 240, 255))
     cx, cy = x + r, y + r
-    draw.line([(cx - r * 0.45, cy), (cx - r * 0.1, cy + r * 0.38),
-               (cx + r * 0.5, cy - r * 0.4)],
-              fill=(255, 255, 255, 255), width=max(2, r // 5), joint="curve")
+    draw.line(
+        [
+            (cx - r * 0.45, cy),
+            (cx - r * 0.1, cy + r * 0.38),
+            (cx + r * 0.5, cy - r * 0.4),
+        ],
+        fill=(255, 255, 255, 255),
+        width=max(2, r // 5),
+        joint="curve",
+    )
 
 
-def make_card(question: str, channel: str, out_path: str, avatar_path=None,
-              punch: str | None = None):
+def make_card(
+    question: str,
+    channel: str,
+    out_path: str,
+    avatar_path=None,
+    punch: str | None = None,
+):
     """`punch` = gancho visual de 3-5 palabras, enorme, sobre la pregunta.
 
     Kallaway (revisado 30 jul 2026): el gancho visual pesa mucho mas que el
@@ -90,7 +107,9 @@ def make_card(question: str, channel: str, out_path: str, avatar_path=None,
     lines = wrap_text(draw_probe, question, q_font, text_w)
 
     punch = (punch or "").strip()
-    punch_lines = wrap_text(draw_probe, punch.upper(), punch_font, text_w) if punch else []
+    punch_lines = (
+        wrap_text(draw_probe, punch.upper(), punch_font, text_w) if punch else []
+    )
     punch_line_h = 80
     punch_h = (punch_line_h * len(punch_lines) + 24) if punch_lines else 0
 
@@ -112,8 +131,13 @@ def make_card(question: str, channel: str, out_path: str, avatar_path=None,
     if not paste_avatar(img, av_path, ax, ay, ad):
         draw.ellipse([ax, ay, ax + ad, ay + ad], fill=(60, 70, 230, 255))
         initial = (channel.lstrip("@") or "?")[0].upper()
-        draw.text((ax + ad // 2, ay + ad // 2), initial, font=load_font(34, bold=True),
-                  fill=(255, 255, 255, 255), anchor="mm")
+        draw.text(
+            (ax + ad // 2, ay + ad // 2),
+            initial,
+            font=load_font(34, bold=True),
+            fill=(255, 255, 255, 255),
+            anchor="mm",
+        )
 
     name_x = ax + ad + 20
     draw.text((name_x, ay + 8), channel, font=name_font, fill=(255, 255, 255, 255))
@@ -145,10 +169,13 @@ def make_card(question: str, channel: str, out_path: str, avatar_path=None,
     draw.text((PAD + 150, fy), "💬", font=icon_font, fill=(220, 220, 220, 255))
     draw.text((PAD + 195, fy + 2), "99+", font=meta_font, fill=(220, 220, 220, 255))
     draw.text((W - PAD - 150, fy), "↪️", font=icon_font, fill=(220, 220, 220, 255))
-    draw.text((W - PAD - 105, fy + 2), "share", font=meta_font, fill=(220, 220, 220, 255))
+    draw.text(
+        (W - PAD - 105, fy + 2), "share", font=meta_font, fill=(220, 220, 220, 255)
+    )
 
     img.save(out_path)
     print("saved", out_path, img.size)
+
 
 if __name__ == "__main__":
     question = sys.argv[1]

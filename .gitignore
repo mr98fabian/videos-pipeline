@@ -93,3 +93,12 @@ assets/kx_cast/**/_originales/
 # temporales de analisis
 _tmp_shorts.json
 _tmp_shorts_metrics.json
+
+# Sesion de Google Flow (cookies de la cuenta) y volcados de su DOM. Lo primero
+# NUNCA debe entrar al repo; lo segundo es diagnostico regenerable con
+# `py flow_automation.py --inspect`.
+.flow_profile/
+.flow_inspect/
+
+# mapa guion -> proyecto de Flow (estado de ejecucion, no codigo)
+flow_projects.json
