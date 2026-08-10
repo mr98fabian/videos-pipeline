@@ -59,6 +59,17 @@ FLOW_URL = "https://labs.google/fx/tools/flow"
 DEBUG = bool(os.getenv("FLOW_DEBUG"))
 MODEL_NAME = "Nano Banana 2"
 
+# MODELOS DE IMAGEN Y SU LIMITE DIARIO (10 ago 2026). Nano Banana 2 tiene cupo
+# POR DIA aunque la cuenta sea Pro: al agotarlo, TODA generacion devuelve el
+# mismo "No se pudo generar" que un rechazo de contenido, y el tile lo explica
+# en la segunda linea ("Alcanzaste el limite diario ... Prueba con otro
+# modelo"). Sin leer esa linea, una tanda entera cae a gradiente y parece que
+# Flow se rompio. Los otros modelos del desplegable llevan cupos aparte, asi
+# que agotar uno no agota los demas.
+IMAGE_MODEL = os.getenv("FLOW_IMAGE_MODEL", "")  # "" = el default del proyecto
+IMAGE_MODEL_FALLBACKS = ("Nano Banana Pro", "Nano Banana 2 Lite")
+_DAILY_LIMIT_RE = r"(l[ií]mite diario|daily limit|prueba con otro modelo|try another model)"
+
 # MODELO DE VIDEO: 'Veo 3.1 - Lite' cuesta 10 creditos por generacion, 'Fast'
 # 20 y 'Quality' 100 (plan Pro = 1.000/mes). Hasta el 4 ago 2026 el codigo no
 # fijaba ninguno y Flow generaba con el default: la cuenta paso de 846 a 6
@@ -268,7 +279,7 @@ class FlowSession:
         self.aspect_ratio = aspect_ratio
         self.mode = mode
         self.count = count
-        self.model = model
+        self.model = model or (IMAGE_MODEL or None)
         # duracion del clip; pagar 8s para una escena de 5 es tirar creditos
         self.duration_s = duration_s
         self.project_url = project_url
@@ -467,6 +478,28 @@ class FlowSession:
     # romperlo.
     _REFUSAL_RE = r"^(no se pudo generar|couldn'?t generate|no se pudo crear)"
 
+    def _daily_limit_hit(self) -> bool:
+        """True si algun tile dice que se agoto el cupo diario del modelo.
+
+        Se busca aparte de `_refusals()` porque ese regex esta anclado al
+        principio del texto ("no se pudo generar") y el motivo real viaja en
+        otro elemento del mismo tile.
+        """
+        try:
+            return bool(
+                self._page.evaluate(
+                    "(args) => {"
+                    " const [sel, re] = args;"
+                    " const rx = new RegExp(re, 'i');"
+                    " for (const tile of document.querySelectorAll(sel)) {"
+                    "   if (rx.test(tile.innerText || '')) return true;"
+                    " } return false; }",
+                    [SEL_TILE, _DAILY_LIMIT_RE],
+                )
+            )
+        except Exception:
+            return False
+
     def _refusals(self) -> list[str]:
         """Avisos de rechazo visibles, buscados SOLO dentro de los tiles de la
         grilla. Se devuelve la lista y no un booleano porque los tiles fallidos
@@ -516,15 +549,21 @@ class FlowSession:
         try:  # re-encodada por Flow: comparar pixeles, no bytes
             from PIL import Image, ImageChops, ImageStat
 
+            # MINIATURA, NO TAMANO EXACTO (10 ago 2026). La version anterior
+            # exigia `r.size == got.size` y Flow reescala la referencia al
+            # aspecto del proyecto, asi que nunca comparaba: ocho escenas del
+            # video de la quincena eran la propia lamina de Tadeo sobre blanco,
+            # bajada como si fuera el resultado. Pasa justo cuando la
+            # generacion falla (cupo diario) y el unico media nuevo de la
+            # grilla es la referencia recien subida.
+            THUMB = (64, 64)
             with Image.open(path) as got:
-                got = got.convert("RGB")
+                got_t = got.convert("RGB").resize(THUMB)
                 for ref in self._refs:
                     with Image.open(ref) as r:
-                        r = r.convert("RGB")
-                        if r.size != got.size:
-                            continue
-                        diff = ImageChops.difference(r, got)
-                        if max(ImageStat.Stat(diff).mean) < 2.0:
+                        r_t = r.convert("RGB").resize(THUMB)
+                        diff = ImageChops.difference(r_t, got_t)
+                        if max(ImageStat.Stat(diff).mean) < 12.0:
                             return True
         except Exception as e:
             _log(f"no pude comparar con la referencia: {e}")
@@ -801,7 +840,26 @@ class FlowSession:
             self._refs, self._ref_hashes = [], set()
             if references:
                 self._attach(list(references))
-            return self._submit_and_wait(prompt, Path(path), timeout_s)
+            if self._submit_and_wait(prompt, Path(path), timeout_s):
+                return True
+            # CUPO DIARIO AGOTADO -> CAMBIAR DE MODELO, NO REINTENTAR IGUAL.
+            # Reintentar con el mismo modelo no puede funcionar hasta el dia
+            # siguiente: el 10 ago 2026 una tanda de 24 escenas se fue entera a
+            # gradiente asi, con tres reintentos por escena, sin que el log
+            # dijera por que.
+            for alt in IMAGE_MODEL_FALLBACKS:
+                if not self._daily_limit_hit() or alt == self.model:
+                    break
+                _log(f"cupo diario agotado; cambio a '{alt}'")
+                self.model = alt
+                self.mode = None
+                self._configure("image")
+                self._refs, self._ref_hashes = [], set()
+                if references:
+                    self._attach(list(references))
+                if self._submit_and_wait(prompt, Path(path), timeout_s):
+                    return True
+            return False
         except Exception as e:
             _log(f"fallo generando '{prompt[:50]}...': {e}")
             return False

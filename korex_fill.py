@@ -12,8 +12,9 @@ todos o se agotan las rondas.
     py korex_fill.py output/<carpeta>            # hasta 6 rondas
     py korex_fill.py output/<carpeta> --rondas 3
 
-Despues, para rehacer el video con las escenas completas:
-    py korex_engine.py output/<carpeta>
+Despues, para rehacer el video con las escenas completas, el camino clasico
+(imagenes de Flow a pantalla completa). OJO: `korex_engine.py` esta RETIRADO
+para KOREX desde el 9 ago 2026 -- ese motor es la piel de HiddenFacts.
 """
 
 from __future__ import annotations
@@ -79,7 +80,6 @@ def main() -> int:
         print(f"\nSIGUEN FALTANDO: {faltan}. Volver a correr korex_fill.")
         return 1
     print(f"\nLISTO: las {len(terms)} escenas estan en {clips}")
-    print(f"Ahora: py korex_engine.py {out_dir}")
     return 0
 
 
