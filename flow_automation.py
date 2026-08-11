@@ -848,7 +848,9 @@ class FlowSession:
             # gradiente asi, con tres reintentos por escena, sin que el log
             # dijera por que.
             for alt in IMAGE_MODEL_FALLBACKS:
-                if not self._daily_limit_hit() or alt == self.model:
+                if alt == self.model:
+                    continue  # el que ya se estaba usando no es alternativa
+                if not self._daily_limit_hit():
                     break
                 _log(f"cupo diario agotado; cambio a '{alt}'")
                 self.model = alt
