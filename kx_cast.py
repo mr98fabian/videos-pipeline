@@ -317,3 +317,39 @@ def resolve_scene_cast(data: dict, n_scenes: int) -> list[Path | None]:
         # ya en biblioteca (con o sin variantes) -> gratis; si no, se genera
         out.append(pick(char, pose, i) or get_pose(char, pose))
     return out
+
+# REPARTO SECUNDARIO (10 ago 2026). Personajes que aparecen NOMBRADOS dentro de
+# un search_term en vez de en character_terms, porque no llevan biblioteca de
+# poses. Sin esto la Bruja del Banco salia distinta en cada plano -- vestido
+# blanco en una escena y tunica negra en la siguiente -- y encima como bruja de
+# cuento, cuando su diseño aprobado es una BANQUERA: traje de raya diplomatica,
+# sombrero picudo y libro de contabilidad.
+SECONDARY_CAST = {
+    "bruja del banco": "bruja-del-banco",
+    "bruja": "bruja-del-banco",
+}
+SECONDARY_LOCK = {
+    "bruja-del-banco": (
+        "CHARACTER LOCK — the witch in the reference sheet is the Bank Witch and "
+        "she must look EXACTLY the same: tall and thin, PINSTRIPE business suit "
+        "with skirt, tall pointed witch hat, small round glasses, sharp hooked "
+        "nose, grey hair in a bun, thick ledger book. Never a fairy-tale witch "
+        "in loose robes, never a plain dress, never a different outfit."
+    )
+}
+
+
+def secondary_refs(term: str) -> tuple[list[Path], str]:
+    """Hojas madre de los secundarios nombrados en el texto de la escena, y el
+    bloque de identidad que hay que pegar en el prompt."""
+    t = (term or "").lower()
+    refs, locks = [], []
+    for needle, slug in SECONDARY_CAST.items():
+        if needle in t:
+            sheet = _canonical_sheet(slug)
+            if sheet and Path(sheet) not in refs:
+                refs.append(Path(sheet))
+                if SECONDARY_LOCK.get(slug):
+                    locks.append(SECONDARY_LOCK[slug])
+            break
+    return refs, " ".join(locks)

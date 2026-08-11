@@ -121,6 +121,15 @@ Cambios concretos derivados de este estudio:
 - **Puerta de aceptación de una lámina nueva**: prueba de silueta + comparación
   lado a lado con la hoja madre. Si hay que dudar, está fuera de modelo.
 
+**Reparto secundario (10 ago 2026).** La Bruja del Banco tiene ya su propia
+hoja madre en `assets/characters/bruja-del-banco/`. Su caso enseña algo distinto
+al de Tadeo: el diseño aprobado **existía** desde el principio —una BANQUERA con
+traje de raya diplomática, sombrero picudo y libro de contabilidad— pero el
+pipeline nunca lo usaba, porque ella se nombra dentro del `search_term` y no en
+`character_terms`. Sin referencia, cada plano inventaba una bruja de cuento
+distinta. Ahora `kx_cast.secondary_refs()` detecta su nombre en el texto de la
+escena y engancha su hoja y su bloque de identidad.
+
 **Lo que este estudio NO promete:** que el modelo acierte a la primera. Promete
 que el fallo se detecte antes de montar y que la referencia sea siempre la misma.
 La consistencia de verdad la sigue dando reusar el PNG aprobado.

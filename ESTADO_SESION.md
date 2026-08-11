@@ -13,6 +13,40 @@ lo que quedó a medias, y qué sigue. Se lee al empezar y se actualiza al termin
 
 ---
 
+## Actualizado: 10 ago 2026 — Kimi implementó los 6 hallazgos del video ganador
+
+**Esto lo hizo la sesión de Kimi.** Contexto: el Short "Cómo salir de deudas y
+dejar de 'pelar cable' este 2026 🔥" (`shorts/wjBlLC3whJE`) rindió increíble;
+diagnóstico: título/tema buscable + slang local, no la transición cómic
+(retención~vistas = -0.127 en nuestros datos). Fórmula guardada en
+`SERIES_PELAR_CABLE.md` + memoria de Kimi.
+
+- **`pipeline.py`**: (1) frame-miniatura horneado en los últimos 0.2s
+  (`append_thumb_frame`, default ON, `--no-thumb-frame` para salirse) — elegir
+  ese frame con el selector de la app móvil al publicar. (2) Check anti-slop
+  `_check_antislop_similarity` en la batería de lints: avisa si el guion
+  comparte ≥10% de shingles de 5 palabras con los últimos 10 renders. **Ya se
+  estrenó:** detectó que el video de quincena de hoy (sesión de Claude) y el
+  `korex-quincena.json` de Kimi eran el mismo guion — Kimi borró el duplicado y
+  escribió el episodio 2 en su lugar (`scripts/korex-tarjeta-minimo.json`).
+- **`performance_report.py`**: columnas nuevas `shares_per_1000_views`,
+  `subs_per_1000_views`, `target_emotion`, `twist_phrase` (de `guion.json`) +
+  secciones de insights por shares y por emoción.
+- **`feedback_digest.py`** (nuevo): loop datos→prompt del ROADMAP §2.7. Leer
+  `performance_report.csv` y escribir `FEEDBACK_DIGEST.md` para la revisión
+  mensual del prompt.
+- **`mine_topics.py`** (nuevo): minería de temas. OJO: Reddit 403-ea esta red
+  (verificado hoy); la fuente que funciona es el autocompletado de YouTube
+  (`--no-reddit` para saltar Reddit). 104 candidatos en `topics_mined.txt`.
+- **`SERIES_PELAR_CABLE.md`**: plan de 5 episodios con la fórmula ganadora.
+  Ep. 1 = el quincena ya renderizado hoy (sin publicar aún); ep. 2 listo en
+  `scripts/korex-tarjeta-minimo.json`.
+- **Pendiente manual**: token de Analytics caducado — correr
+  `py performance_report.py` una vez y el navegador re-autoriza solo; después
+  `py feedback_digest.py` para llenar las secciones 1-2 del digest.
+
+---
+
 ## Actualizado: 9 ago 2026 — Regla 11 (investigaciones multiidioma) aplicada, también a KOREX
 
 **Esto lo hizo la sesión de Kimi, no la de Claude.** Contexto: Fabián pidió

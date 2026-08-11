@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import statistics
 from pathlib import Path
 
@@ -45,6 +46,53 @@ METRIC_FIELDS = [
     "impressions",
     "impressionsClickThroughRate",
 ]
+
+# columnas derivadas (10 ago 2026, ANALISIS_OUTLIERS_PROPIOS.md §6): los KPI que
+# el analisis de outliers propios exigio medir -- shares/1000 es LA palanca sin
+# explotar del corpus (mediana de shares = 0 en 51 videos) y la retencion NO
+# correlaciona con vistas (-0.127), asi que el ranking importante ya no es
+# retencion sino accion social por mil vistas.
+DERIVED_FIELDS = [
+    "shares_per_1000_views",
+    "subs_per_1000_views",
+    # etiquetas del guion (regla 11) para correlacionar emocion/giro -> shares:
+    # se leen del guion.json que pipeline.py guarda en cada carpeta de output
+    "target_emotion",
+    "twist_phrase",
+]
+
+ROOT = Path(__file__).resolve().parent
+
+
+def _resolve_out_dir(value: str) -> Path:
+    """Misma logica que experiments.resolve_out_dir: el log guarda solo el
+    nombre de la carpeta, hay que probar con y sin 'output/' delante."""
+    p = Path(value or "")
+    if p.is_absolute():
+        return p
+    direct = ROOT / value
+    if direct.exists():
+        return direct
+    return ROOT / "output" / value
+
+
+def _enrich_row(row: dict) -> None:
+    views = _num(row, "views")
+    shares = _num(row, "shares")
+    subs = _num(row, "subscribersGained")
+    if views and views > 0:
+        if shares is not None:
+            row["shares_per_1000_views"] = f"{shares / views * 1000:.2f}"
+        if subs is not None:
+            row["subs_per_1000_views"] = f"{subs / views * 1000:.2f}"
+    guion = _resolve_out_dir(row.get("output_dir", "")) / "guion.json"
+    if guion.exists():
+        try:
+            data = json.loads(guion.read_text(encoding="utf-8"))
+            row["target_emotion"] = data.get("target_emotion", "")
+            row["twist_phrase"] = data.get("twist_phrase", "")
+        except (OSError, json.JSONDecodeError):
+            pass
 
 
 def load_log() -> list[dict]:
@@ -83,6 +131,7 @@ def build_report(only_account: str | None = None) -> list[dict]:
             row["account"] = account
             for mf in METRIC_FIELDS:
                 row[mf] = m.get(mf, "")
+            _enrich_row(row)
             combined.append(row)
     return combined
 
@@ -168,6 +217,58 @@ def print_insights(rows: list[dict]) -> None:
             print(f"\n  {score_field} alto -> {high_avg:,.0f} vistas promedio")
             print(f"  {score_field} bajo -> {low_avg:,.0f} vistas promedio")
 
+    # 4. shares/1000 vistas: el KPI que manda desde el analisis de outliers
+    #    propios (9 ago 2026) -- cualquier video >5 shares entra a analisis
+    with_shares = [
+        r for r in scored if _num(r, "shares_per_1000_views") is not None
+    ]
+    if with_shares:
+        by_shares = sorted(
+            with_shares,
+            key=lambda r: _num(r, "shares_per_1000_views"),
+            reverse=True,
+        )
+        top_share = by_shares[0]
+        med_shares = statistics.median(
+            _num(r, "shares_per_1000_views") for r in by_shares
+        )
+        print(
+            f"\n  shares/1000 vistas (mediana={med_shares:.2f}): "
+            f"'{top_share.get('title', '')[:60]}' lidera con "
+            f"{_num(top_share, 'shares_per_1000_views'):.2f} "
+            f"({top_share.get('shares', '?')} shares en {top_share.get('views', '?')} vistas)"
+        )
+        outliers = [r for r in by_shares if (_num(r, "shares") or 0) >= 5]
+        if outliers:
+            print(
+                f"  OUTLIERS DE SHARES (>=5): {len(outliers)} video(s) -- "
+                + ", ".join(f"'{r.get('title', '')[:40]}'" for r in outliers[:5])
+            )
+
+    # 5. emocion objetivo del guion (regla 11) vs vistas/shares -- para
+    #    responder 'que emocion conviene provocar' con datos propios
+    with_emotion = [
+        r
+        for r in scored
+        if r.get("target_emotion") and _num(r, "views") is not None
+    ]
+    if len(with_emotion) >= 3:
+        by_emotion: dict[str, list[dict]] = {}
+        for r in with_emotion:
+            by_emotion.setdefault(r["target_emotion"], []).append(r)
+        print("\n  Por emocion objetivo (vistas mediana | shares/1000 mediana):")
+        for emo, group in sorted(
+            by_emotion.items(), key=lambda kv: len(kv[1]), reverse=True
+        ):
+            med_views = statistics.median(_num(r, "views") for r in group)
+            s1000 = [
+                _num(r, "shares_per_1000_views")
+                for r in group
+                if _num(r, "shares_per_1000_views") is not None
+            ]
+            med_s = f"{statistics.median(s1000):.2f}" if s1000 else "n/d"
+            print(f"    {emo:<10} n={len(group):<3} {med_views:>8,.0f} | {med_s}")
+
     if not any(r.get("impressions") for r in scored):
         print(
             "\n  (impressions/CTR no disponibles via API para esta cuenta -- para ver el "
@@ -194,7 +295,11 @@ def main() -> int:
         return 1
 
     out_path = Path(args.out)
-    fieldnames = LOG_FIELDS + [m for m in METRIC_FIELDS if m not in LOG_FIELDS]
+    fieldnames = (
+        LOG_FIELDS
+        + [m for m in METRIC_FIELDS if m not in LOG_FIELDS]
+        + [d for d in DERIVED_FIELDS if d not in LOG_FIELDS]
+    )
     with out_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()

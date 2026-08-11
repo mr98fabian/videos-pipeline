@@ -1951,6 +1951,53 @@ def _check_script_lint(
             )
 
 
+def _check_antislop_similarity(script: str, out_dir: Path) -> None:
+    """Check anti-AI-slop de variacion entre guiones (MINIATURAS_SHORTS_2026.md
+    §4 bonus coreano, aplicado 10 ago 2026): la politica 2026 de YouTube excluye
+    de monetizacion canales masivos y repetitivos con poca variacion entre
+    videos. Compara el guion nuevo contra los ultimos guiones YA renderizados
+    (guion.json de las carpetas output/ mas recientes) con shingles de 5
+    palabras (Jaccard). Como todo el lint, solo AVISA -- nunca bloquea."""
+    def shingles(text: str, n: int = 5) -> set:
+        words = re.findall(r"\w+", text.lower())
+        return {tuple(words[i : i + n]) for i in range(len(words) - n + 1)}
+
+    new = shingles(script)
+    if not new:
+        return
+    out_root = ROOT / "output"
+    if not out_root.exists():
+        return
+    candidates = sorted(
+        (
+            p
+            for p in out_root.glob("*/guion.json")
+            if p.parent.resolve() != out_dir.resolve()
+        ),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )[:10]
+    for p in candidates:
+        try:
+            old_script = json.loads(p.read_text(encoding="utf-8")).get("script", "")
+        except (OSError, json.JSONDecodeError, AttributeError) as e:
+            log("lint", f"anti-slop: no se pudo leer {p.parent.name} ({e}), se omite")
+            continue
+        old = shingles(old_script)
+        if not old:
+            continue
+        jaccard = len(new & old) / len(new | old)
+        if jaccard >= 0.10:
+            log(
+                "lint",
+                f"AVISO anti-slop: el guion comparte {jaccard:.0%} de "
+                f"shingles de 5 palabras con '{p.parent.name}' -- estructura "
+                "demasiado parecida entre videos consecutivos es justo lo "
+                "que la politica anti-AI-slop 2026 penaliza. Varia la "
+                "estructura (apertura, orden de beats, cierre), no solo el dato.",
+            )
+
+
 def _rate_to_kokoro_speed(rate: str) -> float:
     """Reusa el mismo --rate de edge-tts ('+8%', '-15%') como velocidad para
     Kokoro, asi no hace falta un flag nuevo: '+0%' o vacio = 1.0 normal."""
@@ -3107,6 +3154,20 @@ def _acquire_clips_loop(
             # sacaba una figura igualmente: la escena de cierre del bucle salio
             # como sticker recortado en vez de la misma foto de la escena 1, y
             # el empalme final->inicio dejo de existir.
+            # secundarios nombrados en el propio texto de la escena (la
+            # Bruja del Banco): su hoja madre viaja como referencia igual que
+            # la de Tadeo. Ver kx_cast.secondary_refs.
+            try:
+                import kx_cast as _kx
+
+                _sec_refs, _sec_lock = _kx.secondary_refs(term)
+                if _sec_refs:
+                    champ_refs = list(champ_refs) + _sec_refs
+                    if _sec_lock:
+                        term = f"{term}. {_sec_lock}"
+            except Exception as e:
+                log("media", f"clip {i + 1}/{n_clips}: secundarios no resueltos ({e})")
+
             explicit = i < len(char_terms)
             raw_char = (char_terms[i] if explicit else None) or None
             # KOREX: un character_term con forma "tadeo/codicia" nombra una pose
@@ -4939,6 +5000,123 @@ def add_real_photo_collages(
     return video_path
 
 
+def append_thumb_frame(video: Path, out_dir: Path, text: str, dur: float = 0.2) -> Path:
+    """Frame-miniatura horneado al final del render (MINIATURAS_SHORTS_2026.md,
+    aplicado 10 ago 2026): en Shorts la miniatura se BLOQUEA al publicar y solo
+    se puede elegir un frame desde la app movil, asi que se hornea un frame 9:16
+    diseñado (banda oscura + texto corto de alto contraste) en los ultimos ~0.2s
+    y se elige con el selector de frame al subir. En el feed nadie lo ve
+    (autoplay directo); trabaja en busqueda (+85% CTR) e inicio (+140% CTR) --
+    justo la superficie de los videos 'buscables' como el de pelar cable.
+    Trade-off aceptado y documentado: rompe la costura perfecta del loop de
+    --hook-max en ese punto (0.2s); la miniatura controlada vale mas que una
+    costura invisible."""
+    clips_dir = out_dir / "clips"
+    clips_dir.mkdir(exist_ok=True)
+    base = clips_dir / "thumb_frame_base.png"
+    # fondo: el loop_frame de assemble si existe (frame de escena LIMPIO, sin
+    # hook_card/subs/watermark encima). Si no, un frame a 1.0s (NO el frame 0:
+    # con --hook-max es el flash blanco de entrada, visto en el ep. 2, 10 ago).
+    loop_frame = clips_dir / "loop_frame.png"
+    if loop_frame.exists():
+        base = loop_frame
+    else:
+        run(["ffmpeg", "-y", "-ss", "1.0", "-i", str(video), "-vframes", "1", str(base)])
+    clean = text.replace("\\", "").replace("{", "(").replace("}", ")")
+    lines = _wrap_caption(clean, width_chars=18).split("\n")
+    # un drawtext POR LINEA, nunca textfile multilinea: este build de ffmpeg
+    # dibuja el \n como un cuadrado (tofu) al final de cada linea (visto en el
+    # render del ep. 2 de Pelando cable, 10 ago 2026)
+    font = "C\\:/Windows/Fonts/arialbd.ttf"
+    fontsize = 92
+    line_h = fontsize + 16
+    block_h = len(lines) * line_h - 16
+    band_h = block_h + 80
+    band_y = (HEIGHT - band_h) // 2
+    y_start = (HEIGHT - block_h) // 2
+    draw = f"drawbox=x=0:y={band_y}:w=iw:h={band_h}:color=black@0.72:t=fill"
+    for idx, line in enumerate(lines):
+        draw += (
+            f",drawtext=fontfile='{font}':text='{_drawtext_escape(line)}'"
+            f":fontcolor=white:fontsize={fontsize}:borderw=5:bordercolor=black@0.85"
+            f":x=(w-text_w)/2:y={y_start + idx * line_h}"
+        )
+    composed = clips_dir / "thumb_frame.png"
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(base.resolve()),
+            "-vf",
+            draw,
+            "-frames:v",
+            "1",
+            "-update",
+            "1",
+            str(composed.resolve()),
+        ],
+        cwd=clips_dir,
+    )
+    seg = clips_dir / "seg_thumb_frame.mp4"
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            "-loop",
+            "1",
+            "-i",
+            str(composed),
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=44100:cl=stereo",
+            "-t",
+            f"{dur:.3f}",
+            "-vf",
+            f"scale={WIDTH}:{HEIGHT},fps={FPS},setsar=1",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "21",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-ar",
+            "44100",
+            "-shortest",
+            str(seg),
+        ]
+    )
+    concat_txt = out_dir / "concat_thumb.txt"
+    concat_txt.write_text(
+        f"file '{video.name}'\nfile 'clips/{seg.name}'\n", encoding="utf-8"
+    )
+    out = out_dir / "video_thumb.mp4"
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            concat_txt.name,
+            "-c",
+            "copy",
+            out.name,
+        ],
+        cwd=out_dir,
+    )
+    return out
+
+
 # ------------------------------------------------------------------- MAIN
 
 
@@ -5152,6 +5330,17 @@ def main() -> int:
         help="Genera 5 ideas de tema nuevas (usando topics.txt como referencia) y termina",
     )
     parser.add_argument(
+        "--no-thumb-frame",
+        dest="thumb_frame",
+        action="store_false",
+        default=True,
+        help="No hornear el frame-miniatura diseñado en los ultimos 0.2s del "
+        "render (MINIATURAS_SHORTS_2026.md: la miniatura del Short se bloquea "
+        "al publicar y solo se elige un frame desde la app movil; el frame "
+        "horneado da control total en busqueda/inicio/canal). Default ON "
+        "desde el 10 ago 2026.",
+    )
+    parser.add_argument(
         "--auto",
         action="store_true",
         help="Modo automatico: toma el siguiente tema no usado de topics.txt "
@@ -5340,6 +5529,7 @@ def main() -> int:
             _check_ventana_critica(data["script"], data.get("payoffs"))
             _check_but_therefore(data["script"])
             _check_sentence_rhythm(data["script"])
+            _check_antislop_similarity(data["script"], out_dir)
             audio_path, words = with_retries(
                 generate_audio, data["script"], args.voice, args.rate, out_dir
             )
@@ -5480,6 +5670,15 @@ def main() -> int:
                 ]
             if collage_subjects and not args.no_collage and not silent_card_mode:
                 final = add_real_photo_collages(final, collage_subjects, out_dir)
+
+            # frame-miniatura horneado al final (10 ago 2026,
+            # MINIATURAS_SHORTS_2026.md): texto del hook_card (o titulo si no
+            # hay) sobre el primer frame, en los ultimos 0.2s -- elegir ese
+            # frame con el selector de la app movil al publicar.
+            if args.thumb_frame and not silent_card_mode:
+                thumb_text = (data.get("hook_card") or data.get("title") or "").strip()
+                if thumb_text:
+                    final = append_thumb_frame(final, out_dir, thumb_text)
     except Exception:
         if args.auto:
             _log_auto_failure(topic)
