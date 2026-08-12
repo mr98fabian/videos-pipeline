@@ -70,6 +70,7 @@ motion_graphics/public/archivo/
 *.bak
 performance_report.csv
 vidiq_key.txt
+piapi_key.txt
 assets/cache/
 assets/image_cache/
 assets/sticker_library/
