@@ -3646,6 +3646,7 @@ def assemble(
     hook_card: str | None = None,
     hook_card_mode: str = "overlay",
     hook_punch: bool = False,
+    music_file: str | None = None,
 ) -> Path:
     """durations: duracion por escena (de _scene_boundaries, cortes en fin de
     frase). Sin ella, reparto uniforme (comportamiento anterior).
@@ -3919,6 +3920,33 @@ def assemble(
     # mano un audio trending del nicho en el editor de Shorts de Studio, ver
     # memoria musica-trending-videos-solo-lectura). No caer al fallback de
     # libreria local en ese caso.
+    # PISTA ELEGIDA A MANO (12 ago 2026). El sorteo aleatorio entre las 12 de la
+    # biblioteca hacia que un canal de un video diario sonara siempre parecido y
+    # encima con pistas de otra epoca. `music_file` en el guion nombra el archivo
+    # (o la etiqueta de era del manifest) y manda sobre el sorteo.
+    if not music and music_file:
+        cand = MUSIC_DIR / music_file
+        if cand.exists():
+            music = cand
+        else:
+            import json as _json
+
+            try:
+                man = _json.loads((MUSIC_DIR / "manifest.json").read_text("utf-8"))
+            except Exception:
+                man = {}
+            porEra = [
+                MUSIC_DIR / n
+                for n, meta in man.items()
+                if isinstance(meta, dict) and music_file in (meta.get("era") or [])
+            ]
+            porEra = [p for p in porEra if p.exists()]
+            if porEra:
+                import random as _r
+
+                music = _r.choice(porEra)
+            else:
+                log("assembly", f"AVISO: musica '{music_file}' no encontrada")
     if not music and music_mood is not None:
         music = _pick_music(text=hook_card)
 
@@ -5633,6 +5661,9 @@ def main() -> int:
                     None
                     if (silent_card_mode or data.get("music") is False)
                     else data.get("music_mood")
+                ),
+                music_file=(
+                    data.get("music") if isinstance(data.get("music"), str) else None
                 ),
                 sfx_cues=sfx_cues,
                 durations=durations,
