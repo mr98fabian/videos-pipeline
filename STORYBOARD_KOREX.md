@@ -49,6 +49,13 @@ Traducido a reglas de producción, y esto es lo que pedías:
   problema propio: nuestros fondos llevan muebles, cortinas, textura de papel y
   sombreado. Zenn pone **un color plano y nada más**. Lo bonito puede estar
   restando comprensión — en los planos que **explican** algo, el fondo se vacía.
+
+  **Lo que NO se toca (decisión de Fabián, 12 ago):** el estilo de dibujo de
+  Tadeo se mantiene **siempre**, en todos los planos. Vaciar el fondo significa
+  quitar muebles, cortinas y ruido — **no** cambiar de estilo. Misma línea
+  entintada, mismo grano, mismo personaje; lo que desaparece es el decorado, no
+  el trazo. Un plano explicativo es Tadeo con su línea de siempre sobre un fondo
+  liso, nunca un vector plano de otro canal.
 - **Señalización:** destacar lo esencial libera capacidad mental. Es exactamente
   la **X roja gigante** que Zenn superpone a su propia ilustración, o una flecha,
   o un círculo. Barato, y es de lo poco que la evidencia respalda sin matices.
