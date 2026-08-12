@@ -38,6 +38,7 @@ leer nunca.
 | [[STORYBOARD_KOREX]] | Cómo se planifica cada plano: 絵コンテ, sincronía, jerarquía de planos |
 | [[PERSONAJE_MODEL_SHEET]] | Cómo se mantiene a Tadeo idéntico. Leer antes de generar cualquier lámina |
 | [[SERIES_PELAR_CABLE]] | La serie de episodios en marcha |
+| [[STORYBOARD_DOS_SUELDOS]] | El storyboard del primer largo: 104 planos sobre 30 imágenes |
 | [[INVESTIGACION_COSTE_ANIMACION]] | Qué cuesta animar y por qué solo se anima la apertura |
 
 ## 2. Cómo decide YouTube (distribución)

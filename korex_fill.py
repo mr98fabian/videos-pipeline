@@ -11,6 +11,14 @@ todos o se agotan las rondas.
 
     py korex_fill.py output/<carpeta>            # hasta 6 rondas
     py korex_fill.py output/<carpeta> --rondas 3
+    py korex_fill.py output/<carpeta> --espera 0 # sin pausa entre rondas
+
+ESPERA CRECIENTE ENTRE RONDAS (12 ago 2026). Reintentar en caliente no sirve
+cuando Flow se degrada: medido varias veces el mismo dia -- una tanda entera se
+va a gradiente y diez minutos despues un prompt trivial funciona a la primera.
+Los fallos vienen en RACHA, no sueltos. Por eso entre ronda y ronda se espera
+5, 10, 20 y luego 30 minutos: es la unica forma de que la carpeta se complete
+sola sin que nadie mire la pantalla.
 
 Despues, para rehacer el video con las escenas completas, el camino clasico
 (imagenes de Flow a pantalla completa). OJO: `korex_engine.py` esta RETIRADO
@@ -21,7 +29,11 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
+
+# minutos de espera antes de cada ronda a partir de la segunda
+ESPERAS_MIN = (5, 10, 20, 30)
 
 sys.stdout.reconfigure(encoding="utf-8")
 ROOT = Path(__file__).resolve().parent
@@ -37,6 +49,11 @@ def main() -> int:
     if "--rondas" in argv:
         k = argv.index("--rondas")
         rondas = int(argv[k + 1])
+        del argv[k : k + 2]
+    espera = None
+    if "--espera" in argv:
+        k = argv.index("--espera")
+        espera = int(argv[k + 1])
         del argv[k : k + 2]
     out_dir = Path(argv[0]).resolve()
     clips = out_dir / "clips"
