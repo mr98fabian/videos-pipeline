@@ -975,12 +975,17 @@ def _shared_session(aspect_ratio: str = "9:16", count: int = 1) -> FlowSession:
         s.__enter__()
         _SHARED = s
         atexit.register(close_session)
-    elif _SHARED.count != count:
+    elif _SHARED.count != count or _SHARED.aspect_ratio != aspect_ratio:
+        # EL ASPECTO TAMBIEN SE RECONFIGURA (12 ago 2026). La sesion se creaba
+        # con el aspecto de la primera llamada y lo conservaba para siempre: se
+        # pidieron 52 imagenes en 16:9 para el formato largo y salieron todas en
+        # 9:16, el del canal de Shorts, porque la sesion ya estaba abierta.
         _SHARED.count = count
+        _SHARED.aspect_ratio = aspect_ratio
         try:
             _SHARED._configure(_SHARED.mode)
         except Exception as e:
-            _log(f"no pude cambiar el numero de salidas a x{count}: {e}")
+            _log(f"no pude reconfigurar a {aspect_ratio} x{count}: {e}")
     return _SHARED
 
 
