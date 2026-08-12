@@ -142,6 +142,16 @@ Every number below was verified with vidIQ, not taken from the source video (`a1
 - Never regenerate an already-uploaded video to apply a new rule, even while it is still private; improvements start with the next script.
 
 ### The documentation corpus
+
+**Start at [INDEX.md](INDEX.md).** 48 markdown files live at the root and, until
+12 ago 2026, none of them linked to each other — so every session opened the
+three it happened to remember and missed the other forty-five. That cost real
+work the same day: titles were switched to questions on the strength of a stale
+memory that the channel's own data contradicts, and two research documents were
+written that duplicated existing ones. `INDEX.md` groups all 48 by theme, says
+when to read each, and — the part that matters — **lists the known conflicts and
+which document wins**. A `.md` that is not linked from the index is a file
+nobody will ever read.
 ~20 Spanish `.md` files at the root hold the channel strategy, not code docs. The ones that actually get consulted:
 - **`ESTADO_SESION.md` — READ THIS FIRST, before anything else.** The user runs two Claude sessions in parallel to stretch tokens, and this file is the handoff between them: what was just done, what is half-finished, what is next. **Update it before the session ends** (overwrite, don't append — history belongs in `HISTORIAL_MEJORAS.md`). Because two sessions can edit the same files, `git diff` before touching code the other session may have changed.
 - `HISTORIAL_MEJORAS.md` — the chronological research → change → where-it-shipped → hypothesis log. **Append an entry here whenever a change affects the output of a video.**
