@@ -72,6 +72,15 @@ def main() -> int:
                 if pose_txt:
                     term = f"{term}. Tadeo esta {pose_txt}"
                 prompt = f"{term}. {kx_cast.CHARACTER_LOCK}"
+            # SECUNDARIOS TAMBIEN AQUI (10 ago 2026). Este enganche vive en tres
+            # sitios (pipeline, korex_fill y el parcheo manual) y se olvido en
+            # los tres por separado: cada vez que faltaba, la Bruja del Banco
+            # volvia a salir de bruja de cuento en vez de banquera.
+            sec_refs, sec_lock = kx_cast.secondary_refs(term)
+            if sec_refs:
+                refs = list(refs) + [r for r in sec_refs if r not in refs]
+                if sec_lock:
+                    prompt = f"{prompt}. {sec_lock}"
             ok = fa.generate_image(
                 prompt,
                 clips / f"nb_{i}.png",
