@@ -36,6 +36,13 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 API = "https://api.piapi.ai/api/v1/task"
+# VARIANTE BARATA POR DEFECTO (12 ago 2026, ver INVESTIGACION_COSTE_ANIMACION.md).
+# El primer clip se genero con `seedance-2`, el buque insignia, y costo ~$2 por
+# 5s: estabamos pagando el modelo tope para hacer un empuje de camara sobre un
+# dibujo quieto. `seedance-2-mini` cuesta $0,084/s a 720p frente a $0,20/s --58%
+# menos-- y el modo de dos extremos esta en TODAS las variantes, asi que no se
+# pierde nada de la receta. Se cambia con --modelo si algun plano lo pide.
+MODELO = "seedance-2-mini"
 # 720p y no 1080p a proposito: la tarifa oficial se dispara en 1080p y el canal
 # ya publica escalando desde 768x1376, asi que no se gana nitidez real.
 RESOLUCION = "720p"
@@ -63,6 +70,7 @@ def animar(
     ultima: Path | None = None,
     segundos: int = 5,
     resolucion: str = RESOLUCION,
+    modelo: str = MODELO,
     timeout_s: int = 900,
 ) -> bool:
     """Crea el clip y lo baja. Devuelve False sin lanzar: una escena sin animar
@@ -76,7 +84,7 @@ def animar(
 
     payload = {
         "model": "seedance",
-        "task_type": "seedance-2",
+        "task_type": modelo,
         "input": {
             "prompt": movimiento,
             "mode": "first_last_frames",
@@ -96,7 +104,10 @@ def animar(
         print(f"[piapi] {r.status_code}: {r.text[:300]}")
         return False
     task_id = r.json()["data"]["task_id"]
-    print(f"[piapi] tarea {task_id} ({len(urls)} extremo(s), {segundos}s, {resolucion})")
+    print(
+        f"[piapi] tarea {task_id} ({modelo}, {len(urls)} extremo(s), "
+        f"{segundos}s, {resolucion})"
+    )
 
     limite = time.monotonic() + timeout_s
     while time.monotonic() < limite:
@@ -136,13 +147,15 @@ def main() -> int:
     out_dir = Path(argv[0])
     i = int(argv[1])
     hasta = None
-    segundos, resolucion = 5, RESOLUCION
+    segundos, resolucion, modelo = 5, RESOLUCION, MODELO
     if "--hasta" in argv:
         hasta = int(argv[argv.index("--hasta") + 1])
     if "--segundos" in argv:
         segundos = int(argv[argv.index("--segundos") + 1])
     if "--resolucion" in argv:
         resolucion = argv[argv.index("--resolucion") + 1]
+    if "--modelo" in argv:
+        modelo = argv[argv.index("--modelo") + 1]
 
     data = json.loads((out_dir / "script.json").read_text(encoding="utf-8"))
     movimientos = data.get("motion_terms") or []
@@ -156,6 +169,7 @@ def main() -> int:
         ultima=(clips / f"nb_{hasta}.png") if hasta is not None else None,
         segundos=segundos,
         resolucion=resolucion,
+        modelo=modelo,
     )
     return 0 if ok else 1
 
