@@ -38,5 +38,6 @@
   "hook_card": "En 1925 un estafador vendio la Torre Eiffel como chatarra.",
   "description": "Victor Lustig convencio a los chatarreros de Paris de que el gobierno iba a desarmar la Torre Eiffel. Y lo hizo dos veces. #historia #estafas",
   "music_mood": "comedic_tense",
-  "style": "Animacion vectorial plana estilo 'rubber hose' anos 30, ESTRICTAMENTE en blanco y negro puro con grises neutros: cero sepia, cero tono crema, cero papel amarillento, cero color de ningun tipo. Grano de film vintage y parpadeo sutil. Protagonista Tadeo el mapache con guantes blancos de boton. Formato VERTICAL 9:16."
+  "style": "Animacion vectorial plana estilo 'rubber hose' anos 30, ESTRICTAMENTE en blanco y negro puro con grises neutros: cero sepia, cero tono crema, cero papel amarillento, cero color de ningun tipo. Grano de film vintage y parpadeo sutil. Protagonista Tadeo el mapache con guantes blancos de boton. Formato VERTICAL 9:16.",
+  "music": false
 }

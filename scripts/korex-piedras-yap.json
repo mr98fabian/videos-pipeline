@@ -60,5 +60,6 @@
     "",
     "tadeo/senalando",
     "tadeo/grito"
-  ]
+  ],
+  "music": false
 }

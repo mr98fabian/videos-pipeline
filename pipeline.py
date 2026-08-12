@@ -5625,7 +5625,15 @@ def main() -> int:
                 audio_path,
                 ass_path,
                 out_dir,
-                music_mood=(None if silent_card_mode else data.get("music_mood")),
+                # `"music": false` en el guion apaga la musica de fondo sin
+                # tocar `music_mood`, que se sigue usando para el TONO de los
+                # SFX. KOREX la lleva apagada desde el 12 ago 2026: la
+                # biblioteca son 12 pistas y siempre sonaba a lo mismo.
+                music_mood=(
+                    None
+                    if (silent_card_mode or data.get("music") is False)
+                    else data.get("music_mood")
+                ),
                 sfx_cues=sfx_cues,
                 durations=durations,
                 watermark=args.watermark or None,

@@ -1,0 +1,51 @@
+{
+  "script": "El veintidos de mayo de dos mil diez, un programador compro dos pizzas por diez mil bitcoins. Pero las pago contento, como quien hace el negocio de su vida. Porque en dos mil diez, bitcoin no valia nada. Eran puntos de un foro, monedas de videojuego sin videojuego. Laszlo solo queria probar que servian para algo real, y ofrecio diez mil monedas por dos pizzas grandes. Un chico de diecinueve años acepto, pago las pizzas con su tarjeta, y se quedo los diez mil bitcoins. Ahi todos ganaban: pizza gratis, historia para el chico. Pero la parte que nadie cuenta es esta: no fueron dos pizzas. Laszlo siguio comprando pizza con bitcoin todo el verano, hasta gastar cien mil monedas. Cien mil. Hoy esas dos pizzas valen mas de mil millones de dolares, y cada veintidos de mayo el mundo celebra el Bitcoin Pizza Day. Laszlo dice que no se arrepiente: alguien tenia que comprar la primera pizza de la historia. Aunque le costara diez mil bitcoins.",
+  "payoffs": [
+    "diez mil bitcoins",
+    "las pago contento",
+    "se quedo los diez mil bitcoins",
+    "no fueron dos pizzas",
+    "cien mil monedas",
+    "mil millones de dolares"
+  ],
+  "target_emotion": "humor",
+  "twist_phrase": "no fueron dos pizzas",
+  "comment_cta": "Genio adelantado o el peor negocio de la historia? Dime tu bando abajo.",
+  "search_terms": [
+    "Tadeo character: close-up de la cara de Tadeo mirando dos pizzas grandes humeantes sobre una mesa de madera con un recibo que dice 10.000 BTC",
+    "Tadeo character: Tadeo levantando una porcion de pizza con sonrisa enorme, fondo blanco limpio",
+    "Tadeo character: Tadeo encogido de hombros con monedas digitales sin valor flotando a su alrededor",
+    "Tadeo character: pantalla de computadora vieja con un foro de internet del 2010 y monedas digitales flotando, Tadeo senalando la pantalla",
+    "Tadeo character: Tadeo escribiendo en un teclado viejo con monedas doradas saliendo de la pantalla hacia dos cajas de pizza",
+    "Tadeo character: un chico joven con tarjeta de credito en una mano y una montana de monedas doradas en la otra, Tadeo al lado mirando",
+    "Tadeo character: Tadeo y el chico chocando las manos sobre dos cajas de pizza abiertas, ambos sonriendo",
+    "Tadeo character: Tadeo con un dedo en alto frente a una pila de cajas de pizza vacias, gesto de espera que hay mas",
+    "Tadeo character: montanas de cajas de pizza apiladas hasta el techo con monedas doradas volando, ambiente de verano",
+    "Tadeo character: primer plano de una torre gigante de monedas doradas apiladas, la cara de Tadeo en shock al fondo",
+    "Tadeo character: fiesta con globos y una pizza gigante, Tadeo mirando un cartel de precio de mil millones de dolares",
+    "Tadeo character: Tadeo de pie tranquilo con una porcion de pizza y el pulgar arriba, gesto de no me arrepiento",
+    "Tadeo character: dos pizzas grandes humeantes sobre la misma mesa de madera de la primera escena, un momento despues, Tadeo mirandolas"
+  ],
+  "character_terms": [
+    "tadeo/explicando",
+    "tadeo/triunfo",
+    "tadeo/bolsillos",
+    "tadeo/explicando",
+    "tadeo/decidido",
+    "tadeo/picaro",
+    "tadeo/orgulloso",
+    "tadeo/senalando",
+    "tadeo/codicia",
+    "tadeo/grito",
+    "tadeo/confundido",
+    "tadeo/decidido",
+    "tadeo/bolsillos"
+  ],
+  "title": "Laszlo compro dos pizzas por 10.000 bitcoins (y las pago contento)",
+  "hook_card": "En 2010 un programador compro dos pizzas por 10.000 bitcoins. Y las pago contento.",
+  "hook_punch": "DOS PIZZAS, 10.000 BTC",
+  "description": "El 22 de mayo de 2010, Laszlo Hanyecz pago 10.000 bitcoins por dos pizzas. Hoy valen mas de mil millones de dolares y el mundo celebra el Bitcoin Pizza Day. Genio adelantado o el peor negocio de la historia? Dime tu bando abajo. #bitcoin #historia #finanzas #pizza",
+  "music_mood": "comedic_tense",
+  "style": "Animacion vectorial plana estilo 'rubber hose' anos 30, ESTRICTAMENTE en blanco y negro puro con grises neutros: cero sepia, cero tono crema, cero papel amarillento, cero color de ningun tipo. Grano de film vintage y parpadeo sutil. Protagonista Tadeo el mapache con guantes blancos de boton. Formato VERTICAL 9:16.",
+  "music": false
+}
