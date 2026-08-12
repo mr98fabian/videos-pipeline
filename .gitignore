@@ -103,3 +103,10 @@ _tmp_shorts_metrics.json
 
 # mapa guion -> proyecto de Flow (estado de ejecucion, no codigo)
 flow_projects.json
+
+# Obsidian: la config de la boveda SI se comparte (grafo, plugins,
+# carpetas excluidas); el estado de ventanas de cada uno, no.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.obsidian/plugins/

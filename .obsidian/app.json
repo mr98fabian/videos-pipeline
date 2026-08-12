@@ -1,0 +1,19 @@
+{
+  "alwaysUpdateLinks": true,
+  "newLinkFormat": "shortest",
+  "useMarkdownLinks": false,
+  "attachmentFolderPath": "assets/referencia",
+  "userIgnoreFilters": [
+    "output/",
+    "assets/cache/",
+    "assets/kx_cast/",
+    "assets/music/",
+    "assets/stickers/",
+    "tools/",
+    "motion_graphics/node_modules/",
+    ".flow_profile/",
+    "logs/",
+    "__pycache__/",
+    ".git/"
+  ]
+}
