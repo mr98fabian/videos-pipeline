@@ -22,22 +22,44 @@ selva.
 
 | Concepto | En idioma de Tadeo |
 |---|---|
-| Dinero | **los brillos** |
-| Sueldo / quincena | **la ronda** (lo que junta en una noche de rebusca) |
-| Ahorro | **la despensa** |
-| Fondo de emergencia | **la madriguera** |
-| Deuda | **el cepo** |
+| Dinero | **los verdes** |
+| Ahorro | **los verdes bajo el colchón** |
+| Invertir | **los verdes que salen a rebuscar** |
+| Sueldo / quincena | **la rebusca** |
+| Fondo de emergencia | **la despensa de invierno** |
+| Deuda | **la lata en el hocico** |
 | Interés | **la mordida** |
-| Interés compuesto | **la mordida que se muerde sola** |
-| Tarjeta de crédito | **el cubo sin fondo** |
-| Gastos hormiga | **las migas** |
-| Inflación | **el cubo que encoge** |
-| Banco | la casa de **la Bruja del Banco** (personaje ya existente) |
-| Bolsa / mercado | **el basurero grande** |
-| Burbuja | **la bolsa inflada** |
-| Riesgo | **el perro del patio** |
-| Impuestos | **el peaje del callejón** |
-| Quedarse sin dinero | **pelar cable** (jerga que ya es suya y ya ganó) |
+| Interés compuesto | **la mordida para la mordida** |
+| Gastos hormiga | **los mordisquitos** |
+| Tarjeta de crédito | **el bote ajeno** |
+| Inflación | **el bote más alto** |
+| Bolsa / mercado | **el callejón grande** |
+| Burbuja | **la bolsa que suena y está vacía** |
+| Riesgo | **la carretera** |
+| Estar sin dinero | **pelar cable** |
+
+### El aquelarre: todo el que te quita una parte
+
+Decisión de Fabián: lo que cobra, retiene o embarga se llama **bruja**, y en
+despectivo. No es adorno — le da al canal **un solo antagonista con muchas
+caras**, que es lo que permite que el espectador tome bando desde el segundo uno.
+
+| Quién | Cómo se llama |
+|---|---|
+| El banco | **la Bruja del Banco** (personaje ya dibujado, con hoja madre) |
+| Los impuestos | **la parte para las brujas** |
+| El sistema financiero entero | **el aquelarre** |
+| Las comisiones | **el pellizco de la bruja** |
+| Los cobradores de deuda vendida | **las brujas de cobranza** |
+
+**Ojo con una imprecisión que hay que asumir a sabiendas:** los impuestos no los
+cobra el banco. Meterlos en la misma familia es una licencia del canal —
+funciona narrativamente porque desde el bolsillo del espectador **se sienten
+igual**, pero conviene no decir nunca que el banco se queda los impuestos.
+
+**Nota sobre "los verdes":** Los Ecomonos usan "hojas verdes". Estamos a una
+palabra de su vocabulario; se asume a propósito porque "verdes" es jerga común
+en LATAM y no es invención suya.
 
 **Cómo se usa, y esto importa más que la lista:**
 
