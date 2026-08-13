@@ -47,6 +47,58 @@ diagnóstico: título/tema buscable + slang local, no la transición cómic
 
 ---
 
+## Actualizado: 12 ago 2026 — KOREX largo, referentes medidos y el idioma de Tadeo
+
+### Lo que está BLOQUEADO ahora mismo (leer primero)
+
+`output/2026-08-12-dos-sueldos/` tiene **la voz lista (8m47s, Qwen clonado a 145
+wpm)** y **47 de 52 imágenes, pero TODAS en 9:16** — el vídeo es largo y las
+necesita en **16:9**.
+
+Dos cosas se cruzaron:
+1. `_shared_session` aplicaba el aspecto **solo al crear** la sesión y luego lo
+   ignoraba; una sesión abierta antes para Shorts imponía el vertical. **Ya está
+   arreglado**, pero sin verificar.
+2. Flow volvió a negarse en seco (una prueba con "una silla en un cuarto vacío"
+   falló sin generar). Hasta que se recupere no se puede comprobar el arreglo.
+
+**Qué hacer al retomar:**
+```powershell
+py qa_personaje.py output/2026-08-12-dos-sueldos/storyboard --aspecto 16:9
+FLOW_IMAGE_MODEL="Nano Banana Pro" py <scratchpad>/gen_largo.py   # rondas con espera
+```
+Si siguen saliendo verticales con Flow ya funcionando, el fallo es la pestaña de
+aspecto: correr `py flow_automation.py --inspect` y revalidar el selector.
+
+### Lo hecho hoy (todo commiteado)
+
+- **[[ESTUDIO_REFERENTES]]** — Los Ecomonos (429k subs, mediana **245.834**
+  vistas, 92% de títulos con la misma firma, solo 4% preguntas) y Zenn (mediana
+  31k con un vídeo de 7,85M). Medido con la API y sus transcripciones.
+- **Los títulos-pregunta fueron un error mío** y está documentado: el ganador de
+  KOREX (9.668 vistas, 85,4%) es una promesa práctica. Los guiones ya llevan la
+  firma nueva; **los 5 vídeos subidos siguen con el título viejo**.
+- **[[IDIOMA_KOREX]]** — diccionario mapache y el aquelarre (todo el que cobra
+  es una bruja). **[[STORYBOARD_KOREX]]** — 絵コンテ, 6-8s por plano, una frase
+  un plano. **[[INDEX]]** — los 48 documentos enlazados y la tabla de conflictos.
+- **Curva de retención real del ganador**: 97,3% en el segundo 6 y **64,2% en el
+  9**. Ahí está el escalón, y el `relativeRetentionPerformance` arranca en 0,13:
+  ese vídeo ganó por el título, no por el gancho.
+- **PiAPI/Seedance cableado** (`piapi_animate.py`) y bajado a `seedance-2-mini`
+  tras medir que el clip costó ~$2. Solo se anima la apertura.
+- **Skill `qa-personaje`** + `qa_personaje.py`: comprueba formato/color/lámina/
+  repetidas y arma hojas de 6 a 340 px para mirar el personaje.
+- Música: fuera el sorteo, entra ragtime **CC0** (etiqueta `korex30s`).
+
+### Pendiente, por orden
+
+1. Desbloquear el 16:9 y completar las 52 imágenes.
+2. Revisar imagen a imagen con `qa-personaje` hasta que **todas** sean Tadeo.
+3. Montar el largo y **operar el segundo 6-9**, que es donde se cae el canal.
+4. Sacar las curvas de los otros 5 vídeos: ver si el escalón se repite.
+
+---
+
 ## Actualizado: 9 ago 2026 — Regla 11 (investigaciones multiidioma) aplicada, también a KOREX
 
 **Esto lo hizo la sesión de Kimi, no la de Claude.** Contexto: Fabián pidió
