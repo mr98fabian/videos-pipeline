@@ -49,26 +49,21 @@ diagnóstico: título/tema buscable + slang local, no la transición cómic
 
 ## Actualizado: 12 ago 2026 — KOREX largo, referentes medidos y el idioma de Tadeo
 
-### Lo que está BLOQUEADO ahora mismo (leer primero)
+### Dónde va el largo (desbloqueado)
 
-`output/2026-08-12-dos-sueldos/` tiene **la voz lista (8m47s, Qwen clonado a 145
-wpm)** y **47 de 52 imágenes, pero TODAS en 9:16** — el vídeo es largo y las
-necesita en **16:9**.
+`output/2026-08-12-dos-sueldos/` tiene la **voz lista (8m47s, Qwen clonado a 145
+wpm)** y las 52 imágenes regenerándose **en 16:9** (verificado: 1376x768).
 
-Dos cosas se cruzaron:
-1. `_shared_session` aplicaba el aspecto **solo al crear** la sesión y luego lo
-   ignoraba; una sesión abierta antes para Shorts imponía el vertical. **Ya está
-   arreglado**, pero sin verificar.
-2. Flow volvió a negarse en seco (una prueba con "una silla en un cuarto vacío"
-   falló sin generar). Hasta que se recupere no se puede comprobar el arreglo.
+Dos cosas que costaron la tarde y no hay que volver a descubrir:
 
-**Qué hacer al retomar:**
-```powershell
-py qa_personaje.py output/2026-08-12-dos-sueldos/storyboard --aspecto 16:9
-FLOW_IMAGE_MODEL="Nano Banana Pro" py <scratchpad>/gen_largo.py   # rondas con espera
-```
-Si siguen saliendo verticales con Flow ya funcionando, el fallo es la pestaña de
-aspecto: correr `py flow_automation.py --inspect` y revalidar el selector.
+1. `_shared_session` aplicaba el aspecto **solo al crear** la sesión; una sesión
+   abierta antes para Shorts imponía el vertical a todo lo demás. Arreglado.
+2. **Nunca dos trabajos de Flow a la vez.** Comparten `.flow_profile`, y el
+   segundo falla sin explicación. Se dio Flow por caído cuando en realidad era
+   un trabajo propio en segundo plano.
+
+Y una que sí funcionó: **las rondas con espera convergen solas**. La tanda
+anterior llegó a 52/52 entrando en la ronda 4 tras esperar 20 minutos.
 
 ### Lo hecho hoy (todo commiteado)
 

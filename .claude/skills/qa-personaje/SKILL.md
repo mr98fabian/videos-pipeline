@@ -43,6 +43,14 @@ Comparar contra `assets/characters/tadeo/default_model_sheet.png`. Rechazar si:
 6. **Texto incrustado**, aunque sea un cartel de atrezo.
 7. **La escena no corresponde** a la frase que suena (mirar el storyboard).
 
+## Nunca dos trabajos de Flow a la vez
+
+Todos los procesos comparten `.flow_profile`. Si lanzas una generación mientras
+otra sigue viva, la segunda falla sin explicación y **parece que Flow se cayó o
+que se agotó la cuota**. Pasó el 12 ago: se dio por caído el servicio y en
+realidad era un trabajo propio en segundo plano. Antes de lanzar, comprobar que
+no hay otro corriendo.
+
 ## Regenerar, y con qué
 
 ```bash
