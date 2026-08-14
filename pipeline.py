@@ -3165,6 +3165,11 @@ def _acquire_clips_loop(
                     champ_refs = list(champ_refs) + _sec_refs
                     if _sec_lock:
                         term = f"{term}. {_sec_lock}"
+                # figuras historicas (Newton y demas): no hay hoja madre que
+                # mandar, asi que la identidad viaja entera en palabras
+                _hist = _kx.historical_lock(term)
+                if _hist:
+                    term = f"{term}. {_hist}"
             except Exception as e:
                 log("media", f"clip {i + 1}/{n_clips}: secundarios no resueltos ({e})")
 

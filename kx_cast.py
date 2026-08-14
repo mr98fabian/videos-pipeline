@@ -345,6 +345,39 @@ SECONDARY_LOCK = {
 }
 
 
+# FIGURAS HISTORICAS (14 ago 2026). No tienen hoja madre --no son del reparto--
+# pero tampoco valen "un senor con peluca": si el guion dice Newton, el
+# espectador tiene que reconocer a Newton en el primer cuarto de segundo, igual
+# que reconoce a Tadeo. Se dibujan CARICATURIZADAS en el estilo de la casa, no
+# como retrato al oleo, y la identidad la llevan dos o tres rasgos por los que
+# esa cara se recuerda -- no un parecido fotografico, que en caricatura ni
+# siquiera es el objetivo.
+FIGURAS_HISTORICAS = {
+    "newton": (
+        "long white curly wig down to the shoulders, long oval face, straight "
+        "prominent nose, heavy brow, serious unimpressed expression, 18th "
+        "century velvet coat with wide cuffs and a lace cravat"
+    ),
+}
+HISTORICAL_LOCK = (
+    "Historical figure drawn as a CARICATURE in exactly the same house style as "
+    "Tadeo -- hand-inked black and white, 1930s rubber hose cartoon, brush line "
+    "of varying weight -- never a realistic portrait, never an oil painting, "
+    "never a photograph. Exaggerated features but INSTANTLY recognisable as the "
+    "real person: {rasgos}. His face must be visible, front or three-quarter "
+    "view, never from behind."
+)
+
+
+def historical_lock(term: str) -> str:
+    """Bloque de identidad de la figura historica nombrada en la escena, o ''."""
+    t = (term or "").lower()
+    for nombre, rasgos in FIGURAS_HISTORICAS.items():
+        if nombre in t:
+            return HISTORICAL_LOCK.format(rasgos=rasgos)
+    return ""
+
+
 def secondary_refs(term: str) -> tuple[list[Path], str]:
     """Hojas madre de los secundarios nombrados en el texto de la escena, y el
     bloque de identidad que hay que pegar en el prompt."""

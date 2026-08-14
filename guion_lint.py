@@ -83,10 +83,14 @@ def analizar(guion: str) -> dict:
                 collections.Counter(zip(cont, cont[1:])).most_common()
                 if v >= TOPE_BIGRAMA]
 
-    # frases que vuelven a decir la tesis (la de apertura)
+    # frases que vuelven a decir la tesis (la de apertura). LA ULTIMA NO CUENTA:
+    # el guion DEBE cerrar sobre las palabras del gancho para que el bucle no
+    # tenga costura (regla del canal, medida: 3,76 -> 2,89 de retencion en el
+    # unico video con bucle, frente a 0,08 en los que cierran con resumen). Sin
+    # esta excepcion el lint pedia romper justo lo que mejor funciona.
     base = set(_contenido(frases[0])) if frases else set()
     ecos = []
-    for f in frases[1:]:
+    for f in frases[1:-1]:
         s = set(_contenido(f))
         if len(s) >= MIN_CONTENIDO_ECO and base and \
                 len(s & base) / len(s) >= SOLAPE_TESIS:
