@@ -95,13 +95,19 @@ CHARACTER_LOCK = (
     "with no fur tufts or spikes along the silhouette; the eye mask is a single "
     "solid dark band across both eyes, wider than tall; chest, belly and muzzle "
     "are one flat cream tone, never white and never grey; tail has exactly four "
-    "dark rings; gloves have four fingers; NO clothing of any kind; when the "
+    "dark rings; gloves have four fingers; when the "
     "mouth is open it is a plain dark shape with at most one simple tongue, "
     "never rows of individual pointed teeth. "
-    "Keep the character identical and change ONLY the pose and "
+    # LA ROPA SI ESTA PERMITIDA (13 ago 2026, decision de Fabian). Antes se
+    # prohibia de raiz porque una chaqueta era la senal mas facil de "esto ya no
+    # es Tadeo". Pero prohibirla no era la regla: la regla es que la CARA se
+    # reconozca. Lo que se rechaza es un mapache que no es el, lleve o no lleve
+    # ropa; y si lleva, la cabeza sigue siendo exactamente esta.
+    "He MAY wear clothes when the scene calls for it, but his head is never "
+    "restyled: same mask, same muzzle, same eyes, same proportions. "
+    "Keep the character identical and change ONLY the pose, the clothes and "
     "the background. Do not redesign him, do not restyle him, do not make him "
-    "realistic or furry, do not add or remove clothing that the reference does "
-    "not have. Draw ONE single character in a real scene: never a character "
+    "realistic or furry. Draw ONE single character in a real scene: never a character "
     "sheet, never a turnaround, no rows of extra heads or faces, no floating "
     "detached hands, gloves or tails anywhere in the frame. "
     "ANATOMY: exactly two arms and two gloved hands, one head, one tail. If he "

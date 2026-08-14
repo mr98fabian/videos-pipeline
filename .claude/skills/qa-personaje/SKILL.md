@@ -36,12 +36,15 @@ fue como se colaron los tres brazos de la Bruja.
 
 Comparar contra `assets/characters/tadeo/default_model_sheet.png`. Rechazar si:
 
-1. **Lleva ropa.** Tadeo va desnudo, siempre. Chaquetas, gorros y uniformes son
-   el fallo más repetido.
-2. **La cara no es la suya**: hocico alargado, antifaz distinto, ojos de otro
-   tamaño, orejas puntiagudas. Si dudas, está fuera.
-3. **No es un mapache**: han salido ardillas y gatos.
-4. **Hay más de un protagonista** en el cuadro, o clones suyos de fondo.
+1. **La cara no es la suya**: hocico alargado, antifaz distinto, ojos de otro
+   tamaño, orejas puntiagudas. Si dudas, está fuera. **Este es el único criterio
+   que importa de verdad** — el espectador reconoce a Tadeo por la cabeza.
+   *La ropa está permitida* (decisión de Fabián, 13 ago 2026): puede llevar
+   chaqueta o gorra si la escena lo pide. Lo que no puede es cambiar de cara.
+   Y la regla vale solo para **él**: el vecino, la multitud y los secundarios no
+   tienen por qué parecerse a Tadeo, solo ser mapaches del mismo estilo.
+2. **No es un mapache**: han salido ardillas y gatos.
+3. **Hay más de un protagonista** en el cuadro, o clones suyos de fondo.
 5. **Manos o brazos de más.** Contarlos, literalmente: dos manos.
 6. **Texto incrustado**, aunque sea un cartel de atrezo.
 7. **La escena no corresponde** a la frase que suena (mirar el storyboard).
@@ -74,14 +77,12 @@ ya está medido:
   mínimo —especie, nada de ropa, guantes de cuatro dedos— porque sin él se cuelan
   overoles y gatos negros. Medido el 13 ago: **15 de 19 rechazos** venían de ahí,
   no de los planos de Tadeo.
-- **La regla de "nada de ropa" va en TODOS los prompts, no solo en los que
-  nombran al personaje.** Segunda vuelta del mismo día: 9 de 14 imágenes
-  rehechas volvieron con gorra, chaleco o bombín. Eran los planos de *objetos*
-  —una red enrollada, una pila de platos, un calendario— cuyo texto no dice ni
-  "Tadeo" ni "mapache", así que caían en una tercera rama sin ninguna regla. El
-  estilo de la casa es toon vintage y, dejado a su aire, el modelo viste a sus
-  personajes: pone un mapache con sombrero aunque nadie se lo haya pedido. La
-  identidad no puede depender de que el texto de la escena nombre al personaje.
+- **Las reglas van en TODOS los prompts, no solo en los que nombran al
+  personaje.** Los planos de *objetos* —una red enrollada, una pila de platos,
+  un calendario— no dicen ni "Tadeo" ni "mapache", así que caían en una tercera
+  rama sin ninguna regla, y el modelo metía por su cuenta un mapache con
+  sombrero. Da igual qué regla sea: si el prompt no la lleva, el estilo decide
+  por ti.
 - Si un plano falla tres veces seguidas, **cambiar el plano, no insistir**. La
   escena de las monedas falló seis veces hasta que se quitó la mano del prompt:
   el plano era de las monedas, no de quién las sostenía.

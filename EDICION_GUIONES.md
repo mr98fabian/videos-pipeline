@@ -254,3 +254,36 @@ en 1-2 (nada de fade out suave: el final débil mata el rewatch).
 | Kinetic typography de cifras | Poco | **Central** (ROADMAP 4.2) | Poco |
 | Loop hook-final | Siempre | Siempre | Siempre |
 | CTA de comentario polarizante | "¿Tú también o solo yo?" | "¿Team X o team Y?" | "¿De qué personaje quieres el lore?" |
+
+---
+
+## 4. Redundancia dentro de un guion (13 ago 2026)
+
+Feedback de Fabián sobre el largo de "Dos sueldos": *"me gustó, pero me parece
+que repite una y otra vez lo mismo"*. No era impresión, era medible: en 1.273
+palabras, **"casa" 24 veces, "rebusca/rebuscas" 24, "mano" 13**, y la frase
+entera *"la casa de tus papás"* cinco veces.
+
+**El problema no es el vocabulario, es la estructura.** El guion re-enunciaba la
+tesis en vez de avanzar el argumento. En 60 segundos repetir el ancla ayuda —el
+espectador entra a mitad y necesita saber de qué va—; en nueve minutos, la misma
+repetición se lee como relleno y da permiso para irse.
+
+**Regla:** la tesis se enuncia al principio y se cierra al final. En medio, cada
+frase añade algo que no se dijo antes: un dato, una consecuencia, un giro. Si
+una frase se puede borrar sin perder información, sobra.
+
+Comprobación antes de producir:
+
+```bash
+py guion_lint.py scripts/<guion>.json
+```
+
+Marca palabras de contenido repetidas de más (tope: 0,8% del guion, con suelo de
+5 usos para no penalizar los Shorts), frases hechas repetidas 3+ veces y frases
+que reformulan la de apertura. El nombre del personaje no cuenta: repetir
+"Tadeo" es identidad, no redundancia. Los Shorts del canal pasan limpios; el
+largo salta en las tres categorías, que es justo lo que se notaba al verlo.
+
+Es distinto de `_check_antislop_similarity` de `pipeline.py`, que compara un
+guion con el **anterior**. Este mira **dentro** de uno solo.
