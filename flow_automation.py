@@ -130,6 +130,45 @@ _last_submit = 0.0
 REFUSAL_GRACE_S = float(os.getenv("FLOW_REFUSAL_GRACE", "75"))
 
 
+# Proyecto fijo por canal. El personaje registrado en Flow vive dentro de UN
+# proyecto, asi que el proyecto pasa a ser parte de la identidad del canal y no
+# un contenedor desechable. Se guarda en disco (estado de ejecucion, como
+# used_topics.json) y se puede forzar con FLOW_PROJECT_URL.
+FLOW_PROJECTS_FILE = Path(__file__).parent / "flow_projects.json"
+FLOW_PROJECT_KEY = os.getenv("FLOW_PROJECT", "korex")
+
+
+def _pinned_project() -> str | None:
+    url = os.getenv("FLOW_PROJECT_URL", "").strip()
+    if url:
+        return url
+    try:
+        import json
+
+        return json.loads(FLOW_PROJECTS_FILE.read_text("utf-8")).get(FLOW_PROJECT_KEY)
+    except Exception:
+        return None
+
+
+def _pin_project(url: str) -> None:
+    """Escritura atomica: una corrida programada y una manual pueden coincidir."""
+    import json
+    import tempfile
+
+    try:
+        datos = json.loads(FLOW_PROJECTS_FILE.read_text("utf-8"))
+    except Exception:
+        datos = {}
+    if datos.get(FLOW_PROJECT_KEY) == url:
+        return
+    datos[FLOW_PROJECT_KEY] = url
+    fd, tmp = tempfile.mkstemp(dir=str(FLOW_PROJECTS_FILE.parent), suffix=".tmp")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, FLOW_PROJECTS_FILE)
+    _log(f"proyecto de '{FLOW_PROJECT_KEY}' fijado: {url}")
+
+
 def is_logged_in() -> bool:
     return FLOW_PROFILE_DIR.exists() and any(FLOW_PROFILE_DIR.iterdir())
 
@@ -332,18 +371,34 @@ class FlowSession:
 
     def _open_project(self) -> None:
         page = self._page
-        if self.project_url:
-            page.goto(self.project_url, timeout=60_000)
-        else:
-            page.goto(FLOW_URL, timeout=60_000)
+        # PROYECTO FIJO POR CANAL (14 ago 2026). Antes cada corrida abria un
+        # "Proyecto nuevo", y con el build nuevo eso dejo de ser inocuo: los
+        # PERSONAJES de Flow --lo que mantiene a Tadeo identico sin mandar
+        # laminas-- viven DENTRO del proyecto donde se crearon, y el selector
+        # solo lista el proyecto actual. Con un proyecto por corrida el
+        # personaje nunca vuelve a estar al alcance: medido hoy, dos intentos
+        # dieron un nino humano en overol porque la referencia no se engancho.
+        url = self.project_url or _pinned_project()
+        if url:
             try:
-                page.wait_for_load_state("networkidle", timeout=25_000)
-            except Exception:
-                pass
-            page.get_by_text("Proyecto nuevo", exact=False).first.click(timeout=20_000)
+                page.goto(url, timeout=60_000)
+                page.wait_for_selector(SEL_PROMPT, timeout=30_000)
+                page.wait_for_timeout(2500)
+                self.project_url = page.url
+                return
+            except Exception as e:
+                # el proyecto fijado pudo borrarse a mano; no bloquear por eso
+                _log(f"no pude abrir el proyecto fijado ({e}); creo uno nuevo")
+        page.goto(FLOW_URL, timeout=60_000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=25_000)
+        except Exception:
+            pass
+        page.get_by_text("Proyecto nuevo", exact=False).first.click(timeout=20_000)
         page.wait_for_selector(SEL_PROMPT, timeout=30_000)
         page.wait_for_timeout(2500)
         self.project_url = page.url
+        _pin_project(self.project_url)
 
     # -- configuracion -------------------------------------------------------
 
