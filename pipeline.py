@@ -4591,6 +4591,97 @@ def _photo_sticker(query: str, clips_dir: Path, tag: str) -> str | None:
     return None
 
 
+SIGNOS_DIR = Path(__file__).resolve().parent / "assets" / "signos_korex"
+# Que signo pide cada momento. Se busca por palabra narrada, no por escena: el
+# signo tiene que caer EN la palabra, como el golpe de un baterista.
+_SIGNO_POR_PALABRA = {
+    "exclamacion": ("nunca", "jamas", "nadie", "todo", "cero", "gratis"),
+    "interrogacion": ("por que", "como", "cuanto", "quien", "acaso"),
+    "estrella_golpe": ("perdio", "quebro", "estallo", "reviento", "cayo"),
+    "gota_sudor": ("deuda", "deudas", "debe", "pagar", "prestamo"),
+    "nube_humo": ("humo", "burbuja", "aire", "nada"),
+    "corazon_roto": ("papas", "familia", "casa", "hijos"),
+    "flecha": ("subio", "bajo", "mira", "aqui", "esto"),
+}
+
+
+def add_korex_signs(
+    video_path: Path,
+    out_dir: Path,
+    words: list[tuple[float, float, str]] | None,
+    max_signos: int = 3,
+) -> Path:
+    """Signos de emocion entintados sobre la palabra que los pide (情緒元素).
+
+    Sustituye a los stickers de emoji en KOREX. Tres decisiones, todas de
+    MOTION_TEXTO_2026.md:
+      - DIBUJADOS en el estilo del canal, no pictogramas del sistema: un emoji
+        vectorial moderno sobre tinta de 1930 es un injerto, y era el 20 de 24
+        escenas del corto de Newton.
+      - DOS O TRES POR VIDEO, no uno por escena. El criterio japonés: el
+        acabado se mide por cuánto ruido quitaste.
+      - Sobre la palabra exacta, con el timestamp real del TTS.
+
+    Nunca bloquea el render: si no hay libreria o falla ffmpeg, devuelve el
+    video tal cual.
+    """
+    if not words or not SIGNOS_DIR.exists():
+        return video_path
+    elegidos: list[tuple[float, Path]] = []
+    usados: set[str] = set()
+    for ini, _fin, palabra in words:
+        if len(elegidos) >= max_signos:
+            break
+        if ini < 2.5:  # los dos primeros segundos son de la hook card
+            continue
+        w = _norm_word(palabra)
+        for signo, claves in _SIGNO_POR_PALABRA.items():
+            if signo in usados or w not in claves:
+                continue
+            p = SIGNOS_DIR / f"{signo}.png"
+            if p.exists() and (not elegidos or ini - elegidos[-1][0] > 6.0):
+                elegidos.append((ini, p))
+                usados.add(signo)
+            break
+    if not elegidos:
+        return video_path
+
+    # en out_dir, no en clips/: el paso de la miniatura arma su lista de
+    # concat con el NOMBRE del archivo y corre con cwd=out_dir
+    dst = out_dir / "video_con_signos.mp4"
+    cmd = ["ffmpeg", "-y", "-i", str(video_path)]
+    for _t, p in elegidos:
+        cmd += ["-loop", "1", "-t", "1.0", "-i", str(p)]
+    partes, prev = [], "[0:v]"
+    for k, (t, _p) in enumerate(elegidos, start=1):
+        lado = "W-w-70" if k % 2 else "70"
+        y = int(HEIGHT * (0.22 if k % 2 else 0.62))
+        # colorkey sobre el papel blanco del signo; el trazo negro sobrevive
+        partes.append(
+            f"[{k}:v]scale={int(WIDTH * 0.26)}:-1,colorkey=0xFFFFFF:0.30:0.08,"
+            f"format=yuva420p,fade=t=in:st=0:d=0.12:alpha=1,"
+            f"fade=t=out:st=0.75:d=0.25:alpha=1[s{k}];"
+        )
+        etiqueta = f"[v{k}]" if k < len(elegidos) else "[vout]"
+        partes.append(
+            f"{prev}[s{k}]overlay=x={lado}:y={y}:"
+            f"enable='between(t,{t:.2f},{t + 1.0:.2f})'{etiqueta};"
+        )
+        prev = etiqueta
+    filtro = "".join(partes).rstrip(";")
+    cmd += ["-filter_complex", filtro, "-map", "[vout]", "-map", "0:a?",
+            "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+            "-pix_fmt", "yuv420p", "-c:a", "copy", str(dst)]
+    try:
+        run(cmd, timeout=1800)
+    except Exception as e:
+        log("signos", f"no pude componer los signos ({e}); sigo sin ellos")
+        return video_path
+    log("signos", f"{len(elegidos)} signos entintados: "
+                  f"{', '.join(p.stem for _t, p in elegidos)}")
+    return dst
+
+
 def _franja_libre(
     primer_clip: Path | None, n_lineas: int, gap: int, default_y: int = 300
 ) -> int:
@@ -4615,9 +4706,18 @@ def _franja_libre(
             g = im.convert("L").resize((160, 284))
         y_min = int(284 * 0.10)
         y_max = int(284 * 0.80) - int(alto_texto / HEIGHT * 284)
+        # LA BANDA MAS VACIA NO BASTA (14 ago 2026). En un primer plano no hay
+        # ninguna banda vacia, asi que la de "menos detalle" acababa cruzando
+        # los ojos -- medido en la escena 1 de Newton, exactamente el error que
+        # la investigacion manda evitar. En vertical, la cara cae casi siempre
+        # entre el 25% y el 60% del alto: esa franja queda prohibida y el texto
+        # se va arriba (frente, cielo, fondo) o abajo (torso, suelo).
+        prohibido = (int(284 * 0.25), int(284 * 0.60))
         mejor, mejor_var = None, None
+        alto = max(int(alto_texto / HEIGHT * 284), 8)
         for y in range(y_min, max(y_max, y_min + 1), 6):
-            alto = max(int(alto_texto / HEIGHT * 284), 8)
+            if y + alto > prohibido[0] and y < prohibido[1]:
+                continue
             banda = g.crop((0, y, 160, min(y + alto, 284)))
             var = ImageStat.Stat(banda).stddev[0]
             if mejor_var is None or var < mejor_var:
@@ -5596,14 +5696,22 @@ def main() -> int:
     # esta sesion pasaron el chequeo "existe video.mp4" ANTES de que ninguna
     # hubiera escrito el archivo, y terminaron pisandose los inputs a mitad
     # de render).
-    suffix = 2
-    while True:
-        try:
-            out_dir.mkdir(parents=True, exist_ok=False)
-            break
-        except FileExistsError:
-            out_dir = OUTPUT_ROOT / f"{base_slug}-{suffix}"
-            suffix += 1
+    # RE-MONTAR ES VOLVER A LA MISMA CARPETA (14 ago 2026). Con
+    # --reusar-imagenes lo que se quiere es rehacer el montaje de un video ya
+    # generado; crear una carpeta nueva la dejaria sin las nb_*.png que
+    # justamente se querian reusar, y el flag no serviria de nada.
+    if args.reusar_imagenes and out_dir.exists():
+        log("montaje", f"re-montando sobre {out_dir.name} (--reusar-imagenes)")
+        out_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        suffix = 2
+        while True:
+            try:
+                out_dir.mkdir(parents=True, exist_ok=False)
+                break
+            except FileExistsError:
+                out_dir = OUTPUT_ROOT / f"{base_slug}-{suffix}"
+                suffix += 1
     _atomic_write_json(out_dir / "script.json", data)
 
     # Tres generadores (4 ago 2026): Flow por navegador (gratis con la cuenta
@@ -5834,6 +5942,8 @@ def main() -> int:
             # corrida es exactamente como se cuelan estas cosas.
             _es_korex = str(args.voice or "").startswith(QWEN_VOICE_PREFIXES)
             usa_stickers = bool(data.get("stickers", not _es_korex))
+            if _es_korex and not silent_card_mode and not args.no_motion:
+                final = add_korex_signs(final, out_dir, words)
             if not silent_card_mode and not args.no_motion and usa_stickers:
                 final = add_scene_stickers(
                     final,
