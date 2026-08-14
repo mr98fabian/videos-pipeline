@@ -33,15 +33,23 @@ def question_from_guion(out_dir: Path) -> str | None:
     2026): pregunta de eleccion escrita por el generador expresamente para el
     comentario fijado. Es la fuente preferida cuando existe; la descripcion
     queda como fallback para videos anteriores a ese cambio."""
-    gj = out_dir / "guion.json"
-    if not gj.exists():
-        return None
-    try:
-        data = json.loads(gj.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
-    cta = (data.get("comment_cta") or "").strip()
-    return cta or None
+    # `script.json` tambien vale (14 ago 2026). `guion.json` lo escribe el
+    # generador de Shorts; los videos escritos a mano --y todo el formato
+    # largo-- dejan el suyo como `script.json`, con el mismo campo dentro. Sin
+    # esto, el primer largo de KOREX se quedaba sin comentario fijado por un
+    # nombre de archivo.
+    for nombre in ("guion.json", "script.json"):
+        f = out_dir / nombre
+        if not f.exists():
+            continue
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        cta = (data.get("comment_cta") or "").strip()
+        if cta:
+            return cta
+    return None
 
 
 def extract_question(description: str) -> str | None:
