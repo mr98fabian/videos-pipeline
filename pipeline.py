@@ -1383,6 +1383,33 @@ def _starts_with_why(text: str) -> bool:
     return t.startswith("why") or t.startswith("por que") or t.startswith("por qué")
 
 
+def _check_hook_card_distinta(script: str, hook_card: str) -> None:
+    """La hook card NO puede ser la primera frase del guion copiada.
+
+    Pedido de Fabian, 14 ago 2026: *"el hook card no debe ser exactamente lo que
+    dice el guion, debe explicar el video pero con otras palabras"*. Tiene
+    fundamento: durante ~1,5 s el espectador esta LEYENDO y OYENDO lo mismo, o
+    sea que la pantalla no aporta nada -- es el efecto de redundancia de Mayer,
+    dos canales gastados en un solo dato. Con otras palabras, la tarjeta suma
+    una capa: la voz cuenta y el texto promete.
+    """
+    if not (script and hook_card):
+        return
+    primera = re.split(r"(?<=[.!?])\s+", script.strip())[0]
+    a = {_norm_word(w) for w in primera.split() if _norm_word(w)}
+    b = {_norm_word(w) for w in hook_card.split() if _norm_word(w)}
+    if not a or not b:
+        return
+    solape = len(a & b) / len(b)
+    if solape >= 0.7:
+        log(
+            "lint",
+            f"AVISO: la hook_card repite {solape:.0%} de la primera frase narrada. "
+            f"Debe explicar el video con OTRAS palabras: mientras se lee, la voz "
+            f"ya lo esta diciendo, y la pantalla no suma nada.",
+        )
+
+
 def _check_open_hook(
     script: str, title: str, hook_card: str, formato: str = ""
 ) -> None:
@@ -4051,27 +4078,44 @@ def assemble(
     hook_card_filter = ""
     if hook_card:
         card_clean = hook_card.replace("\\", "").replace("{", "(").replace("}", ")")
-        card_lines = _wrap_caption(card_clean, width_chars=22).split("\n")
-        c_gap = 78
+        # REDISENO 14 ago 2026 (ver MOTION_TEXTO_2026.md). La version anterior
+        # --barra negra solida, tres lineas, centrada sobre la cara-- cometia a
+        # la vez los cuatro errores que las cinco fuentes consultadas señalan
+        # como el sello del video casero. Los numeros de aqui no son gusto:
+        # salen de la escuela japonesa de telop.
+        #   - altura de letra: 7% del alto de pantalla (banda buena 6-8%)
+        #   - contorno negro: 8% del tamano de letra (banda 5-10%)
+        #   - blanco con contorno negro es la combinacion mas legible que existe
+        #   - dos lineas como maximo; a partir de cuatro el ojo deja de leer
+        CARD_FS = int(HEIGHT * 0.07)
+        CARD_BORD = max(int(CARD_FS * 0.08), 4)
+        # ~14 caracteres por linea a este tamano; con dos lineas caben unas 6
+        # palabras, que es justo el techo que recomiendan las fuentes.
+        card_lines = _wrap_caption(card_clean, width_chars=14).split("\n")
+        if len(card_lines) > 2:
+            log(
+                "hook",
+                f"hook_card de {len(card_lines)} lineas: se recorta a 2. "
+                "Escribila mas corta (6 palabras) -- ver MOTION_TEXTO_2026.md",
+            )
+            card_lines = card_lines[:2]
+        c_gap = int(CARD_FS * 1.15)
         # anclado cerca del TOP (no centrado verticalmente) -- el estilo 'Cap' de
         # los subtitulos karaoke usa MarginV alto (ver Style: Cap en generate_subtitles),
         # lo que los deja cayendo en la franja media/baja del frame. Si el card se
         # centra verticalmente, cae en la MISMA franja y ambos textos se solapan
         # (bug real detectado 19 jul 2026, ver captura de pantalla del usuario).
-        c_y0 = 220
         cx = WIDTH // 2
-        # scrim SOLO detras del bloque de texto (no el frame completo, feedback
-        # del usuario 20 jul 2026 -- el oscurecido total se sentia como "filtro
-        # blanco y negro" sobre toda la imagen). Caja centrada en X, ajustada a
-        # la altura real del texto con padding.
-        box_pad_y = 30
-        box_w = min(int(WIDTH * 0.9), 900)
-        box_h = len(card_lines) * c_gap + box_pad_y * 2
-        box_x = (WIDTH - box_w) // 2
-        box_y = c_y0 - c_gap // 2 - box_pad_y
-        hook_card_filter = (
-            f"drawbox=x={box_x}:y={box_y}:w={box_w}:h={box_h}:color=black@0.75:t=fill"
-            ":enable='between(t,0,2.2)',"
+        # SE VA LA CAJA NEGRA. Era lo que mas abarataba el plano: una barra
+        # solida de lado a lado tapa el dibujo y, en la escena 1, tapaba la
+        # cara -- el unico freno al scroll que hay. Con contorno grueso el
+        # texto se lee igual sobre cualquier fondo y la imagen sigue viendose.
+        # El hueco donde cae el texto se elige mirando el propio fotograma.
+        # se mira la IMAGEN de la escena 1, no el clip: PIL no abre mp4 y el
+        # nb_0.png es exactamente lo que se ve en el fotograma 0
+        _img0 = (Path(clips[0]).parent / "nb_0.png") if clips else None
+        c_y0 = _franja_libre(
+            _img0 if (_img0 and _img0.exists()) else None, len(card_lines), c_gap
         )
         # revelado progresivo linea por linea (no todo junto) -- investigacion
         # 20 jul 2026: el "hook card hipnotico" tira de la vista siguiendo un
@@ -4086,12 +4130,15 @@ def assemble(
         for i, line in enumerate(card_lines):
             y = c_y0 + i * c_gap
             start_s = i * line_stagger_s
+            # UN SOLO ACENTO, el amarillo del canal (regla de 4 colores: dos
+            # neutros + un acento + uno de tema). En ASS el color va en BGR.
             line_colored = re.sub(
-                r"\d+", lambda m: f"{{\\c&H4AD2FF&}}{m.group(0)}{{\\c&HFFFFFF&}}", line
+                r"\d+", lambda m: f"{{\\c&H00D1FF&}}{m.group(0)}{{\\c&HFFFFFF&}}", line
             )
             card_events.append(
                 f"Dialogue: 0,{_ass_time(start_s)},0:00:02.20,Cap,,0,0,0,,"
-                f"{{\\an5\\pos({cx},{y})\\fs60\\c&HFFFFFF&\\fad(250,200)}}{line_colored}"
+                f"{{\\an5\\pos({cx},{y})\\fs{CARD_FS}\\bord{CARD_BORD}\\shad0"
+                f"\\3c&H000000&\\c&HFFFFFF&\\fad(250,200)}}{line_colored}"
             )
         with ass_path.open("a", encoding="utf-8") as f:
             f.write("\n".join(card_events) + "\n")
@@ -4542,6 +4589,44 @@ def _photo_sticker(query: str, clips_dir: Path, tag: str) -> str | None:
         if _cutout_and_halftone(raw_path, out_path) == "ok":
             return fname
     return None
+
+
+def _franja_libre(
+    primer_clip: Path | None, n_lineas: int, gap: int, default_y: int = 300
+) -> int:
+    """Y donde poner la hook card: la franja MAS VACIA del primer fotograma.
+
+    Antes iba siempre a 220 px, y en un primer plano eso cae justo en los ojos.
+    Taparle la cara al personaje en el fotograma 0 es tirar el unico freno al
+    scroll que tiene el video (ver MOTION_TEXTO_2026.md §1). En vez de adivinar,
+    se mira: se corta el fotograma en bandas horizontales y se elige la de menor
+    detalle -- el cielo, una pared, el suelo --, que es donde un rotulista
+    pondria el texto a mano.
+
+    Se salta la banda de arriba (menu de tres puntos) y el 20% de abajo
+    (avatar, nombre, suscribirse, audio y sugeridos de la interfaz de Shorts).
+    Si algo falla, devuelve el valor de siempre: esto no puede tumbar un render.
+    """
+    alto_texto = n_lineas * gap
+    try:
+        from PIL import Image, ImageStat
+
+        with Image.open(primer_clip) as im:  # type: ignore[arg-type]
+            g = im.convert("L").resize((160, 284))
+        y_min = int(284 * 0.10)
+        y_max = int(284 * 0.80) - int(alto_texto / HEIGHT * 284)
+        mejor, mejor_var = None, None
+        for y in range(y_min, max(y_max, y_min + 1), 6):
+            alto = max(int(alto_texto / HEIGHT * 284), 8)
+            banda = g.crop((0, y, 160, min(y + alto, 284)))
+            var = ImageStat.Stat(banda).stddev[0]
+            if mejor_var is None or var < mejor_var:
+                mejor, mejor_var = y, var
+        if mejor is None:
+            return default_y
+        return int(mejor / 284 * HEIGHT) + alto_texto // 2
+    except Exception:
+        return default_y
 
 
 def add_scene_stickers(
@@ -5602,6 +5687,7 @@ def main() -> int:
             _check_open_hook(
                 data["script"], data.get("title", ""), data.get("hook_card", "") or ""
             )
+            _check_hook_card_distinta(data["script"], data.get("hook_card", "") or "")
             _check_hook_beats(data["script"])
             _check_payoff_spacing(data["script"], data.get("payoffs"))
             _check_giro_posicion(
