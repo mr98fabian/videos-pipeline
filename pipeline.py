@@ -3715,6 +3715,7 @@ def assemble(
     caption_keywords: list[str] | None = None,
     hook_card: str | None = None,
     hook_card_mode: str = "overlay",
+    caption_margin: int = 960,
     hook_punch: bool = False,
     music_file: str | None = None,
 ) -> Path:
@@ -4115,7 +4116,10 @@ def assemble(
         # nb_0.png es exactamente lo que se ve en el fotograma 0
         _img0 = (Path(clips[0]).parent / "nb_0.png") if clips else None
         c_y0 = _franja_libre(
-            _img0 if (_img0 and _img0.exists()) else None, len(card_lines), c_gap
+            _img0 if (_img0 and _img0.exists()) else None,
+            len(card_lines),
+            c_gap,
+            margin_v=caption_margin,
         )
         # revelado progresivo linea por linea (no todo junto) -- investigacion
         # 20 jul 2026: el "hook card hipnotico" tira de la vista siguiendo un
@@ -4648,24 +4652,47 @@ def add_korex_signs(
 
     # en out_dir, no en clips/: el paso de la miniatura arma su lista de
     # concat con el NOMBRE del archivo y corre con cwd=out_dir
+    # TAMANO Y DURACION (14 ago 2026, tras verlo montado): a 26% de ancho y un
+    # segundo, Fabian no vio ninguno de los tres. En 花字 el signo es GRANDE y
+    # cae sobre el golpe; pequeño y en una esquina se lee como suciedad de
+    # compresion. 40% de ancho, 1,4 s, y fuera de la banda de subtitulos.
+    DUR = 1.4
     dst = out_dir / "video_con_signos.mp4"
     cmd = ["ffmpeg", "-y", "-i", str(video_path)]
     for _t, p in elegidos:
-        cmd += ["-loop", "1", "-t", "1.0", "-i", str(p)]
+        cmd += ["-loop", "1", "-t", str(DUR), "-i", str(p)]
     partes, prev = [], "[0:v]"
     for k, (t, _p) in enumerate(elegidos, start=1):
-        lado = "W-w-70" if k % 2 else "70"
-        y = int(HEIGHT * (0.22 if k % 2 else 0.62))
-        # colorkey sobre el papel blanco del signo; el trazo negro sobrevive
+        lado = "W-w-60" if k % 2 else "60"
+        # y mas alto (0.42 en vez de 0.58): a 0.58 el signo caia detras del
+        # brazo/mesa del personaje en primer plano y quedaba medio tapado
+        # (corazon_roto en la escena de Newton, 14 ago 2026). Mas arriba, sobre
+        # el torso o el fondo, nunca compite con las manos ni la mesa.
+        y = int(HEIGHT * (0.20 if k % 2 else 0.42))
+        # colorkey sobre el papel blanco del signo; el trazo negro sobrevive.
+        # El 'pop' es de escala, no de opacidad: entra al 65% y se asienta en
+        # 0,18 s -- es lo que hace que el ojo lo registre como un golpe y no
+        # como un elemento que estaba ahi.
+        w0 = int(WIDTH * 0.40)
+        # EL SIGNO TIENE SU PROPIA LINEA DE TIEMPO Y EMPIEZA EN 0 (bug medido el
+        # 14 ago 2026). La imagen entra con `-loop 1 -t 1.4`, asi que sus fades
+        # ocurren entre el segundo 0 y el 1,4 del VIDEO, no del momento en que
+        # se quiere el signo: al llegar al segundo 18 ya estaba desvanecido y
+        # el overlay componia un fotograma transparente. Se ve exactamente
+        # igual que "no se compuso nada", y por eso no aparecia ninguno de los
+        # tres. `setpts` lo desplaza al momento real; va AL FINAL, despues de
+        # los fades y del pop, que si dependen del tiempo propio del signo.
         partes.append(
-            f"[{k}:v]scale={int(WIDTH * 0.26)}:-1,colorkey=0xFFFFFF:0.30:0.08,"
-            f"format=yuva420p,fade=t=in:st=0:d=0.12:alpha=1,"
-            f"fade=t=out:st=0.75:d=0.25:alpha=1[s{k}];"
+            f"[{k}:v]scale={w0}:-1,colorkey=0xFFFFFF:0.30:0.08,format=yuva420p,"
+            f"scale=w='iw*min(1,0.65+1.95*t)':h=-1:eval=frame,"
+            f"fade=t=in:st=0:d=0.08:alpha=1,"
+            f"fade=t=out:st={DUR - 0.3:.2f}:d=0.3:alpha=1,"
+            f"setpts=PTS+{t:.2f}/TB[s{k}];"
         )
         etiqueta = f"[v{k}]" if k < len(elegidos) else "[vout]"
         partes.append(
-            f"{prev}[s{k}]overlay=x={lado}:y={y}:"
-            f"enable='between(t,{t:.2f},{t + 1.0:.2f})'{etiqueta};"
+            f"{prev}[s{k}]overlay=x={lado}:y={y}:eof_action=pass:"
+            f"enable='between(t,{t:.2f},{t + DUR:.2f})'{etiqueta};"
         )
         prev = etiqueta
     filtro = "".join(partes).rstrip(";")
@@ -4677,13 +4704,16 @@ def add_korex_signs(
     except Exception as e:
         log("signos", f"no pude componer los signos ({e}); sigo sin ellos")
         return video_path
-    log("signos", f"{len(elegidos)} signos entintados: "
-                  f"{', '.join(p.stem for _t, p in elegidos)}")
+    log("signos", "  ".join(f"{p.stem}@{t:.1f}s" for t, p in elegidos))
     return dst
 
 
 def _franja_libre(
-    primer_clip: Path | None, n_lineas: int, gap: int, default_y: int = 300
+    primer_clip: Path | None,
+    n_lineas: int,
+    gap: int,
+    margin_v: int = 960,
+    default_y: int = 300,
 ) -> int:
     """Y donde poner la hook card: la franja MAS VACIA del primer fotograma.
 
@@ -4704,8 +4734,14 @@ def _franja_libre(
 
         with Image.open(primer_clip) as im:  # type: ignore[arg-type]
             g = im.convert("L").resize((160, 284))
-        y_min = int(284 * 0.10)
-        y_max = int(284 * 0.80) - int(alto_texto / HEIGHT * 284)
+        # EL KARAOKE TAMBIEN OCUPA SITIO. Con caption_margin=380 (KOREX) los
+        # subtitulos viven entre el 68% y el 80% del alto, y ahi es justo donde
+        # la busqueda de "banda vacia" queria poner la tarjeta: fondo liso, sin
+        # detalle... porque es donde va el texto que aun no existe cuando se
+        # mide. Se descuenta antes de buscar.
+        subs_top = HEIGHT - margin_v - 2 * 115  # dos lineas de karaoke a fs96
+        y_min = int(284 * 0.08)
+        y_max = int(subs_top / HEIGHT * 284) - int(alto_texto / HEIGHT * 284)
         # LA BANDA MAS VACIA NO BASTA (14 ago 2026). En un primer plano no hay
         # ninguna banda vacia, asi que la de "menos detalle" acababa cruzando
         # los ojos -- medido en la escena 1 de Newton, exactamente el error que
@@ -5927,6 +5963,7 @@ def main() -> int:
                 hook_card=hook_card,
                 hook_card_mode=args.hook_card_mode,
                 hook_punch=hook_strong,
+                caption_margin=int(data.get("caption_margin") or 960),
             )
 
             # stickers automaticos (21 jul 2026): UNO por escena (search_term), no
