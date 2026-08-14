@@ -430,13 +430,26 @@ class FlowSession:
         self._close_popovers()
         self.mode = mode
 
+    # EL POPPER NO ES EL UNICO QUE TAPA (13 ago 2026). Una tanda del largo se
+    # quedo clavada en 37/52 sin generar ni una imagen mas: el boton '+' estaba
+    # visible y habilitado, pero un FONDO de dialogo de Radix se comia todos los
+    # clicks ("<div data-state=open data-aria-hidden=true> intercepts pointer
+    # events", 15s de timeout por intento). El dialogo ya no existe -- queda
+    # solo su backdrop --, asi que Escape no lo quita y la sesion entera se
+    # vuelve inutil sin dar un solo error propio.
+    _OVERLAY_SEL = (
+        "div[data-radix-popper-content-wrapper], "
+        "div[data-state='open'][data-aria-hidden='true'], "
+        "[role='dialog'][data-state='open']"
+    )
+
     def _close_popovers(self) -> None:
         """Los paneles de Flow son poppers de Radix: mientras uno queda abierto
         intercepta TODOS los clicks, incluido el de la caja de prompt. Un solo
         Escape no basta cuando hay panel + dropdown encimados."""
         page = self._page
         for _ in range(6):
-            if not page.locator("div[data-radix-popper-content-wrapper]").count():
+            if not page.locator(self._OVERLAY_SEL).count():
                 return
             page.keyboard.press("Escape")
             page.wait_for_timeout(400)
@@ -445,6 +458,37 @@ class FlowSession:
             page.wait_for_timeout(500)
         except Exception:
             pass
+
+    def _accept_rights_notice(self) -> None:
+        """Aviso de derechos que Flow saca al subir un archivo (build del 13 ago
+        2026): 'Asegurate de tener los derechos necesarios ... Politica de Uso
+        Prohibido'. Con el abierto no entra la subida y su fondo se come todos
+        los clicks, asi que la sesion se queda muda: 85 minutos de tanda sin una
+        sola imagen. Fabian autorizo aceptarlo (13 ago 2026); son laminas
+        propias, generadas para el canal."""
+        btn = self._page.locator("button:has-text('Aceptar')")
+        if btn.count():
+            try:
+                btn.first.click(timeout=10_000)
+                _log("aviso de derechos de Flow: aceptado")
+            except Exception as e:
+                _log(f"no pude aceptar el aviso de derechos: {e}")
+
+    def _unblock(self, mode: str) -> None:
+        """Deja la pagina clickable antes de empezar una generacion.
+
+        Recargar NO es gratis y por eso solo se hace aqui: el 4 ago 2026 se
+        recargaba antes de cada escena y la tasa cayo de 9/12 a 0/12. Pero un
+        backdrop huerfano no se va con Escape, y sin recarga TODA escena
+        posterior falla igual. Recarga condicionada al bloqueo real, no por
+        rutina.
+        """
+        self._close_popovers()
+        if not self._page.locator(self._OVERLAY_SEL).count():
+            return
+        _log("overlay atascado tapando la UI; recargo el proyecto")
+        self._reset_prompt(mode)
+        self._close_popovers()
 
     def set_mode(self, mode: str) -> None:
         """Cambia entre imagen y video sin reabrir el proyecto."""
@@ -665,39 +709,33 @@ class FlowSession:
         self._refs = files
         self._ref_hashes = {hashlib.sha1(f.read_bytes()).hexdigest() for f in files}
 
-        # 1) subir a la biblioteca del proyecto
-        page.locator(SEL_FILE_INPUT).first.set_input_files(
-            [str(f) for f in files], timeout=60_000
-        )
-        stable, last = 0, -1
-        for _ in range(40):
-            page.wait_for_timeout(1000)
-            now = len(self._media())
-            stable = stable + 1 if now == last else 0
-            last = now
-            if stable >= 3:
-                break
-
-        # 2) enganchar cada una a la instruccion
+        # SE SUBE DESDE EL PROPIO SELECTOR, NO POR EL INPUT OCULTO (13 ago 2026).
+        # Google rehizo Flow a media tanda del largo: el input oculto sigue
+        # existiendo y sigue aceptando el archivo, pero ahora lo deja en la
+        # biblioteca GLOBAL, mientras que el selector lista solo el PROYECTO. El
+        # resultado era "No se encontraron resultados" y un timeout buscando la
+        # fila, con la tanda entera cayendo sin una sola imagen. Ademas el
+        # listado dejo de ser `[role=option]`: la rejilla son <img> y lo unico
+        # que identifica cada asset es su `alt` con el nombre del archivo.
         for f in files:
             self._close_popovers()
             page.locator("button:has-text('add_2')").first.click(timeout=15_000)
             page.wait_for_timeout(2500)
-            opt = page.locator("[role=option]").filter(has_text=f.name).first
-            # el selector abre con el asset recien subido ya marcado
-            # (aria-selected=true) y volver a clickearlo no es accionable: se
-            # queda esperando y tira timeout. Solo se clickea si hace falta.
-            if opt.get_attribute("aria-selected") != "true":
-                # la lista es virtualizada (react-virtuoso): mientras se
-                # recicla, el contenedor tapa la fila y el click normal se
-                # queda reintentando hasta agotar el timeout. force=True
-                # dispara igual sobre la fila ya resuelta.
-                try:
-                    opt.scroll_into_view_if_needed(timeout=5000)
-                    opt.click(timeout=8000)
-                except Exception:
-                    opt.click(timeout=8000, force=True)
-                page.wait_for_timeout(1200)
+            tile = page.locator(f"[role=dialog] img[alt={f.name!r}]")
+            if not tile.count():
+                with page.expect_file_chooser(timeout=30_000) as fc:
+                    page.get_by_text("Cargar medios", exact=False).first.click(
+                        timeout=10_000)
+                fc.value.set_files(str(f))
+                page.wait_for_timeout(2500)
+                self._accept_rights_notice()
+                page.wait_for_selector(f"[role=dialog] img[alt={f.name!r}]",
+                                       timeout=120_000)
+            try:
+                tile.first.click(timeout=10_000)
+            except Exception:
+                tile.first.click(timeout=10_000, force=True)
+            page.wait_for_timeout(1500)
             # segun el estado del proyecto el click ya engancha y cierra el
             # dialogo; solo si sigue abierto hay que confirmar con el boton
             add = page.locator("button:has-text('Agregar a la instrucción')")
@@ -709,7 +747,7 @@ class FlowSession:
                     page.wait_for_timeout(500)
                 if btn.is_enabled():
                     btn.click(timeout=15_000)
-            page.wait_for_timeout(2500)
+            page.wait_for_timeout(2000)
         self._close_popovers()
 
     def _download(self, url: str, path: Path, want_mime: str) -> bool:
@@ -837,6 +875,7 @@ class FlowSession:
             # arrastraban. Medido el 4 ago 2026: empeoro de 9/12 a 0/12. La
             # pagina recien recargada es justo el estado que FALLA.
             self.set_mode("image")
+            self._unblock("image")
             self._refs, self._ref_hashes = [], set()
             if references:
                 self._attach(list(references))
