@@ -131,7 +131,8 @@ def cama_musical(tmp: Path) -> Path | None:
     if not pistas:
         return None
     lista = tmp / "musica.txt"
-    lista.write_text("".join(f"file '{p.as_posix()}'\n" for p in pistas), "utf-8")
+    lista.write_text("".join(f"file '{p.resolve().as_posix()}'\n"
+                             for p in pistas), "utf-8")
     dst = tmp / "cama.m4a"
     if not dst.exists():
         run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(lista),
@@ -168,7 +169,11 @@ def montar(carpeta: Path, guion_path: Path, solo: int = 0) -> Path:
                 print(f"  {k}/{len(tareas)} cortes", flush=True)
 
     lista = tmp / "lista.txt"
-    lista.write_text("".join(f"file '{t[4].as_posix()}'\n" for t in tareas), "utf-8")
+    # RUTAS ABSOLUTAS: el demuxer concat resuelve cada 'file' RELATIVO A LA
+    # CARPETA DE LA LISTA, no al directorio de trabajo, asi que una ruta
+    # relativa acaba duplicando el prefijo ('.../cortes/output/.../c_000.mp4').
+    lista.write_text("".join(f"file '{t[4].resolve().as_posix()}'\n"
+                             for t in tareas), "utf-8")
     mudo = carpeta / "video_mudo.mp4"
     # Reencodear el concat SIEMPRE (regla del proyecto): con -c copy, un corte
     # sin keyframe en su primer frame trunca el resultado sin avisar.
@@ -191,12 +196,17 @@ def montar(carpeta: Path, guion_path: Path, solo: int = 0) -> Path:
             "[bg][trig]sidechaincompress=threshold=0.03:ratio=6:attack=50:"
             "release=300[duck];"
             "[voz][duck]amix=inputs=2:duration=first:normalize=0,"
-            "loudnorm=I=-14:TP=-1.0:LRA=11[aout]"
+            # 48 kHz estereo explicito: la voz de Qwen sale mono a 96 kHz y el
+            # grafo la arrastraba tal cual hasta el archivo final. YouTube lo
+            # reencoda igual, pero un master mono a 96k no es lo que se sube.
+            "loudnorm=I=-14:TP=-1.0:LRA=11,"
+            "aformat=sample_rates=48000:channel_layouts=stereo[aout]"
         )
         cmd += ["-filter_complex", af, "-map", "0:v", "-map", "[aout]"]
     else:
         cmd += ["-filter_complex",
-                "[1:a]loudnorm=I=-14:TP=-1.0:LRA=11[aout]",
+                "[1:a]loudnorm=I=-14:TP=-1.0:LRA=11,"
+                "aformat=sample_rates=48000:channel_layouts=stereo[aout]",
                 "-map", "0:v", "-map", "[aout]"]
     cmd += ["-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest", str(dst)]
     run(cmd, timeout=1800)
