@@ -489,10 +489,20 @@ def update_video(
     description: str | None = None,
     tags: list[str] | None = None,
     account: str = "default",
+    privacy_status: str | None = None,
 ) -> None:
     """Actualiza titulo/descripcion/tags de un video ya subido (ej. tras afinar
-    con vidIQ despues de la subida)."""
+    con vidIQ despues de la subida).
+
+    privacy_status pasa un video ya subido a 'public' (o vuelve a 'unlisted').
+    Es el paso final del flujo real del canal --se sube no listado, se revisa y
+    se promueve-- y hasta hoy habia que hacerlo a mano en Studio. Pasa por el
+    mismo control de espaciado que una subida publica: 30 minutos entre publicos
+    es una regla del canal, no del formato de subida."""
     youtube = get_youtube_client(account)
+    if privacy_status == "public":
+        _check_publish_spacing(youtube, datetime.now(timezone.utc))
+        _check_publish_window(datetime.now(timezone.utc))
     resp = _yt_execute(youtube.videos().list(part="snippet", id=video_id))
     items = resp.get("items", [])
     if not items:
@@ -511,6 +521,14 @@ def update_video(
             part="snippet", body={"id": video_id, "snippet": current}
         )
     )
+    if privacy_status:
+        _yt_execute(
+            youtube.videos().update(
+                part="status",
+                body={"id": video_id, "status": {"privacyStatus": privacy_status}},
+            )
+        )
+        print(f"[update] privacidad -> {privacy_status}")
     print(f"[update] listo: https://youtube.com/watch?v={video_id}")
 
 
@@ -926,6 +944,13 @@ if __name__ == "__main__":
 
     p_update = sub.add_parser("update")
     p_update.add_argument("video_id")
+    p_update.add_argument(
+        "--privacy",
+        default=None,
+        choices=["private", "unlisted", "public"],
+        help="Promueve un video ya subido (el flujo del canal: subir no "
+        "listado, revisar, publicar).",
+    )
     p_update.add_argument("--title", default=None)
     p_update.add_argument("--description", default=None)
     p_update.add_argument("--tags", default=None)
@@ -983,7 +1008,12 @@ if __name__ == "__main__":
             else None
         )
         update_video(
-            args.video_id, args.title, args.description, tags, account=args.account
+            args.video_id,
+            args.title,
+            args.description,
+            tags,
+            account=args.account,
+            privacy_status=args.privacy,
         )
     elif args.cmd == "report":
         print(

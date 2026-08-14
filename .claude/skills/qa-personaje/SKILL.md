@@ -41,9 +41,14 @@ Comparar contra `assets/characters/tadeo/default_model_sheet.png`. Rechazar si:
    que importa de verdad** — el espectador reconoce a Tadeo por la cabeza.
    *La ropa está permitida* (decisión de Fabián, 13 ago 2026): puede llevar
    chaqueta o gorra si la escena lo pide. Lo que no puede es cambiar de cara.
-   Y la regla vale solo para **él**: el vecino, la multitud y los secundarios no
-   tienen por qué parecerse a Tadeo, solo ser mapaches del mismo estilo.
-2. **No es un mapache**: han salido ardillas y gatos.
+
+   **Y esta puerta juzga a Tadeo, a nadie más.** Textual, 14 ago 2026:
+   *"mapache que no sea Tadeo me parece perfecto como salga"*. El vecino, la
+   multitud y los secundarios pasan tal cual — no se rehace una imagen porque
+   un mapache de fondo tenga overol o la cara rara. Rechazar por eso costó dos
+   rondas enteras de regeneración el día anterior, para nada.
+2. **Tadeo no es un mapache**: han salido ardillas y gatos. (Un secundario
+   raro no cuenta — ver arriba.)
 3. **Hay más de un protagonista** en el cuadro, o clones suyos de fondo.
 5. **Manos o brazos de más.** Contarlos, literalmente: dos manos.
 6. **Texto incrustado**, aunque sea un cartel de atrezo.
