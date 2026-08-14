@@ -3170,6 +3170,9 @@ def _acquire_clips_loop(
                 _hist = _kx.historical_lock(term)
                 if _hist:
                     term = f"{term}. {_hist}"
+                # y en toda escena, venga de donde venga: la imagen no lleva
+                # texto ni se disfraza de caratula (ver kx_cast.SIN_TEXTO)
+                term = f"{term}. {_kx.SIN_TEXTO}"
             except Exception as e:
                 log("media", f"clip {i + 1}/{n_clips}: secundarios no resueltos ({e})")
 
@@ -5417,7 +5420,10 @@ def main() -> int:
         try:
             import flow_projects
 
-            flow_projects.use_project(data.get("title") or Path(args.script_file).stem)
+            flow_projects.use_project(
+                data.get("title") or Path(args.script_file).stem,
+                Path(args.script_file).stem,
+            )
         except Exception as e:
             log("flow", f"no pude atar el proyecto de Flow (no critico): {e}")
     elif args.auto:

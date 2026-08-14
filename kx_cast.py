@@ -369,6 +369,21 @@ HISTORICAL_LOCK = (
 )
 
 
+# NI TEXTO NI LAMINA DE TITULO (14 ago 2026). El estilo de la casa dice "dibujo
+# animado de los anos treinta", y el modelo lo interpreta a su manera: de 24
+# escenas del corto de Newton, SEIS volvieron como caratula de dibujo antiguo
+# --"TADDEO IN 'LONDON FOG'", "TADEO EL MAPACHE presents...", "A CLEAN SWEEP!"--
+# y una partida en dos vinetas. Y el nombre sale mal escrito, que es peor que no
+# ponerlo. El texto del video lo pone el motor, nunca la imagen.
+SIN_TEXTO = (
+    "Sin texto de ningun tipo en la imagen: ni titulo, ni cartel, ni rotulo, ni "
+    "letras, ni numeros, ni bocadillos de dialogo, ni creditos, ni el nombre del "
+    "personaje. NO es una caratula ni un cartel de pelicula ni una portada: es "
+    "UNA sola ilustracion que ocupa todo el cuadro, sin marcos, sin franjas de "
+    "titulo abajo y sin dividir la imagen en vinetas."
+)
+
+
 def historical_lock(term: str) -> str:
     """Bloque de identidad de la figura historica nombrada en la escena, o ''."""
     t = (term or "").lower()

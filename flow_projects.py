@@ -1,4 +1,4 @@
-"""Un proyecto de Google Flow POR GUION (no por corrida).
+"""Un proyecto de Google Flow por CANAL (uno por guion fuera de KOREX).
 
 Por que existe (3 ago 2026): `FlowSession._open_project()` pulsa "Proyecto
 nuevo" siempre que no se le pasa una URL, asi que cada corrida creaba uno --
@@ -19,11 +19,9 @@ Uso:
     ...                                               # pipeline / fill / animate
     flow_projects.forget("korex-tadeo-tarjeta")        # si se quiere empezar limpio
 
-NOTA DE IMPLEMENTACION: engancha con un monkeypatch sobre
-`flow_automation._shared_session` en vez de editar ese archivo, a proposito --
-`flow_automation.py` lo esta reescribiendo la otra sesion de Claude (1000+
-lineas sin commitear) y tocarlo ahora pisaria su trabajo. Cuando esa migracion
-aterrice, esto se puede plegar dentro de `_shared_session` sin cambiar la API.
+NOTA DE IMPLEMENTACION: ya NO hay monkeypatch. Este modulo solo elige la clave
+de proyecto y `flow_automation._open_project` hace el resto (fijar, reabrir y
+recrear si el proyecto fijado no existe).
 """
 
 from __future__ import annotations
@@ -36,7 +34,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 STATE = ROOT / "flow_projects.json"
 
-_patched = False
 _current: str | None = None
 
 
@@ -89,41 +86,40 @@ def forget(script: str) -> None:
         _save(data)
 
 
-def use_project(script: str) -> None:
-    """Ata todas las sesiones de Flow de este proceso al proyecto del guion.
+def use_project(script: str, *pistas: str) -> None:
+    """Ata todas las sesiones de Flow de este proceso a un proyecto conocido.
 
-    Si el guion ya tiene proyecto, se reabre; si no, Flow crea uno y se apunta
-    aqui para las corridas siguientes.
+    UN PROYECTO POR CANAL EN KOREX (14 ago 2026). Antes era uno por guion, y
+    tenia sentido: evitaba llenar la cuenta de proyectos con dos imagenes cada
+    uno. Pero con el build nuevo de Flow los PERSONAJES viven DENTRO de un
+    proyecto y el selector solo lista el actual: con un proyecto por guion, el
+    Tadeo registrado no vuelve a estar al alcance nunca. Un solo proyecto de
+    canal cumple las dos cosas -- no hay spam de proyectos y el personaje
+    siempre esta ahi. Los guiones que no son de KOREX conservan el reparto por
+    guion.
+
+    SE ACABO EL MONKEYPATCH. Lo habia porque `flow_automation.py` lo estaba
+    reescribiendo la otra sesion y no se queria pisar; esa migracion ya
+    aterrizo. Y el parche costo caro: su `_shared_session` se quedo con la
+    firma vieja (sin `count`), asi que en cuanto el pipeline empezo a pasar
+    `count` TODA generacion lanzaba TypeError y caia al gradiente. Medido el 14
+    ago: 24 de 24 escenas en gradiente, sin un solo error visible en el log
+    porque `generate_image` se traga la excepcion.
     """
-    global _patched, _current
+    global _current
     import flow_automation as fa
 
     _current = _slugify(script)
-
-    if not _patched:
-        original = fa._shared_session
-
-        def _shared_session(aspect_ratio: str = "9:16"):
-            if fa._SHARED is None and _current:
-                url = _load().get(_current)
-                s = fa.FlowSession(aspect_ratio=aspect_ratio, project_url=url)
-                s.__enter__()
-                fa._SHARED = s
-                import atexit
-
-                atexit.register(fa.close_session)
-                # tras abrir, project_url ya trae la URL real del proyecto
-                remember(_current, s.project_url or "")
-                return s
-            return original(aspect_ratio)
-
-        fa._shared_session = _shared_session
-        _patched = True
-
-    known = _load().get(_current)
+    # LAS PISTAS IMPORTAN: el titulo del guion de KOREX no dice "korex" por
+    # ningun lado ("Isaac Newton perdio su fortuna..."), asi que detectar el
+    # canal por el titulo falla siempre. El nombre del archivo si lo dice.
+    todo = " ".join(_slugify(x) for x in (script, *pistas) if x)
+    clave = "korex" if "korex" in todo else _current
+    fa.FLOW_PROJECT_KEY = clave
+    known = _load().get(clave)
     print(
-        f"[flow] guion '{_current}': "
-        + (f"reusando proyecto existente" if known else "estrenara proyecto nuevo")
+        f"[flow] guion '{_current}' -> proyecto '{clave}': "
+        + ("reusando el existente" if known else "estrenara uno nuevo")
     )
 
 
