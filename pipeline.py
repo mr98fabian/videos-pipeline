@@ -2999,6 +2999,7 @@ def acquire_media(
     wan_hero_path: Path | None = None,
     character_terms: list[str] | None = None,
     flow_animate: bool = False,
+    reusar_imagenes: bool = False,
 ) -> list[Path]:
     """media_source: 'flow' | 'comfy' | 'seedream' | 'pexels' | 'gradient'.
     Siempre cae a gradiente si falla.
@@ -3070,6 +3071,7 @@ def acquire_media(
         named_char_cache,
         char_terms=char_terms,
         flow_animate=flow_animate,
+        reusar_imagenes=reusar_imagenes,
     )
 
 
@@ -3090,6 +3092,7 @@ def _acquire_clips_loop(
     named_char_cache,
     char_terms=None,
     flow_animate=False,
+    reusar_imagenes=False,
 ) -> list[Path]:
     clips: list[Path] = []
     char_terms = list(char_terms or [])
@@ -3279,6 +3282,31 @@ def _acquire_clips_loop(
             gen_ok = False
             cache_hit = None
             tiene_reparto = any("/" in (c or "") for c in char_terms)
+            # LA IMAGEN YA GENERADA DE ESTE MISMO PROMPT SE REUSA (14 ago 2026).
+            # Un re-render por un cambio de MONTAJE --quitar los stickers, tocar
+            # la musica, cambiar el corte-- volvia a pedirle a Flow las 24
+            # escenas: 45 minutos y otra tirada de cuota para un video cuyas
+            # imagenes ya estaban aprobadas una por una. Se guarda el prompt al
+            # lado (nb_i.prompt.txt) y solo se reusa si coincide LETRA POR
+            # LETRA: si el guion o las reglas cambian, el prompt cambia y la
+            # escena se regenera sola. Sin esa comparacion, la reutilizacion
+            # seria la forma perfecta de montar un video con escenas viejas.
+            prompt_path = img_path.with_suffix(".prompt.txt")
+            if img_path.exists() and prompt_path.exists():
+                try:
+                    if prompt_path.read_text(encoding="utf-8") == gen_term:
+                        gen_ok = True
+                        log("media", f"clip {i + 1}/{n_clips}: reusada (mismo prompt)")
+                except OSError:
+                    pass
+            elif img_path.exists() and reusar_imagenes:
+                # Escotilla para re-montar carpetas hechas ANTES de que se
+                # guardara el prompt. Va con bandera explicita y avisando,
+                # porque aqui nadie comprueba que la imagen corresponda al
+                # guion actual: se reusa a ciegas y es responsabilidad de quien
+                # la pide.
+                gen_ok = True
+                log("media", f"clip {i + 1}/{n_clips}: reusada A CIEGAS (--reusar-imagenes)")
             if not char_ref and not champ_refs and not tiene_reparto:
                 try:
                     from visual_cache import scene_cache_lookup, scene_cache_store
@@ -3286,7 +3314,9 @@ def _acquire_clips_loop(
                     cache_hit = scene_cache_lookup(gen_term, style)
                 except Exception:
                     cache_hit = None
-            if cache_hit:
+            if gen_ok:
+                pass  # reusada arriba
+            elif cache_hit:
                 shutil.copyfile(cache_hit, img_path)
                 gen_ok = True
                 log(
@@ -3314,6 +3344,11 @@ def _acquire_clips_loop(
                         "media",
                         f"clip {i + 1}/{n_clips}: intento {attempt}/{attempts} fallo",
                     )
+                if gen_ok:
+                    try:  # deja constancia de con que prompt se dibujo
+                        prompt_path.write_text(gen_term, encoding="utf-8")
+                    except OSError:
+                        pass
                 if gen_ok and not char_ref and not champ_refs and not tiene_reparto:
                     try:
                         scene_cache_store(gen_term, style, img_path)
@@ -5204,6 +5239,14 @@ def main() -> int:
         "y archivos en assets/sfx/)",
     )
     parser.add_argument(
+        "--reusar-imagenes",
+        action="store_true",
+        help="Re-monta sin volver a pedir las escenas a Flow: reusa los nb_*.png "
+        "que ya esten en la carpeta AUNQUE no se sepa con que prompt se hicieron. "
+        "Para cambios de montaje (musica, corte, stickers) sobre un video cuyas "
+        "imagenes ya estan revisadas.",
+    )
+    parser.add_argument(
         "--no-motion",
         action="store_true",
         help="Desactiva los graficos de movimiento automaticos (icono+texto "
@@ -5622,6 +5665,7 @@ def main() -> int:
             hook_strong=hook_strong,
             wan_hero_path=args.wan_hero,
             flow_animate=args.flow_animate,
+            reusar_imagenes=args.reusar_imagenes,
         )
 
         if args.korex and not silent_card_mode:
@@ -5695,7 +5739,16 @@ def main() -> int:
             # atado a sfx_cues -- mas denso, y cada uno intenta foto real recortada
             # antes de caer a emoji (ver HISTORIAL_MEJORAS.md). No aplica al modo
             # silent_card_mode (sin escenas narradas) ni si el usuario paso --no-motion.
-            if not silent_card_mode and not args.no_motion:
+            # LOS STICKERS SON DE HIDDENFACTS, NO DE KOREX (14 ago 2026). Ahi
+            # encajan: foto real recortada sobre un tablero de archivo. En KOREX
+            # el lenguaje es el dibujo entintado a mano, y un emoji plano
+            # moderno encima --o peor, su respaldo de emoji cuando no encuentra
+            # foto-- delata que el video lo monto una plantilla. Se apaga por
+            # canal, no por bandera: acordarse de pasar --no-motion en cada
+            # corrida es exactamente como se cuelan estas cosas.
+            _es_korex = str(args.voice or "").startswith(QWEN_VOICE_PREFIXES)
+            usa_stickers = bool(data.get("stickers", not _es_korex))
+            if not silent_card_mode and not args.no_motion and usa_stickers:
                 final = add_scene_stickers(
                     final,
                     data["search_terms"],

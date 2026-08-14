@@ -62,6 +62,7 @@ leer nunca.
 | [[PLAN_SEGUNDO_6]] | La fuga medida entre el segundo 5,5 y el 10 |
 | [[RETENCION_PSICOLOGIA]] | Psicología de la retención en formato vertical |
 | [[EDICION_GUIONES]] | Edición, ritmo dopaminérgico y redundancia dentro del guion (§4, lint con `guion_lint.py`) |
+| [[MOTION_TEXTO_2026]] | Texto en pantalla y adornos: por qué el nuestro se ve amateur (JP テロップ, ZH 花字, KO 자막). Rediseño de la hook card y sustitución de los stickers de emoji |
 | [[giros_ganadores]] | Catálogo de ESTRUCTURAS de giro (G1-G6), no de temas |
 | [[PROMPT_MAESTRO]] | Cómo y por qué HiddenFacts escribe sus guiones |
 | [[FORMATOS_A_PROBAR]] | Los 20 formatos pendientes de probar |
