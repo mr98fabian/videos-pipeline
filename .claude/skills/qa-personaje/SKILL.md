@@ -67,7 +67,10 @@ ya está medido:
   pequeñas y el modelo copia lo que ve grande.
 - **"EXACTAMENTE UN mapache en el cuadro y es Tadeo"**, literal.
 - En multitudes, lo contrario: **"mapaches genéricos, ninguno el protagonista"**,
-  o saldrán clones.
+  o saldrán clones. **Pero eso solo no basta:** esa rama necesita su propio
+  mínimo —especie, nada de ropa, guantes de cuatro dedos— porque sin él se cuelan
+  overoles y gatos negros. Medido el 13 ago: **15 de 19 rechazos** venían de ahí,
+  no de los planos de Tadeo.
 - Si un plano falla tres veces seguidas, **cambiar el plano, no insistir**. La
   escena de las monedas falló seis veces hasta que se quitó la mano del prompt:
   el plano era de las monedas, no de quién las sostenía.
