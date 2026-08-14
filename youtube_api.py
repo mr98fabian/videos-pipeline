@@ -333,6 +333,7 @@ def upload_video(
     publish_at: str | None = None,
     default_language: str | None = None,
     min_duration: float | None = 58.0,
+    thumbnail: str | Path | None = None,
 ) -> str:
     """Sube un video. privacy_status: 'private' | 'unlisted' | 'public'.
     publish_at: timestamp ISO 8601 UTC (ej. '2026-07-16T23:00:00Z') para publicacion
@@ -447,7 +448,39 @@ def upload_video(
         print(
             f"[upload] listo: https://youtube.com/watch?v={video_id} (privacy={privacy_status})"
         )
+    if thumbnail:
+        _set_thumbnail(youtube, video_id, thumbnail)
     return video_id
+
+
+def _set_thumbnail(youtube, video_id: str, path: str | Path) -> None:
+    """Sube la miniatura personalizada.
+
+    Va DENTRO de upload_video y no como paso aparte porque en el largo la
+    miniatura no es un extra: es la unica superficie donde se decide el clic
+    (en Shorts el feed no la muestra siquiera, ver MINIATURAS_SHORTS_2026.md).
+    Subir el video y olvidarse de ella deja a YouTube eligiendo un fotograma
+    cualquiera.
+
+    Nunca tumba la subida: el video ya esta arriba y la miniatura se puede
+    poner a mano en Studio; fallar aqui y propagar la excepcion haria pensar
+    que la subida entera fallo.
+    """
+    p = Path(path)
+    if not p.exists():
+        print(f"[miniatura] no existe {p}; el video queda con el fotograma automatico")
+        return
+    # Limite 2 MB -> 50 MB desde 2026 (television conectada, miniaturas en 4K).
+    mb = p.stat().st_size / 1024 / 1024
+    try:
+        _yt_execute(
+            youtube.thumbnails().set(
+                videoId=video_id, media_body=MediaFileUpload(str(p))
+            )
+        )
+        print(f"[miniatura] puesta ({p.name}, {mb:.1f} MB)")
+    except Exception as e:
+        print(f"[miniatura] fallo ({e}); ponela a mano en Studio")
 
 
 def update_video(
@@ -872,6 +905,12 @@ if __name__ == "__main__":
         "--privacy", default="unlisted", choices=["private", "unlisted", "public"]
     )
     p_upload.add_argument(
+        "--thumbnail",
+        default=None,
+        help="Miniatura personalizada (jpg/png). Sin esto YouTube elige un "
+        "fotograma al azar, que en formato largo es tirar el clic.",
+    )
+    p_upload.add_argument(
         "--publish-at",
         default=None,
         help="ISO 8601 UTC ej. 2026-07-16T23:00:00Z -- programa la "
@@ -935,6 +974,7 @@ if __name__ == "__main__":
             account=args.account,
             publish_at=args.publish_at,
             min_duration=None if args.allow_short else 58.0,
+            thumbnail=args.thumbnail,
         )
     elif args.cmd == "update":
         tags = (
