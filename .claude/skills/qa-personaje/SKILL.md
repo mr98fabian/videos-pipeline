@@ -25,6 +25,9 @@ Eso comprueba solo lo que no necesita criterio y suele ser lo que más escuece:
 | lámina | fondo blanco = se coló una lámina de personaje en vez de una escena |
 | repetida | dos escenas con la misma imagen |
 
+Ojo con `lamina`: en los planos que explican se pide fondo liso a propósito, así
+que un borde casi blanco ahí es correcto y no un fallo. Confírmalo mirando.
+
 Luego genera **hojas de revisión de 6 imágenes a 340 px**. Ese tamaño no es
 capricho: a 175 px una mano de más o un hocico distinto son invisibles, y así
 fue como se colaron los tres brazos de la Bruja.
@@ -71,6 +74,14 @@ ya está medido:
   mínimo —especie, nada de ropa, guantes de cuatro dedos— porque sin él se cuelan
   overoles y gatos negros. Medido el 13 ago: **15 de 19 rechazos** venían de ahí,
   no de los planos de Tadeo.
+- **La regla de "nada de ropa" va en TODOS los prompts, no solo en los que
+  nombran al personaje.** Segunda vuelta del mismo día: 9 de 14 imágenes
+  rehechas volvieron con gorra, chaleco o bombín. Eran los planos de *objetos*
+  —una red enrollada, una pila de platos, un calendario— cuyo texto no dice ni
+  "Tadeo" ni "mapache", así que caían en una tercera rama sin ninguna regla. El
+  estilo de la casa es toon vintage y, dejado a su aire, el modelo viste a sus
+  personajes: pone un mapache con sombrero aunque nadie se lo haya pedido. La
+  identidad no puede depender de que el texto de la escena nombre al personaje.
 - Si un plano falla tres veces seguidas, **cambiar el plano, no insistir**. La
   escena de las monedas falló seis veces hasta que se quitó la mano del prompt:
   el plano era de las monedas, no de quién las sostenía.
