@@ -594,8 +594,13 @@ def channel_report(
         )
     )
     headers = [h["name"] for h in resp.get("columnHeaders", [])]
-    row = resp.get("rows", [[0] * len(headers)])[0]
-    return dict(zip(headers, row))
+    # "rows": [] NO es lo mismo que no traer "rows" (15 ago 2026). Cuando el
+    # rango pedido todavia no tiene datos --un video subido hace unas horas,
+    # que es justo cuando uno quiere mirar-- la API devuelve la clave con la
+    # lista vacia, y el default solo cubria el caso de que faltara: reventaba
+    # con IndexError en vez de decir "cero".
+    filas = resp.get("rows") or [[0] * len(headers)]
+    return dict(zip(headers, filas[0]))
 
 
 def top_videos(
