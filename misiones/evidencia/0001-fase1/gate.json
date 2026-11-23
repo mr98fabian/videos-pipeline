@@ -1,0 +1,165 @@
+{
+  "timing_source": "tts",
+  "render_seconds": 32.3,
+  "pages": 15,
+  "words_per_page": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    2,
+    3,
+    4,
+    2,
+    3,
+    3,
+    4,
+    4,
+    2
+  ],
+  "parity_js_python": true,
+  "palette_still": {
+    "off_palette": 2.1e-05,
+    "debt": 0.0114,
+    "char_color_fraction": 0.0
+  },
+  "palette": {
+    "frames": 89,
+    "off_palette_max": 0.000338,
+    "debt_max": 0.0158,
+    "char_color_fraction": 0.0
+  },
+  "safe_zone": {
+    "dark_outside_safe_max": 0.0
+  },
+  "whisper": {
+    "heard": "Traes cinco dólares en la cuenta y compras un café de seis. El banco te lo deja pasar y ahí está la trampa. No te lo bloqueó, te lo aprobó a propósito. Ese pequeño arrastre te acaba de costar treinta y cinco dólares de sobregiro.",
+    "pages": [
+      {
+        "page": "Traes cinco dólares",
+        "ms": [
+          0,
+          912
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "en la cuenta,",
+        "ms": [
+          912,
+          1572
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "y compras un",
+        "ms": [
+          1572,
+          2812
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "café de seis.",
+        "ms": [
+          2812,
+          3492
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "El banco te",
+        "ms": [
+          4032,
+          4612
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "lo deja pasar.",
+        "ms": [
+          4612,
+          5312
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "Y ahí",
+        "ms": [
+          5312,
+          6212
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "está la trampa:",
+        "ms": [
+          6212,
+          6932
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "no te lo bloqueó,",
+        "ms": [
+          7552,
+          8372
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "te lo",
+        "ms": [
+          8672,
+          8912
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "aprobó a propósito.",
+        "ms": [
+          8912,
+          9912
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "Ese pequeño arrastre",
+        "ms": [
+          10512,
+          11492
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "te acaba de costar",
+        "ms": [
+          11492,
+          12312
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "treinta y cinco dólares",
+        "ms": [
+          12312,
+          13292
+        ],
+        "confirmed": 1.0
+      },
+      {
+        "page": "de sobregiro.",
+        "ms": [
+          13292,
+          14832
+        ],
+        "confirmed": 1.0
+      }
+    ],
+    "word_drift_ms_median": 108,
+    "word_drift_ms_p90": 160
+  },
+  "fails": []
+}

@@ -425,3 +425,10 @@ de vista->sub con retencion sana. Sin datos aun; es oficio, no dato.
 **De paso:** `alt_key`/`alt_fn` en el fallback de la placa de personaje eran nombres inexistentes desde que se borro Nano Banana — cualquier fallo de placa habria tirado `NameError` en vez de seguir sin personaje. Retirado
 **Donde se publico:** pendiente. Probado end-to-end con `scripts/korex-interbolsa.json` (cuyos `character_terms` pasaron de descripciones a claves `tadeo/<pose>`)
 **Que esperamos ver:** el disenio de Tadeo deja de variar entre escenas sin depender de pegar la misma lamina recortada, asi que el personaje puede actuar dentro del plano (no solo estar troquelado encima). La animacion es la que hay que mirar con lupa: 8s por escena a varios minutos de espera, y todavia sin medir si el movimiento real retiene mejor que el Ken Burns
+
+## 2026-11-23 — KoreX, Misión 0001 Fase 1: núcleo Remotion (tokens + karaoke)
+- **Investigación/origen:** prompt maestro de Fabian (Misión 0001). La paleta, las 2 fuentes, el grano, el boil y el karaoke tienen que ser constantes compartidas, no decisiones de cada plantilla.
+- **Cambio:** `motion_graphics/src/kx/` (tokens, fuentes, texturas, paginación, karaoke) + `kx_captions.py` (timing: TTS primero, faster-whisper de respaldo) + `kx_gate.py` (paleta por tono, zona segura, Whisper por página, hoja de contacto).
+- **Dónde:** solo la composición de prueba `KxNucleo`; ningún video publicado cambia todavía.
+- **Medido:** 15/15 páginas confirmadas por Whisper sobre el MP4; 0,034 % fuera de paleta (ringing del códec), rojo ≤1,6 %, 0 color sobre el personaje, 0 píxeles fuera de la zona segura.
+- **Hipótesis:** páginas de 2-4 palabras cortadas por cláusula y con la palabra activa invertida se leen antes que el karaoke por oración del prototipo.

@@ -1,6 +1,6 @@
 # MISIÓN 0001 — Sistema de videos KoreX (Remotion + mix pro)
 
-Estado: en-curso (Fase 0: inventario + plan, esperando OK) · Rama: `feat/sistema-videos-korex`
+Estado: en-auditoria (Fase 1 entregada; la Fase 2 espera el OK de Fabian) · Rama: `feat/sistema-videos-korex`
 (sale de `chore/oficina-y-git`) · Autor: Fabian / Mijo · Ejecutor: Claude (Opus)
 
 Especificación: el "PROMPT MAESTRO — Construcción del sistema de videos KoreX",
@@ -107,4 +107,85 @@ Fase 4) y, en KoreX, los flags `--flow`/`--wan-hero`/`--flow-animate`/`--reusar-
 Cada fase cierra con su entrada en `HISTORIAL_MEJORAS.md` y un commit en esta rama.
 
 ## Reporte
-_(se completa al cerrar la misión)_
+
+### Fase 1 — Núcleo Remotion (tokens + karaoke) · 23 nov 2026
+
+**Qué se hizo**
+- `motion_graphics/src/kx/tokens.js`: los design tokens como constantes. Paleta
+  cerrada INK `#111111` / PAPER `#F4F1EA` / DEBT `#C8102E` (≤8 %), zona segura
+  840×960 (x 48-888, y 288-1248), tamaños de tipo, parámetros del karaoke, del
+  grano y del boil.
+- `fonts.js`: las 2 tipografías vía `@remotion/google-fonts` (ambas OFL): Archivo
+  800/900 para números, títulos y karaoke; Permanent Marker para la pizarra.
+- `texture.jsx`: `FilmGrain` (ruido acromático multiplicado, cambia cada frame),
+  `Boil`/`BoilDefs` (boiling line: desplazamiento que cambia cada 3 frames y
+  cicla 3 dibujos) y `PaletteLockDefs` (duotono INK→PAPER para rasters).
+- `paginate.js` + `KxCaptions.jsx`: karaoke con `createTikTokStyleCaptions`
+  (`combineTokensWithinMilliseconds = 800`), 72 px, peso 800, palabra activa
+  invertida (PAPER sobre INK), franja dentro de la zona segura (y 1008-1248).
+- `kx_captions.py`: fuente de timing. Primero los `words.json` del TTS; si no
+  existen, respaldo con faster-whisper. Incluye el gemelo Python de `paginate`.
+- `kx_gate.py`: comprobaciones sobre el MP4 (base de la Fase 7): barrido de
+  paleta, zona segura, Whisper por página y hoja de contacto.
+- `kx_nucleo.py` + composición `KxNucleo`: el render de prueba de 14,9 s con la
+  voz real `qw_korex` (primeras 3 oraciones del piloto del sobregiro).
+
+**Criterios de aceptación — evidencia** (`misiones/evidencia/0001-fase1/`:
+`contactsheet.png` en git; `gate.json`; el resto en `output/2026-11-23-kx-nucleo/`)
+1. **Render con paleta y karaoke sincronizado: cumple.** 14,9 s, 447 frames,
+   render en 32 s. Whisper transcribe el MP4 renderizado (no la voz bruta) y
+   confirma **15/15 páginas al 100 %** dentro de su ventana. Deriva palabra a
+   palabra Whisper↔TTS: mediana 108 ms, p90 160 ms. Es el margen propio de
+   Whisper; el karaoke usa el TTS, que es exacto por construcción.
+2. **Barrido de color: cumple.**
+   - Frame sin pérdida (`remotion still` con el héroe en pantalla): 0,002 %
+     fuera de paleta, rojo 1,1 %, 0 píxeles de color en la caja del personaje.
+   - MP4 codificado (89 frames a 6 fps): peor frame con 0,034 % fuera de
+     paleta, rojo máximo 1,6 % y color en la caja del personaje 0,0 %.
+   - Zona segura: 0 píxeles oscuros fuera de la caja en todos los frames.
+3. **Ni Flow ni Wan: cumple.** El render es `npx remotion render`. `grep` de
+   flow/wan/korex_engine/animate/fill en los 9 archivos nuevos: solo aparece el
+   comentario que lo dice.
+
+**Fallos encontrados y su arreglo** (todos los cazó la QA, no el ojo)
+- Páginas de 1 palabra ("seis.", "El", "Y") y una página que cruzaba una coma.
+  Arreglo: después de `createTikTokStyleCaptions` se corta por cláusula
+  (`. , : ; ? !`), cada cláusula se parte en trozos de 2-4 palabras eligiendo
+  los cortes donde Remotion detectó una pausa, y las sueltas se pegan a la
+  vecina. Resultado: 15 páginas, todas de 2-4 palabras.
+- El karaoke se salía de la zona segura (una línea de 4 palabras no envolvía).
+  Arreglo: flex-wrap entre palabras y ninguna palabra se parte.
+- El "$35" rebasaba x = 888 durante 4 frames por el rebote del spring. Arreglo:
+  160 px. La regla general (el rebote cabe en la caja) la encodea la Fase 4.
+- Primer barrido: 0,4 % "fuera de paleta". Era ringing del H.264 (negros más
+  negros que INK, blancos más blancos que PAPER) y submuestreo 4:2:0 en los
+  bordes del rojo. Arreglo de la medición, no del diseño: se clasifica por
+  tono. Cuenta como neutro lo que está sobre la recta INK→PAPER, extendida un
+  6 % por extremo; como deuda, lo de tono rojo ±30°; el resto, fuera de
+  paleta. El frame sin pérdida confirma que el diseño era limpio.
+- Whisper oye "sobre giro". Se reúnen los compuestos cuando la unión existe en
+  el guion.
+
+**Desviaciones declaradas**
+- **WhisperX → faster-whisper.** El alineador por defecto de WhisperX para
+  español es VOXPOPULI de torchaudio, que es CC BY-NC. faster-whisper es MIT,
+  con pesos Whisper MIT, ya está instalado y no arrastra torch (~2 GB). Su
+  precisión, medida aquí: mediana de 108 ms. Basta para respaldo y QA, no para
+  un karaoke fino. Si algún día falta `words.json` y hace falta precisión de
+  karaoke, la opción es WhisperX con `jonatasgrosman/wav2vec2-large-xlsr-53-spanish`,
+  pero antes hay que verificar su licencia. Ese camino no está construido.
+- **Rojo deuda.** La spec de esta fase fija "≤8 % y nunca sobre un personaje",
+  así que se aplica tal cual. Esto resuelve el conflicto 1 de la Fase 0.
+- **Las páginas no cruzan comas.** Es más estricto que la spec (2-4 palabras),
+  pero va en la misma dirección.
+- **Paginación duplicada a propósito** (JS para pantalla, Python para la QA).
+  `kx_nucleo` las ejecuta las dos y falla si difieren: hoy son idénticas.
+- `still_hero.png` no va en git (1,5 MB; `*.png` está ignorado). La hoja de
+  contacto sí, con `-f`.
+
+**Pendiente**
+- **Fase 2 (rig de Tadeo): no empieza sin el OK de Fabian a esta fase.**
+- Siguen abiertos de la Fase 0: el conflicto 2 (largo del guion), el 4 (el rig
+  con hoja de poses) y el 7 (repo público, sin push).
+
+**Rama / PR:** `feat/sistema-videos-korex`, sin push ni PR (el repo es público).
