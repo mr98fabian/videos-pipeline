@@ -1,0 +1,9 @@
+$ py scripts/verify.py   # con scripts/zz-canario-invalido.json
+verify: ROJO — 3 fallo(s) · guiones revisados: 1 · tests: 7 passed in 0.03s · archivos añadidos bajo el escudo: 7
+  - [formato] scripts/zz-canario-invalido.json: 2 search_terms para 3 oraciones (regla 1:1 frase↔imagen)
+  - [formato] scripts/zz-canario-invalido.json: 0 beats `*` en character_terms (debe haber exactamente uno)
+  - [formato] scripts/zz-canario-invalido.json: el giro cae al 83% del guion (banda 25-75 %)
+exit=1
+$ py scripts/verify.py   # canario borrado
+verify: VERDE · guiones revisados: 0 · tests: 7 passed in 0.03s · archivos añadidos bajo el escudo: 6
+exit=0
