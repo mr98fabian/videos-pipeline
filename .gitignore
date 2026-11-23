@@ -110,3 +110,25 @@ flow_projects.json
 .obsidian/workspace-mobile.json
 .obsidian/cache
 .obsidian/plugins/
+
+# --- Escudo de secretos ampliado (Mision 0, 22 nov 2026) ---------------------
+# Cualquier credencial con otro nombre o formato. .env.example SI va (solo
+# trae marcadores vacios).
+*client_secret*.json
+*token*.json
+credentials*.json
+*.pickle
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+.env.*
+!.env.example
+
+# Motor KOREX motion: poses copiadas por video y cache del diseno sonoro
+motion_graphics/public/kxm/
+*.npy
+
+# caches de herramientas
+.ruff_cache/
