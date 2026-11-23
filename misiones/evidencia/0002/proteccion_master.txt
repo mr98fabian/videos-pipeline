@@ -1,0 +1,8 @@
+$ gh api -X PUT repos/mr98fabian/videos-pipeline/branches/master/protection  (PR obligatorio + check verify + sin force-push/borrado + enforce_admins)
+{"message":"Upgrade to GitHub Pro or make this repository public to enable this feature.","documentation_url":"https://docs.github.com/rest/branches/branch-protection#update-branch-protection","status":"403"}gh: Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)
+
+$ gh api -X POST repos/mr98fabian/videos-pipeline/rulesets  (alternativa: ruleset)
+{"message":"Upgrade to GitHub Pro or make this repository public to enable this feature.","documentation_url":"https://docs.github.com/rest/repos/rules#create-a-repository-ruleset","status":"403"}gh: Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)
+
+$ gh repo view --json visibility
+{"visibility":"PRIVATE"}

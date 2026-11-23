@@ -16,6 +16,22 @@ los dos repos.
 4. **Mijo audita** contra la sección *Aceptación* y anota el resultado.
 5. **Fabian aprueba** y ordena el merge. Nadie mergea sin esa orden.
 
+## Reglas de la oficina (Misión 0002, igual que CoreX-SF)
+
+- **Criterios antes que código.** La sección «Criterios de aceptación
+  ejecutables» se llena antes de producir; una misión sin ella no se toma.
+- **Artefacto por criterio.** El Reporte pega, por cada criterio, el comando y
+  su salida o la ruta del archivo generado. «Lo probé» no es evidencia.
+- **La puerta es `scripts/verify.py`.** Corre sola al cerrar cada turno de
+  Claude Code (Stop hook en `.claude/settings.json`) y en la CI de GitHub en
+  cada push y PR. Con el árbol sucio y la puerta en rojo, el turno no cierra.
+- **Merges solo por PR con CI verde.** Nada se empuja directo a `master`.
+- **La regla de oro: todo error que se repita se convierte en test o en
+  bloqueo automático** (`tests/` o un chequeo nuevo de `verify.py`), no en una
+  nota más en un `.md`.
+- El ejecutor reporta y deja `en-auditoria`; Mijo audita; Fabian aprueba los
+  merges.
+
 Estados válidos en `cola.md`: `pendiente` · `en-curso` · `en-auditoria` ·
 `aprobada` · `rechazada` · `bloqueada`.
 
