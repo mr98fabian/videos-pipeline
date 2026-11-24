@@ -371,3 +371,79 @@ Composición de prueba (13 s): neutro (3 s de idle) → explicando → confundid
    de siluetas. No he vuelto a pasar el resto de pares tras los fixes: lo revisa Fabian en la hoja.
 
 ⏸ **Puerta dura:** el PR no se fusiona sin la aprobación visual de Fabian sobre `hoja_de_poses.png`.
+
+## Iteración de parecido: Tadeo trazado de la hoja madre (Opus)
+Fabian rechazó en la puerta visual el rig construido con primitivas: derivaba a
+«mascota corporativa». Lo técnico (acting, springs, biblioteca, gate) no se tocó.
+Solo cambió la GEOMETRÍA.
+
+**Método — trazar, no construir.** `kx_trazo.py` toma la vista frontal de
+`_hojas/model_sheet.png` (sin las líneas guía), la reescala ×4 y la separa en
+piezas usando la tinta del propio dibujo, el tono y cinco cortes medidos en la
+hoja: las dos bases de oreja, la coronilla, la barbilla y las axilas. Cada
+contorno pasa a ser un camino en unidades del rig y se escribe en
+`tadeo/traza.js`, un archivo generado: cráneo, orejas con su interior, mechón,
+crema de la cara, antifaz, ojos y pupilas, cejas, nariz, boca, torso, panza,
+guantes, pies y cola. Brazos y piernas no se trazan como forma: de la banda entre
+sus dos líneas de tinta salen la línea central (Bézier ajustada) y el grosor del
+tubo. `RIG` (hombros, caderas, barbilla, grosores y largos) sale de esa traza, y
+las poses conservan su lenguaje corporal: sus manos se re-escalan desde el
+hombro trazado.
+
+**Parecido medido** (`py kx_parecido.py`: el neutro del rig se renderiza en la
+misma rejilla de píxeles que la hoja ×4, con los pies en el suelo de la hoja y el
+eje en la nariz, y las dos imágenes se miden con el mismo código):
+solape de silueta **IoU = 0.9802** (mínimo 0,95).
+
+| marca | madre | rig | desviación |
+|---|---|---|---|
+| cabeza_ancho_alto | 1.433 | 1.433 | -0.07 % |
+| oreja_alto | 79.000 | 79.000 | +0.00 % |
+| oreja_ancho | 129.000 | 128.000 | -0.78 % |
+| ojos_distancia | 267.139 | 267.071 | -0.03 % |
+| antifaz_ancho | 622.000 | 622.000 | +0.00 % |
+| hocico_ancho | 496.000 | 502.000 | +1.21 % |
+| panza_ancho | 398.000 | 401.000 | +0.75 % |
+
+Marcas en px ×4, salvo `cabeza_ancho_alto`, que es una razón. Test:
+`tests/test_tadeo_parecido.py`. Falla si el IoU baja de 0,95, si una marca sale
+de ±3 %, o si `parecido.json` no corresponde al código actual (huella de
+`partes.jsx`, `poses.js`, `traza.js` y compañía). Evidencia en
+`evidencia/0001-fase2/`: `hoja_de_poses.png` con banda inferior nueva (madre vs rig
+a la misma escala · solape al 50 % · tabla de marcas), `parecido_*.png`,
+`rig_neutro.png` y `parecido.json`.
+
+**Lo demás sigue verde:** gate `off_palette_max 0.0`, `safe_zone 0.0`,
+`char_color_fraction 0.0`, 0/390 pares congelados · 71 tests · `verify` VERDE ·
+`grep DEBT tadeo/` vacío · sin cambios de contrato en biblioteca ni acting.
+
+**Qué piezas costaron más**
+1. *Orejas:* la recta de la base corta el cráneo en dos, y para una oreja tomaba el
+   lado equivocado: se comía la frente. Ahora la oreja es siempre el lado PEQUEÑO.
+2. *Nariz:* en el dibujo, nariz, surco y sonrisa son UNA mancha de tinta, y la nariz
+   trazada se llevaba la boca a todas las expresiones. Se separa con una apertura
+   morfológica, porque la nariz es la única parte gruesa.
+3. *Las expresiones:* las 6 cabezas de la hoja no son copias frontales. Guiño, risa
+   y asombro están en 3/4, y las cejas se pegan al contorno del antifaz. Se alinean
+   por los lóbulos del antifaz y el ancho de la cabeza, y se trazan por zonas (bajo
+   la nariz = boca, sobre el antifaz = cejas). Sonrisa, triste, decidido y guiño
+   usan su boca trazada, y la «o» de asombro, la pieza mayor de la suya. **Risa y
+   grito no encajan** en una cara frontal: se derivan de la sonrisa trazada del
+   frente (mismas comisuras, boca abierta debajo) con la mandíbula bajando bajo la
+   barbilla. Confundido, codicia y estafado se derivan transformando bocas trazadas.
+4. *Líneas que la hoja no tiene:* el corte de la barbilla y el borde alto de la
+   panza dibujaban una raya, y en la hoja la crema de la cara se funde con la del
+   pecho. Son cortes sin trazo. Con esa raya fallaba la marca de la cabeza (−13 %).
+
+**Pendiente / declarado**
+- Las cejas de las expresiones siguen siendo las paramétricas de A5 aplicadas a la
+  ceja trazada del frente. Trazadas de la hoja salían con ruido (pelo, contorno del antifaz).
+- Puño, señala, palma y agarra se construyen a la escala del guante trazado (la
+  hoja solo dibuja el abierto). Pies, cola y guantes son piezas rígidas.
+- La cola gira entera (alza + rizo), ya no se curva como en el rig construido.
+- Sin pecas: la vista frontal de la hoja no las tiene.
+- El halo claro sobre el antifaz y el degradado gris de las mejillas no se trazan:
+  son sombreado, no forma.
+
+⏸ **Puerta:** Fabian aprueba la hoja nueva. Si el parecido no le convence, el PR #7
+sigue sin fusionar y la Fase 3 no arranca.

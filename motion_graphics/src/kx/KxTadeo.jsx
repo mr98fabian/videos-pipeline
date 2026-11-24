@@ -130,3 +130,19 @@ export const KxTadeoHoja = ({ celdas, hojaMadre }) => {
     </AbsoluteFill>
   );
 };
+
+// Molde de parecido: el neutro del rig, sin boil, idle ni grano, dibujado en
+// la MISMA rejilla de píxeles que la vista frontal de la hoja madre (×4), para
+// que kx_parecido.py mida solape y marcas píxel a píxel.
+export const KxTadeoMolde = ({ xc, suelo, s }) => {
+  const est = estado({ desde: "neutro", frame: 0, conIdle: false, agenda: [] });
+  return (
+    <AbsoluteFill style={{ background: PAPER }}>
+      <svg width="100%" height="100%">
+        <g transform={`translate(${xc} ${suelo}) scale(${s} ${-s})`}>
+          <TadeoPartes est={est} uid="molde" />
+        </g>
+      </svg>
+    </AbsoluteFill>
+  );
+};

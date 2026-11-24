@@ -1,0 +1,43 @@
+{
+ "huella": "101459691b358fd0",
+ "iou": 0.9802,
+ "iou_min": 0.95,
+ "tolerancia_marcas": 0.03,
+ "marcas": {
+  "cabeza_ancho_alto": {
+   "madre": 1.4334,
+   "rig": 1.4325,
+   "desviacion": -0.0007
+  },
+  "oreja_alto": {
+   "madre": 79.0,
+   "rig": 79.0,
+   "desviacion": 0.0
+  },
+  "oreja_ancho": {
+   "madre": 129.0,
+   "rig": 128.0,
+   "desviacion": -0.0078
+  },
+  "ojos_distancia": {
+   "madre": 267.1388,
+   "rig": 267.0709,
+   "desviacion": -0.0003
+  },
+  "antifaz_ancho": {
+   "madre": 622.0,
+   "rig": 622.0,
+   "desviacion": 0.0
+  },
+  "hocico_ancho": {
+   "madre": 496.0,
+   "rig": 502.0,
+   "desviacion": 0.0121
+  },
+  "panza_ancho": {
+   "madre": 398.0,
+   "rig": 401.0,
+   "desviacion": 0.0075
+  }
+ }
+}

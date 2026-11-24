@@ -19,14 +19,14 @@
     }
   ],
   "char_box": {
-    "x": 192,
-    "y": 449,
-    "w": 610,
-    "h": 731
+    "x": 197,
+    "y": 438,
+    "w": 570,
+    "h": 742
   },
   "duracion_s": 13.0,
   "palette_still": {
-    "off_palette": 7e-06,
+    "off_palette": 5e-06,
     "debt": 0.0,
     "char_color_fraction": 5.2e-05
   },
@@ -42,7 +42,7 @@
   "nunca_congelado": {
     "frames": 390,
     "pares_identicos": 0,
-    "dif_media_minima": 0.243
+    "dif_media_minima": 0.2038
   },
   "fails": []
 }

@@ -3,18 +3,41 @@
 // Espacio del rig: alto total 1000 u, origen en el suelo, x = 0 al centro,
 // y hacia ARRIBA. I/D = izquierda/derecha de pantalla.
 
+import { TRAZA } from "./traza.js";
+
+// Las medidas salen de la TRAZA de la hoja madre (kx_trazo.py), no de
+// proporciones estimadas: hombros, caderas, barbilla, grosores y largos de
+// brazo y pierna son los del dibujo neutro.
+const _len = (p0, p1, p2, n = 64) => {
+  let L = 0;
+  let prev = p0;
+  for (let i = 1; i <= n; i++) {
+    const t = i / n;
+    const p = [0, 1].map((k) => (1 - t) ** 2 * p0[k] + 2 * (1 - t) * t * p1[k] + t * t * p2[k]);
+    L += Math.hypot(p[0] - prev[0], p[1] - prev[1]);
+    prev = p;
+  }
+  return L;
+};
+const _B = TRAZA.brazos;
+const _Pi = TRAZA.pierna;
+const _hx = (Math.abs(_B.I.P0[0]) + Math.abs(_B.D.P0[0])) / 2;
+const _hy = (_B.I.P0[1] + _B.D.P0[1]) / 2;
+const _largoBrazo = (_len(_B.I.P0, _B.I.P1, _B.I.P2) + _len(_B.D.P0, _B.D.P1, _B.D.P2)) / 2;
+
 export const RIG = {
   alto: 1000,
-  torsoPivote: [0, 215],
-  hombro: [128, 585],
-  cadera: [85, 235],
-  cuelloLocal: [0, 625], // barbilla: la cabeza se apoya aquí (solape 30 u)
-  cabezaCentro: 770,
+  torsoPivote: [0, TRAZA.torso_base_y],
+  hombro: [_hx, _hy],
+  cadera: [Math.abs(_Pi.P0[0]), _Pi.P0[1]],
+  tobillo: [Math.abs(_Pi.P2[0]), _Pi.P2[1]],
+  rodilla: [Math.abs(_Pi.P1[0]), _Pi.P1[1]],
+  cuelloLocal: TRAZA.menton, // barbilla trazada: la cabeza se apoya aquí
   // curvaMax 2 (A3 decía 1): con 1 el codo sale como mucho 62 u y las jarras de
   // `orgulloso` o la bocina de `grito` son imposibles. Desviación declarada en el Reporte.
-  brazo: { largo: 330, grosor: 52, factorCurva: 0.38, min: 0.75, max: 1.35, curvaMax: 2 },
-  pierna: { largo: 175, grosor: 78, curvaMax: 0.35 },
-  cola: { base: [95, 250], largo: 420, grosor: [90, 150], anillos: 5 },
+  brazo: { largo: _largoBrazo, grosor: (_B.I.grosor + _B.D.grosor) / 2, factorCurva: 0.38, min: 0.75, max: 1.35, curvaMax: 2 },
+  pierna: { largo: _len(_Pi.P0, _Pi.P1, _Pi.P2), grosor: _Pi.grosor, curvaMax: 0.35 },
+  cola: { base: TRAZA.cola.base, rizoNeutro: 0.3, gradosPorRizo: 12 },
   guante: { radio: 110 }, // radio envolvente del guante abierto desde la muñeca
   pantalla: { x: 468, y: 1180, alto: 640 }, // pies en y = 1180, 1 u = 0,64 px
   beatEscala: 1.12,
@@ -22,9 +45,29 @@ export const RIG = {
   linea: { exterior: 7, interior: 4.5, fina: 3.5 },
 };
 
+// Las poses se escribieron para el brazo de diseño (hombro ±128/585, 330 u).
+// Se conservan como lenguaje corporal: la mano se re-escala desde el hombro
+// trazado en proporción al largo real del brazo.
+const _VIEJO = { hombro: [128, 585], largo: 330 };
+const _mano = ([x, y]) => {
+  const s = x < 0 ? -1 : 1;
+  const k = RIG.brazo.largo / _VIEJO.largo;
+  return [s * RIG.hombro[0] + (x - s * _VIEJO.hombro[0]) * k, RIG.hombro[1] + (y - _VIEJO.hombro[1]) * k];
+};
+// Brazo neutro = el trazado: misma muñeca y la curva que reproduce su codo.
+const _curvaTrazada = (b) => {
+  const mid = [(b.P0[0] + b.P2[0]) / 2, (b.P0[1] + b.P2[1]) / 2];
+  const dx = b.P2[0] - b.P0[0];
+  const dy = b.P2[1] - b.P0[1];
+  const d = Math.hypot(dx, dy);
+  const perp = [-dy / d, dx / d];
+  return ((b.P1[0] - mid[0]) * perp[0] + (b.P1[1] - mid[1]) * perp[1]) / (RIG.brazo.largo * RIG.brazo.factorCurva);
+};
+
 export const GUANTES = ["abierta", "puno", "senala", "palma", "agarra"];
 
-const brazo = (mano, curva, guante = "abierta", giro = 0, capa = "delante") => ({ mano, curva, guante, giro, capa });
+const brazo = (mano, curva, guante = "abierta", giro = 0, capa = "delante") => ({ mano: _mano(mano), curva, guante, giro, capa });
+const brazoTrazado = (lado) => ({ mano: _B[lado].P2, curva: _curvaTrazada(_B[lado]), guante: "abierta", giro: 0, capa: "delante" });
 const base = {
   cabeza: { inclina: 0, gira: 0, dx: 0, dy: 0 },
   torso: { inclina: 0, sy: 1 },
@@ -51,7 +94,7 @@ const pose = (id, expr, mirada, p) => ({
 // pose simétrica (orejas > 0 = hacia fuera; giro > 0 = antihorario en D).
 export const POSES = {
   neutro: pose("neutro", "sonrisa", "camara", {
-    brazoI: brazo([-215, 300], -0.2), brazoD: brazo([215, 300], 0.2),
+    brazoI: brazoTrazado("I"), brazoD: brazoTrazado("D"),
   }),
   confundido: pose("confundido", "confundido", "camara", {
     cabeza: { inclina: 10 }, torso: { sy: 1.04 },
@@ -209,36 +252,33 @@ export const largoCurva = (pts, n = 64) => {
 // Ángulo (grados, matemático) de la tangente final de la curva.
 export const tangenteFinal = ([, p1, p2]) => (Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180) / Math.PI;
 
+// Pierna trazada: cadera, rodilla y tobillo del dibujo; `apertura` separa el
+// tobillo y `flexion` saca la rodilla hacia fuera.
 export const piernaPuntos = (lado, piernas) => {
   const s = lado === "I" ? -1 : 1;
   const salto = piernas.salto || 0;
+  const f = Math.max(0, Math.min(1, piernas.flexion || 0));
   const cadera = [s * RIG.cadera[0], RIG.cadera[1] + salto];
-  const tobillo = [s * RIG.cadera[0] * piernas.apertura, 55 + salto];
-  const curva = Math.max(-RIG.pierna.curvaMax, Math.min(RIG.pierna.curvaMax, piernas.flexion * RIG.pierna.curvaMax)) * -s;
-  const mx = (cadera[0] + tobillo[0]) / 2;
-  const my = (cadera[1] + tobillo[1]) / 2;
-  const k = curva * RIG.pierna.largo * RIG.brazo.factorCurva;
-  return [cadera, [mx - k, my], tobillo];
+  const rodilla = [s * (RIG.rodilla[0] + f * 45), RIG.rodilla[1] + salto - f * 12];
+  const tobillo = [s * RIG.tobillo[0] * piernas.apertura, RIG.tobillo[1] + salto];
+  return [cadera, rodilla, tobillo];
 };
 
-// Cola: Bézier cúbica normalizada a largo 420 u; rizo mueve los controles.
-export const colaPuntos = (cola) => {
-  const r = cola.rizo;
-  const raw = [[0, 0], [170, -60], [300, 70 + 110 * r], [250 - 70 * r, 250 + 30 * r]];
-  const cub = (t) => {
-    const u = 1 - t;
-    return [0, 1].map((i) => u ** 3 * raw[0][i] + 3 * u * u * t * raw[1][i] + 3 * u * t * t * raw[2][i] + t ** 3 * raw[3][i]);
-  };
-  let L = 0;
-  let prev = cub(0);
-  for (let i = 1; i <= 64; i++) {
-    const p = cub(i / 64);
-    L += Math.hypot(p[0] - prev[0], p[1] - prev[1]);
-    prev = p;
-  }
-  const k = RIG.cola.largo / L;
-  return raw.map((p) => rotar([p[0] * k, p[1] * k], -cola.alza)).map(([x, y]) => [x + RIG.cola.base[0], y + RIG.cola.base[1]]);
+// Cola trazada: pieza rígida que gira sobre su base (alza + rizo).
+export const colaAngulo = (cola) => cola.alza + (cola.rizo - RIG.cola.rizoNeutro) * RIG.cola.gradosPorRizo;
+export const colaForma = (cola) => {
+  const a = colaAngulo(cola);
+  const b = RIG.cola.base;
+  return TRAZA.cola.forma.flat().map((q) => rotar(q, -a, b));
 };
+
+const _ext = (polys) => {
+  const pts = polys.flat();
+  return [Math.min(...pts.map((q) => q[0])), Math.min(...pts.map((q) => q[1])), Math.max(...pts.map((q) => q[0])), Math.max(...pts.map((q) => q[1]))];
+};
+const _cab = _ext([...TRAZA.craneo.forma, ...TRAZA.orejas.I.forma, ...TRAZA.orejas.D.forma, ...TRAZA.mechon.forma]);
+// Caja de la cabeza respecto a la barbilla (con holgura para orejas que giran y bocas que bajan).
+export const CABEZA_EXT = [_cab[0] - 40 - RIG.cuelloLocal[0], _cab[1] - 130 - RIG.cuelloLocal[1], _cab[2] + 40 - RIG.cuelloLocal[0], _cab[3] + 40 - RIG.cuelloLocal[1]];
 
 // Geometría completa de una pose en reposo (sin idle): la usan la caja
 // envolvente, el test de largos y el de zona segura.
@@ -254,8 +294,8 @@ export const geometria = (p) => {
     out.piernas[lado] = { puntos: piernaPuntos(lado, p.piernas) };
   }
   const cuello = torsoPunto(RIG.cuelloLocal, p.torso, salto);
-  out.cabeza = { cuello, centro: [cuello[0] + p.cabeza.dx, cuello[1] + 145 + p.cabeza.dy] };
-  out.cola = colaPuntos(p.cola);
+  out.cabeza = { cuello: [cuello[0] + p.cabeza.dx, cuello[1] + p.cabeza.dy] };
+  out.cola = colaForma(p.cola);
   return out;
 };
 
@@ -265,22 +305,18 @@ export const cajaU = (p) => {
   const xs = [];
   const ys = [];
   const add = (x, y, r) => { xs.push(x - r, x + r); ys.push(y - r, y + r); };
-  const c = g.cabeza.centro;
-  xs.push(c[0] - 270, c[0] + 270);
-  ys.push(c[1] - 240, c[1] + 250); // mandíbula de grito abajo, orejas arriba
+  const c = g.cabeza.cuello;
+  xs.push(c[0] + CABEZA_EXT[0], c[0] + CABEZA_EXT[2]);
+  ys.push(c[1] + CABEZA_EXT[1], c[1] + CABEZA_EXT[3]);
   for (const lado of ["I", "D"]) {
     const b = g.brazos[lado];
     for (let i = 0; i <= 16; i++) add(...bezierQ([b.hombro, b.control, b.mano], i / 16), 40);
     add(...b.mano, RIG.guante.radio);
   }
-  xs.push(-260, 260);
-  ys.push(0, 650);
-  for (let i = 0; i <= 8; i++) {
-    const t = i / 8;
-    const q = g.cola;
-    const u = 1 - t;
-    add(...[0, 1].map((k) => u ** 3 * q[0][k] + 3 * u * u * t * q[1][k] + 3 * u * t * t * q[2][k] + t ** 3 * q[3][k]), 80);
-  }
+  const t = _ext([TRAZA.torso.forma[0], ...TRAZA.pies.I.forma.map((f) => f.map(([x, y]) => [x - RIG.tobillo[0], y + RIG.tobillo[1]])), ...TRAZA.pies.D.forma.map((f) => f.map(([x, y]) => [x + RIG.tobillo[0], y + RIG.tobillo[1]]))]);
+  xs.push(t[0] * 1.2 - 20, t[2] * 1.2 + 20);
+  ys.push(0, t[3] + 20);
+  for (const q of g.cola) add(q[0], q[1], 8);
   return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
 };
 

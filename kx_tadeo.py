@@ -138,7 +138,40 @@ def render_hoja(lib: dict) -> Path:
                         f"--props={props}", "--log=error"], cwd=MG, check=True, shell=True, timeout=600)
     finally:
         props.unlink(missing_ok=True)
+    anadir_paneles_parecido(out)
     return out
+
+
+def anadir_paneles_parecido(hoja: Path) -> None:
+    """Banda inferior con madre vs rig, el solape al 50 % y la tabla de marcas
+    (los genera kx_parecido.py en la misma carpeta de evidencia)."""
+    from PIL import Image, ImageDraw
+
+    nombres = ["parecido_lado_a_lado.png", "parecido_solape.png", "parecido_marcas.png"]
+    if not all((EVID / n).exists() for n in nombres):
+        return
+    base = Image.open(hoja).convert("RGB")
+    ims = [Image.open(EVID / n).convert("RGB") for n in nombres]
+    alto = 860
+    escal = [im.resize((round(im.width * alto / im.height), alto)) for im in ims[:2]]
+    libre = base.width - 40 * 4 - sum(im.width for im in escal)
+    tabla = ims[2].resize((libre, round(ims[2].height * libre / ims[2].width)))
+    banda = Image.new("RGB", (base.width, alto + 120), (244, 241, 234))
+    d = ImageDraw.Draw(banda)
+    try:
+        from PIL import ImageFont
+        f = ImageFont.truetype("arialbd.ttf", 34)
+    except OSError:
+        f = None
+    d.text((40, 20), "parecido medible · madre vs rig a la misma escala · solape 50 % · marcas", fill=(17, 17, 17), font=f)
+    x = 40
+    for im in [*escal, tabla]:
+        banda.paste(im, (x, 80))
+        x += im.width + 40
+    out = Image.new("RGB", (base.width, base.height + banda.height), (244, 241, 234))
+    out.paste(base, (0, 0))
+    out.paste(banda, (0, base.height))
+    out.save(hoja)
 
 
 # ------------------------------------------------------------------ gate
