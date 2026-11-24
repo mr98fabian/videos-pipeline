@@ -13,6 +13,7 @@ import { StoryVideo } from "./archivo/StoryVideo";
 import { KorexVideo } from "./korex/KorexVideo";
 import { KorexMotion } from "./korex/KorexMotion";
 import { KxNucleo } from "./kx/KxNucleo";
+import { KxTadeo, KxTadeoHoja } from "./kx/KxTadeo";
 
 const WIDTH = 1080;
 const HEIGHT = 1920;
@@ -126,6 +127,25 @@ const RemotionRoot = () => {
         height={HEIGHT}
         defaultProps={{ voice: null, pose: "", captions: [], heroMs: 0, charBox: { x: 48, y: 400, w: 420, h: 560 }, durationInFrames: FPS * 15 }}
         calculateMetadata={({ props }) => ({ durationInFrames: props.durationInFrames || FPS * 15 })}
+      />
+      <Composition
+        id="KxTadeo"
+        component={KxTadeo}
+        durationInFrames={FPS * 13}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ linea: [{ pose: "neutro", t0: 0 }], durationInFrames: FPS * 13 }}
+        calculateMetadata={({ props }) => ({ durationInFrames: props.durationInFrames || FPS * 13 })}
+      />
+      <Composition
+        id="KxTadeoHoja"
+        component={KxTadeoHoja}
+        durationInFrames={1}
+        fps={FPS}
+        width={3600}
+        height={2750}
+        defaultProps={{ hojaMadre: "kxm/tadeo/model_sheet.png", celdas: { poses: [], cabezas: [], siluetas: [], comparacion: [], expresiones: [], miradas: [] } }}
       />
       <Composition
         id="KorexMotion"

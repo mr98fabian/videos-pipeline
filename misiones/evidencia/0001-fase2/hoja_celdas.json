@@ -1,0 +1,218 @@
+{
+ "poses": [
+  "neutro",
+  "confundido",
+  "decidido",
+  "explicando",
+  "estafado",
+  "orgulloso",
+  "grito",
+  "senalando",
+  "triunfo",
+  "codicia",
+  "bolsillos",
+  "asombro",
+  "picaro",
+  "pensando"
+ ],
+ "siluetas": [
+  "neutro",
+  "confundido",
+  "decidido",
+  "explicando",
+  "estafado",
+  "orgulloso",
+  "grito",
+  "senalando",
+  "triunfo",
+  "codicia",
+  "bolsillos",
+  "asombro",
+  "picaro",
+  "pensando"
+ ],
+ "expresiones": [
+  "sonrisa",
+  "asombro",
+  "triste",
+  "decidido",
+  "guino",
+  "risa",
+  "grito",
+  "confundido",
+  "codicia",
+  "estafado"
+ ],
+ "miradas": [
+  "camara",
+  "izq",
+  "der",
+  "abajo"
+ ],
+ "cabezas": [
+  {
+   "expr": "sonrisa",
+   "mirada": "camara"
+  },
+  {
+   "expr": "asombro",
+   "mirada": "camara"
+  },
+  {
+   "expr": "triste",
+   "mirada": "camara"
+  },
+  {
+   "expr": "decidido",
+   "mirada": "camara"
+  },
+  {
+   "expr": "guino",
+   "mirada": "camara"
+  },
+  {
+   "expr": "risa",
+   "mirada": "camara"
+  },
+  {
+   "expr": "grito",
+   "mirada": "camara"
+  },
+  {
+   "expr": "confundido",
+   "mirada": "camara"
+  },
+  {
+   "expr": "codicia",
+   "mirada": "camara"
+  },
+  {
+   "expr": "estafado",
+   "mirada": "camara"
+  },
+  {
+   "expr": "sonrisa",
+   "mirada": "izq"
+  },
+  {
+   "expr": "asombro",
+   "mirada": "izq"
+  },
+  {
+   "expr": "triste",
+   "mirada": "izq"
+  },
+  {
+   "expr": "decidido",
+   "mirada": "izq"
+  },
+  {
+   "expr": "guino",
+   "mirada": "izq"
+  },
+  {
+   "expr": "risa",
+   "mirada": "izq"
+  },
+  {
+   "expr": "grito",
+   "mirada": "izq"
+  },
+  {
+   "expr": "confundido",
+   "mirada": "izq"
+  },
+  {
+   "expr": "codicia",
+   "mirada": "izq"
+  },
+  {
+   "expr": "estafado",
+   "mirada": "izq"
+  },
+  {
+   "expr": "sonrisa",
+   "mirada": "der"
+  },
+  {
+   "expr": "asombro",
+   "mirada": "der"
+  },
+  {
+   "expr": "triste",
+   "mirada": "der"
+  },
+  {
+   "expr": "decidido",
+   "mirada": "der"
+  },
+  {
+   "expr": "guino",
+   "mirada": "der"
+  },
+  {
+   "expr": "risa",
+   "mirada": "der"
+  },
+  {
+   "expr": "grito",
+   "mirada": "der"
+  },
+  {
+   "expr": "confundido",
+   "mirada": "der"
+  },
+  {
+   "expr": "codicia",
+   "mirada": "der"
+  },
+  {
+   "expr": "estafado",
+   "mirada": "der"
+  },
+  {
+   "expr": "sonrisa",
+   "mirada": "abajo"
+  },
+  {
+   "expr": "asombro",
+   "mirada": "abajo"
+  },
+  {
+   "expr": "triste",
+   "mirada": "abajo"
+  },
+  {
+   "expr": "decidido",
+   "mirada": "abajo"
+  },
+  {
+   "expr": "guino",
+   "mirada": "abajo"
+  },
+  {
+   "expr": "risa",
+   "mirada": "abajo"
+  },
+  {
+   "expr": "grito",
+   "mirada": "abajo"
+  },
+  {
+   "expr": "confundido",
+   "mirada": "abajo"
+  },
+  {
+   "expr": "codicia",
+   "mirada": "abajo"
+  },
+  {
+   "expr": "estafado",
+   "mirada": "abajo"
+  }
+ ],
+ "comparacion": [
+  "orgulloso",
+  "codicia"
+ ]
+}

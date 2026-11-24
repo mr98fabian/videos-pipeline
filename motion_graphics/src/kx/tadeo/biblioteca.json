@@ -1,0 +1,2074 @@
+{
+ "poses": [
+  "neutro",
+  "confundido",
+  "decidido",
+  "explicando",
+  "estafado",
+  "orgulloso",
+  "grito",
+  "senalando",
+  "triunfo",
+  "codicia",
+  "bolsillos",
+  "asombro",
+  "picaro",
+  "pensando"
+ ],
+ "expresiones": [
+  "sonrisa",
+  "asombro",
+  "triste",
+  "decidido",
+  "guino",
+  "risa",
+  "grito",
+  "confundido",
+  "codicia",
+  "estafado"
+ ],
+ "miradas": [
+  "camara",
+  "izq",
+  "der",
+  "abajo"
+ ],
+ "guantes": [
+  "abierta",
+  "puno",
+  "senala",
+  "palma",
+  "agarra"
+ ],
+ "rig": {
+  "alto": 1000,
+  "torsoPivote": [
+   0,
+   215
+  ],
+  "hombro": [
+   128,
+   585
+  ],
+  "cadera": [
+   85,
+   235
+  ],
+  "cuelloLocal": [
+   0,
+   625
+  ],
+  "cabezaCentro": 770,
+  "brazo": {
+   "largo": 330,
+   "grosor": 52,
+   "factorCurva": 0.38,
+   "min": 0.75,
+   "max": 1.35
+  },
+  "pierna": {
+   "largo": 175,
+   "grosor": 78,
+   "curvaMax": 0.35
+  },
+  "cola": {
+   "base": [
+    95,
+    250
+   ],
+   "largo": 420,
+   "grosor": [
+    90,
+    150
+   ],
+   "anillos": 5
+  },
+  "guante": {
+   "radio": 110
+  },
+  "pantalla": {
+   "x": 468,
+   "y": 1180,
+   "alto": 640
+  },
+  "beatEscala": 1.12,
+  "acentoRebase": 1.25,
+  "linea": {
+   "exterior": 7,
+   "interior": 4.5,
+   "fina": 3.5
+  }
+ },
+ "definiciones": {
+  "POSES": {
+   "neutro": {
+    "id": "neutro",
+    "expr": "sonrisa",
+    "mirada": "camara",
+    "cabeza": {
+     "inclina": 0,
+     "gira": 0,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": 0,
+     "sy": 1
+    },
+    "brazoI": {
+     "mano": [
+      -215,
+      300
+     ],
+     "curva": -0.2,
+     "guante": "abierta",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      215,
+      300
+     ],
+     "curva": 0.2,
+     "guante": "abierta",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.3,
+     "alza": 0
+    },
+    "orejas": {
+     "i": 0,
+     "d": 0
+    },
+    "extra": null
+   },
+   "confundido": {
+    "id": "confundido",
+    "expr": "confundido",
+    "mirada": "camara",
+    "cabeza": {
+     "inclina": 10,
+     "gira": 0,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": 0,
+     "sy": 1.04
+    },
+    "brazoI": {
+     "mano": [
+      -330,
+      510
+     ],
+     "curva": 1,
+     "guante": "palma",
+     "giro": 90,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      330,
+      510
+     ],
+     "curva": -1,
+     "guante": "palma",
+     "giro": 90,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.3,
+     "alza": 0
+    },
+    "orejas": {
+     "i": 10,
+     "d": -6
+    },
+    "extra": null
+   },
+   "decidido": {
+    "id": "decidido",
+    "expr": "decidido",
+    "mirada": "camara",
+    "cabeza": {
+     "inclina": 0,
+     "gira": 0,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": 5,
+     "sy": 1
+    },
+    "brazoI": {
+     "mano": [
+      -185,
+      330
+     ],
+     "curva": -0.8,
+     "guante": "puno",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      330,
+      520
+     ],
+     "curva": -1,
+     "guante": "puno",
+     "giro": 60,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1.2,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.3,
+     "alza": 0
+    },
+    "orejas": {
+     "i": -6,
+     "d": -6
+    },
+    "extra": null
+   },
+   "explicando": {
+    "id": "explicando",
+    "expr": "sonrisa",
+    "mirada": "camara",
+    "cabeza": {
+     "inclina": 0,
+     "gira": 0.2,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": 0,
+     "sy": 1
+    },
+    "brazoI": {
+     "mano": [
+      -230,
+      320
+     ],
+     "curva": -0.2,
+     "guante": "abierta",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      340,
+      690
+     ],
+     "curva": -0.9,
+     "guante": "abierta",
+     "giro": -30,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.3,
+     "alza": 0
+    },
+    "orejas": {
+     "i": 0,
+     "d": 0
+    },
+    "extra": null
+   },
+   "estafado": {
+    "id": "estafado",
+    "expr": "estafado",
+    "mirada": "abajo",
+    "cabeza": {
+     "inclina": -4,
+     "gira": 0,
+     "dx": 0,
+     "dy": -25
+    },
+    "torso": {
+     "inclina": 0,
+     "sy": 0.93
+    },
+    "brazoI": {
+     "mano": [
+      -165,
+      290
+     ],
+     "curva": 0.35,
+     "guante": "abierta",
+     "giro": 15,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      165,
+      290
+     ],
+     "curva": -0.35,
+     "guante": "abierta",
+     "giro": 15,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": -0.4,
+     "alza": -18
+    },
+    "orejas": {
+     "i": 22,
+     "d": 22
+    },
+    "extra": null
+   },
+   "orgulloso": {
+    "id": "orgulloso",
+    "expr": "codicia",
+    "mirada": "camara",
+    "cabeza": {
+     "inclina": 0,
+     "gira": 0,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": -5,
+     "sy": 1.04
+    },
+    "brazoI": {
+     "mano": [
+      -180,
+      320
+     ],
+     "curva": -0.8,
+     "guante": "puno",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      180,
+      320
+     ],
+     "curva": 0.8,
+     "guante": "puno",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.6,
+     "alza": 12
+    },
+    "orejas": {
+     "i": 0,
+     "d": 0
+    },
+    "extra": null
+   },
+   "grito": {
+    "id": "grito",
+    "expr": "grito",
+    "mirada": "camara",
+    "cabeza": {
+     "inclina": 0,
+     "gira": 0,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": 8,
+     "sy": 1.08
+    },
+    "brazoI": {
+     "mano": [
+      -255,
+      805
+     ],
+     "curva": 1,
+     "guante": "abierta",
+     "giro": 40,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      255,
+      805
+     ],
+     "curva": -1,
+     "guante": "abierta",
+     "giro": 40,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.3,
+     "alza": 0
+    },
+    "orejas": {
+     "i": -12,
+     "d": -12
+    },
+    "extra": null
+   },
+   "senalando": {
+    "id": "senalando",
+    "expr": "decidido",
+    "mirada": "der",
+    "cabeza": {
+     "inclina": 0,
+     "gira": 0.35,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": 0,
+     "sy": 1
+    },
+    "brazoI": {
+     "mano": [
+      -225,
+      330
+     ],
+     "curva": -0.3,
+     "guante": "puno",
+     "giro": 0,
+     "capa": "detras"
+    },
+    "brazoD": {
+     "mano": [
+      400,
+      600
+     ],
+     "curva": 0.9,
+     "guante": "senala",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.3,
+     "alza": 0
+    },
+    "orejas": {
+     "i": 0,
+     "d": 0
+    },
+    "extra": null
+   },
+   "triunfo": {
+    "id": "triunfo",
+    "expr": "risa",
+    "mirada": "camara",
+    "cabeza": {
+     "inclina": 0,
+     "gira": 0,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": 0,
+     "sy": 1.1
+    },
+    "brazoI": {
+     "mano": [
+      -230,
+      930
+     ],
+     "curva": -0.3,
+     "guante": "puno",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      230,
+      930
+     ],
+     "curva": 0.3,
+     "guante": "puno",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0.4,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 20
+    },
+    "cola": {
+     "rizo": 0.8,
+     "alza": 25
+    },
+    "orejas": {
+     "i": -10,
+     "d": -10
+    },
+    "extra": null
+   },
+   "codicia": {
+    "id": "codicia",
+    "expr": "codicia",
+    "mirada": "abajo",
+    "cabeza": {
+     "inclina": 0,
+     "gira": 0,
+     "dx": 0,
+     "dy": -10
+    },
+    "torso": {
+     "inclina": 6,
+     "sy": 1
+    },
+    "brazoI": {
+     "mano": [
+      -32,
+      380
+     ],
+     "curva": -1,
+     "guante": "agarra",
+     "giro": 70,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      32,
+      380
+     ],
+     "curva": 1,
+     "guante": "agarra",
+     "giro": 70,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.5,
+     "alza": 0
+    },
+    "orejas": {
+     "i": 0,
+     "d": 0
+    },
+    "extra": null
+   },
+   "bolsillos": {
+    "id": "bolsillos",
+    "expr": "triste",
+    "mirada": "abajo",
+    "cabeza": {
+     "inclina": -8,
+     "gira": 0,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": 0,
+     "sy": 1
+    },
+    "brazoI": {
+     "mano": [
+      -240,
+      300
+     ],
+     "curva": -0.25,
+     "guante": "palma",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      240,
+      300
+     ],
+     "curva": 0.25,
+     "guante": "palma",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.3,
+     "alza": 0
+    },
+    "orejas": {
+     "i": 15,
+     "d": 15
+    },
+    "extra": "bolsillos"
+   },
+   "asombro": {
+    "id": "asombro",
+    "expr": "asombro",
+    "mirada": "camara",
+    "cabeza": {
+     "inclina": 0,
+     "gira": 0,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": -6,
+     "sy": 1.06
+    },
+    "brazoI": {
+     "mano": [
+      -370,
+      620
+     ],
+     "curva": 0.6,
+     "guante": "abierta",
+     "giro": 50,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      370,
+      620
+     ],
+     "curva": -0.6,
+     "guante": "abierta",
+     "giro": 50,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.7,
+     "alza": 20
+    },
+    "orejas": {
+     "i": -12,
+     "d": -12
+    },
+    "extra": null
+   },
+   "picaro": {
+    "id": "picaro",
+    "expr": "guino",
+    "mirada": "camara",
+    "cabeza": {
+     "inclina": 4,
+     "gira": -0.25,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": 6,
+     "sy": 1
+    },
+    "brazoI": {
+     "mano": [
+      -180,
+      320
+     ],
+     "curva": -0.8,
+     "guante": "puno",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      205,
+      820
+     ],
+     "curva": 0.3,
+     "guante": "senala",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.3,
+     "alza": 0
+    },
+    "orejas": {
+     "i": 0,
+     "d": 0
+    },
+    "extra": null
+   },
+   "pensando": {
+    "id": "pensando",
+    "expr": "confundido",
+    "mirada": "izq",
+    "cabeza": {
+     "inclina": -6,
+     "gira": 0,
+     "dx": 0,
+     "dy": 0
+    },
+    "torso": {
+     "inclina": 0,
+     "sy": 1
+    },
+    "brazoI": {
+     "mano": [
+      110,
+      430
+     ],
+     "curva": -0.35,
+     "guante": "agarra",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "brazoD": {
+     "mano": [
+      -80,
+      640
+     ],
+     "curva": 1,
+     "guante": "agarra",
+     "giro": 0,
+     "capa": "delante"
+    },
+    "piernas": {
+     "apertura": 1,
+     "flexion": 0,
+     "pieI": 12,
+     "pieD": 12,
+     "salto": 0
+    },
+    "cola": {
+     "rizo": 0.3,
+     "alza": 0
+    },
+    "orejas": {
+     "i": 0,
+     "d": 0
+    },
+    "extra": null
+   }
+  },
+  "EXPRESIONES": {
+   "sonrisa": {
+    "id": "sonrisa",
+    "cejaI": {
+     "interior": 0,
+     "exterior": 0,
+     "arco": 8
+    },
+    "cejaD": {
+     "interior": 0,
+     "exterior": 0,
+     "arco": 8
+    },
+    "parpadoI": 0,
+    "parpadoD": 0,
+    "cerradoI": false,
+    "cerradoD": false,
+    "ojo": 1,
+    "pupila": 1,
+    "boca": "sonrisa",
+    "mandibula": 0,
+    "lagrima": false
+   },
+   "asombro": {
+    "id": "asombro",
+    "cejaI": {
+     "interior": 14,
+     "exterior": 14,
+     "arco": 12
+    },
+    "cejaD": {
+     "interior": 14,
+     "exterior": 14,
+     "arco": 12
+    },
+    "parpadoI": 0,
+    "parpadoD": 0,
+    "cerradoI": false,
+    "cerradoD": false,
+    "ojo": 1.08,
+    "pupila": 1,
+    "boca": "o",
+    "mandibula": 0,
+    "lagrima": false
+   },
+   "triste": {
+    "id": "triste",
+    "cejaI": {
+     "interior": 10.036088501558277,
+     "exterior": -10.036088501558277,
+     "arco": 2
+    },
+    "cejaD": {
+     "interior": 10.036088501558277,
+     "exterior": -10.036088501558277,
+     "arco": 2
+    },
+    "parpadoI": 0.25,
+    "parpadoD": 0.25,
+    "cerradoI": false,
+    "cerradoD": false,
+    "ojo": 1,
+    "pupila": 1,
+    "boca": "triste",
+    "mandibula": 0,
+    "lagrima": false
+   },
+   "decidido": {
+    "id": "decidido",
+    "cejaI": {
+     "interior": -17.37218936815172,
+     "exterior": 5.372189368151719,
+     "arco": 0
+    },
+    "cejaD": {
+     "interior": -17.37218936815172,
+     "exterior": 5.372189368151719,
+     "arco": 0
+    },
+    "parpadoI": 0.3,
+    "parpadoD": 0.3,
+    "cerradoI": false,
+    "cerradoD": false,
+    "ojo": 1,
+    "pupila": 1,
+    "boca": "apretada",
+    "mandibula": 0,
+    "lagrima": false
+   },
+   "guino": {
+    "id": "guino",
+    "cejaI": {
+     "interior": 10,
+     "exterior": 12,
+     "arco": 8
+    },
+    "cejaD": {
+     "interior": -6,
+     "exterior": -8,
+     "arco": 4
+    },
+    "parpadoI": 0,
+    "parpadoD": 0,
+    "cerradoI": false,
+    "cerradoD": true,
+    "ojo": 1,
+    "pupila": 1,
+    "boca": "ladeada",
+    "mandibula": 0,
+    "lagrima": false
+   },
+   "risa": {
+    "id": "risa",
+    "cejaI": {
+     "interior": 10,
+     "exterior": 10,
+     "arco": 8
+    },
+    "cejaD": {
+     "interior": 10,
+     "exterior": 10,
+     "arco": 8
+    },
+    "parpadoI": 0,
+    "parpadoD": 0,
+    "cerradoI": true,
+    "cerradoD": true,
+    "ojo": 1,
+    "pupila": 1,
+    "boca": "risa",
+    "mandibula": 45,
+    "lagrima": false
+   },
+   "grito": {
+    "id": "grito",
+    "cejaI": {
+     "interior": -24.140917904230488,
+     "exterior": 4.140917904230488,
+     "arco": 0
+    },
+    "cejaD": {
+     "interior": -24.140917904230488,
+     "exterior": 4.140917904230488,
+     "arco": 0
+    },
+    "parpadoI": 0,
+    "parpadoD": 0,
+    "cerradoI": false,
+    "cerradoD": false,
+    "ojo": 1.05,
+    "pupila": 0.8,
+    "boca": "grito",
+    "mandibula": 95,
+    "lagrima": false
+   },
+   "confundido": {
+    "id": "confundido",
+    "cejaI": {
+     "interior": 16,
+     "exterior": 16,
+     "arco": 10
+    },
+    "cejaD": {
+     "interior": -4,
+     "exterior": -6,
+     "arco": 2
+    },
+    "parpadoI": 0,
+    "parpadoD": 0.25,
+    "cerradoI": false,
+    "cerradoD": false,
+    "ojo": 1,
+    "pupila": 1,
+    "boca": "ondulada",
+    "mandibula": 0,
+    "lagrima": false
+   },
+   "codicia": {
+    "id": "codicia",
+    "cejaI": {
+     "interior": -8,
+     "exterior": 2,
+     "arco": 10
+    },
+    "cejaD": {
+     "interior": -8,
+     "exterior": 2,
+     "arco": 10
+    },
+    "parpadoI": 0.4,
+    "parpadoD": 0.4,
+    "cerradoI": false,
+    "cerradoD": false,
+    "ojo": 1,
+    "pupila": 1,
+    "boca": "ancha",
+    "mandibula": 0,
+    "lagrima": false
+   },
+   "estafado": {
+    "id": "estafado",
+    "cejaI": {
+     "interior": 14.140917904230488,
+     "exterior": -14.140917904230488,
+     "arco": 2
+    },
+    "cejaD": {
+     "interior": 14.140917904230488,
+     "exterior": -14.140917904230488,
+     "arco": 2
+    },
+    "parpadoI": 0.35,
+    "parpadoD": 0.35,
+    "cerradoI": false,
+    "cerradoD": false,
+    "ojo": 1,
+    "pupila": 1,
+    "boca": "temblorosa",
+    "mandibula": 0,
+    "lagrima": true
+   }
+  },
+  "MIRADAS": {
+   "camara": {
+    "x": 0,
+    "y": 0,
+    "gira": 0
+   },
+   "izq": {
+    "x": -1,
+    "y": 0,
+    "gira": -0.15
+   },
+   "der": {
+    "x": 1,
+    "y": 0,
+    "gira": 0.15
+   },
+   "abajo": {
+    "x": 0,
+    "y": -0.8,
+    "gira": 0
+   }
+  }
+ },
+ "medidas": {
+  "neutro": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -128,
+      585
+     ],
+     "control": [
+      -195.4872566512756,
+      449.82242571459994
+     ],
+     "mano": [
+      -215,
+      300
+     ],
+     "ratio": 0.9072248879216493,
+     "guante": "abierta"
+    },
+    "D": {
+     "hombro": [
+      128,
+      585
+     ],
+     "control": [
+      195.4872566512756,
+      449.82242571459994
+     ],
+     "mano": [
+      215,
+      300
+     ],
+     "ratio": 0.9072248879216493,
+     "guante": "abierta"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -325,
+    0,
+    406.50332440601096,
+    1020
+   ]
+  },
+  "confundido": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -123.07692307692307,
+      599.8
+     ],
+     "control": [
+      -183.80706849372802,
+      444.4051822663247
+     ],
+     "mano": [
+      -330,
+      524.8000000000001
+     ],
+     "ratio": 0.7913756525623052,
+     "guante": "palma"
+    },
+    "D": {
+     "hombro": [
+      123.07692307692307,
+      599.8
+     ],
+     "control": [
+      183.80706849372802,
+      444.4051822663247
+     ],
+     "mano": [
+      330,
+      524.8000000000001
+     ],
+     "ratio": 0.7913756525623052,
+     "guante": "palma"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -440,
+    0,
+    440,
+    1036.4
+   ]
+  },
+  "decidido": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -95.26529653910991,
+      594.7479733656461
+     ],
+     "control": [
+      -230.39320581194175,
+      500.55110220978804
+     ],
+     "mano": [
+      -174.27310873099225,
+      345.6862026888675
+     ],
+     "ratio": 0.8638474431805303,
+     "guante": "puno"
+    },
+    "D": {
+     "hombro": [
+      159.76054617237696,
+      572.4361032222456
+     ],
+     "control": [
+      208.874048079094,
+      415.68702370195336
+     ],
+     "mano": [
+      355.32675190831173,
+      490.0779878112552
+     ],
+     "ratio": 0.7709555985117691,
+     "guante": "puno"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -93.5,
+      145
+     ],
+     [
+      -102,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      93.5,
+      145
+     ],
+     [
+      102,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -284.27310873099225,
+    0,
+    465.32675190831173,
+    1018.4398262176157
+   ]
+  },
+  "explicando": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -128,
+      585
+     ],
+     "control": [
+      -202.40603064697297,
+      461.5091136829858
+     ],
+     "mano": [
+      -230,
+      320
+     ],
+     "ratio": 0.8649153249351387,
+     "guante": "abierta"
+    },
+    "D": {
+     "hombro": [
+      128,
+      585
+     ],
+     "control": [
+      284.0905235846531,
+      536.3648476195575
+     ],
+     "mano": [
+      340,
+      690
+     ],
+     "ratio": 0.8142041552274589,
+     "guante": "abierta"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -340,
+    0,
+    450,
+    1020
+   ]
+  },
+  "estafado": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -137.63440860215053,
+      559.1
+     ],
+     "control": [
+      -107.61483733501058,
+      407.545962313518
+     ],
+     "mano": [
+      -165,
+      264.1
+     ],
+     "ratio": 0.9107420222429756,
+     "guante": "abierta"
+    },
+    "D": {
+     "hombro": [
+      137.63440860215053,
+      559.1
+     ],
+     "control": [
+      107.61483733501058,
+      407.545962313518
+     ],
+     "mano": [
+      165,
+      264.1
+     ],
+     "ratio": 0.9107420222429756,
+     "guante": "abierta"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -275,
+    0,
+    482.235068381436,
+    966.3
+   ]
+  },
+  "orgulloso": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -156.1461080359752,
+      587.608859179838
+     ],
+     "control": [
+      -272.49692782180426,
+      465.57239615848044
+     ],
+     "mano": [
+      -189.75630363768366,
+      318.6560911368126
+     ],
+     "ratio": 0.8911394343696486,
+     "guante": "puno"
+    },
+    "D": {
+     "hombro": [
+      89.0710484173775,
+      609.0625804715693
+     ],
+     "control": [
+      224.84564722436463,
+      509.0842333638114
+     ],
+     "mano": [
+      168.87378767534474,
+      350.03215852596963
+     ],
+     "ratio": 0.8911394343696488,
+     "guante": "puno"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -307.1632087076014,
+    0,
+    362.4137300708261,
+    1034.7774192663205
+   ]
+  },
+  "grito": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -61.75153329980321,
+      627.2057100125467
+     ],
+     "control": [
+      -228.74248168915116,
+      694.9993811985146
+     ],
+     "mano": [
+      -166.2867041742439,
+      864.0592361370938
+     ],
+     "ratio": 0.8939924509370556,
+     "guante": "abierta"
+    },
+    "D": {
+     "hombro": [
+      172.9786755870875,
+      594.2165305257164
+     ],
+     "control": [
+      352.18714610900764,
+      613.3550464044118
+     ],
+     "mano": [
+      338.750010883957,
+      793.0809546474603
+     ],
+     "ratio": 0.8939924509370553,
+     "guante": "abierta"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -276.28670417424394,
+    0,
+    448.750010883957,
+    1048.4907008387672
+   ]
+  },
+  "senalando": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -128,
+      585
+     ],
+     "control": [
+      -211.66197757264126,
+      470.8753404884165
+     ],
+     "mano": [
+      -225,
+      330
+     ],
+     "ratio": 0.8371060686763817,
+     "guante": "puno"
+    },
+    "D": {
+     "hombro": [
+      128,
+      585
+     ],
+     "control": [
+      257.78554546114145,
+      705.1887756379688
+     ],
+     "mano": [
+      400,
+      600
+     ],
+     "ratio": 0.9120176132780262,
+     "guante": "senala"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -335,
+    0,
+    510,
+    1020
+   ]
+  },
+  "triunfo": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -116.36363636363636,
+      642
+     ],
+     "control": [
+      -137.45020936251066,
+      826.2693046176902
+     ],
+     "mano": [
+      -230,
+      987
+     ],
+     "ratio": 1.108525635526164,
+     "guante": "puno"
+    },
+    "D": {
+     "hombro": [
+      116.36363636363636,
+      642
+     ],
+     "control": [
+      137.45020936251066,
+      826.2693046176902
+     ],
+     "mano": [
+      230,
+      987
+     ],
+     "ratio": 1.108525635526164,
+     "guante": "puno"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      255
+     ],
+     [
+      -94.31,
+      165
+     ],
+     [
+      -85,
+      75
+     ]
+    ],
+    "D": [
+     [
+      85,
+      255
+     ],
+     [
+      94.31,
+      165
+     ],
+     [
+      85,
+      75
+     ]
+    ]
+   },
+   "caja_u": [
+    -340,
+    0,
+    340,
+    1097
+   ]
+  },
+  "codicia": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -88.6232711981072,
+      596.3527445845208
+     ],
+     "control": [
+      -170.1017437140815,
+      448.3775151828955
+     ],
+     "mano": [
+      -14.577504212621925,
+      382.44102356033
+     ],
+     "ratio": 0.8077104774478417,
+     "guante": "agarra"
+    },
+    "D": {
+     "hombro": [
+      165.97433401617076,
+      569.5934579880014
+     ],
+     "control": [
+      214.90652627508862,
+      407.91151539472264
+     ],
+     "mano": [
+      49.071897090947566,
+      375.75120191120016
+     ],
+     "ratio": 0.8077104774478417,
+     "guante": "agarra"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -260,
+    0,
+    401.37812828082997,
+    1007.7539771009921
+   ]
+  },
+  "bolsillos": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -128,
+      585
+     ],
+     "control": [
+      -213.17781477033614,
+      453.9663693132549
+     ],
+     "mano": [
+      -240,
+      300
+     ],
+     "ratio": 0.9343732699982333,
+     "guante": "palma"
+    },
+    "D": {
+     "hombro": [
+      128,
+      585
+     ],
+     "control": [
+      213.17781477033614,
+      453.9663693132549
+     ],
+     "mano": [
+      240,
+      300
+     ],
+     "ratio": 0.9343732699982333,
+     "guante": "palma"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -350,
+    0,
+    406.50332440601096,
+    1020
+   ]
+  },
+  "asombro": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -161.08927330030858,
+      592.4291823650786
+     ],
+     "control": [
+      -289.4756840933928,
+      521.6122359436301
+     ],
+     "mano": [
+      -412.62766079420265,
+      601.1842222922946
+     ],
+     "ratio": 0.8059578895782973,
+     "guante": "abierta"
+    },
+    "D": {
+     "hombro": [
+      79.09714671316118,
+      617.673792361795
+     ],
+     "control": [
+      219.4016774662753,
+      575.0974018743741
+     ],
+     "mano": [
+      323.31854177831957,
+      678.5352851103581
+     ],
+     "ratio": 0.8059578895782975,
+     "guante": "abierta"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -522.6276607942027,
+    0,
+    433.31854177831957,
+    1042.2192157270515
+   ]
+  },
+  "picaro": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -88.6232711981072,
+      596.3527445845208
+     ],
+     "control": [
+      -224.21504518509488,
+      496.79761801104064
+     ],
+     "mano": [
+      -168.03845252318558,
+      338.23992240184634
+     ],
+     "ratio": 0.8883598000538803,
+     "guante": "puno"
+    },
+    "D": {
+     "hombro": [
+      165.97433401617076,
+      569.5934579880014
+     ],
+     "control": [
+      182.21593671630785,
+      697.8119228896329
+     ],
+     "mano": [
+      267.11670882742635,
+      795.2574117279364
+     ],
+     "ratio": 0.7607772755427354,
+     "guante": "senala"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -278.0384525231856,
+    0,
+    406.50332440601096,
+    1017.7539771009921
+   ]
+  },
+  "pensando": {
+   "brazos": {
+    "I": {
+     "hombro": [
+      -128,
+      585
+     ],
+     "control": [
+      -32.952119092179245,
+      470.72190745846024
+     ],
+     "mano": [
+      110,
+      430
+     ],
+     "ratio": 0.8741839489835388,
+     "guante": "agarra"
+    },
+    "D": {
+     "hombro": [
+      128,
+      585
+     ],
+     "control": [
+      -8.0568855486678,
+      491.2666873795836
+     ],
+     "mano": [
+      -80,
+      640
+     ],
+     "ratio": 0.7785605399405079,
+     "guante": "agarra"
+    }
+   },
+   "piernas": {
+    "I": [
+     [
+      -85,
+      235
+     ],
+     [
+      -85,
+      145
+     ],
+     [
+      -85,
+      55
+     ]
+    ],
+    "D": [
+     [
+      85,
+      235
+     ],
+     [
+      85,
+      145
+     ],
+     [
+      85,
+      55
+     ]
+    ]
+   },
+   "caja_u": [
+    -270,
+    0,
+    406.50332440601096,
+    1020
+   ]
+  }
+ }
+}

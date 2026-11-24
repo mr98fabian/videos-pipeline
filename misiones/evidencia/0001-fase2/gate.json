@@ -1,0 +1,48 @@
+{
+  "linea": [
+    {
+      "pose": "neutro",
+      "t0": 0
+    },
+    {
+      "pose": "explicando",
+      "t0": 90
+    },
+    {
+      "pose": "confundido",
+      "t0": 170
+    },
+    {
+      "pose": "decidido",
+      "t0": 250,
+      "beat": true
+    }
+  ],
+  "char_box": {
+    "x": 186,
+    "y": 449,
+    "w": 616,
+    "h": 731
+  },
+  "duracion_s": 13.0,
+  "palette_still": {
+    "off_palette": 6e-06,
+    "debt": 0.0,
+    "char_color_fraction": 5.1e-05
+  },
+  "palette": {
+    "frames": 78,
+    "off_palette_max": 0.0,
+    "debt_max": 0.0,
+    "char_color_fraction": 0.0
+  },
+  "safe_zone": {
+    "dark_outside_safe_max": 0.0
+  },
+  "nunca_congelado": {
+    "frames": 390,
+    "pares_identicos": 0,
+    "dif_media_minima": 0.2413
+  },
+  "fails": []
+}
