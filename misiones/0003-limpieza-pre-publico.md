@@ -13,7 +13,7 @@ La protección de `master` de la misión 0002 fue rechazada por el plan Free (40
 es la etapa 2 y **solo** se ejecuta tras la auditoría de Mijo y la orden de merge de Fabian.
 
 ## Criterios de aceptación ejecutables
-1. `git grep -n -i "Users[\\/]Khine"` → sin salida (exit 1).
+1. `git grep -n -i "<usuario-local>"` (el nombre de usuario de Windows, con o sin `Users\`) → sin salida (exit 1).
 2. `scripts/run_ep2_once.bat` entra en la raíz del repo por su propia ubicación (`%~dp0..`): mismo
    directorio de trabajo que antes, desde cualquier ruta de checkout → `cmd /c` de la línea `cd` imprime la raíz del repo.
 3. `git check-ignore -v .claude/settings.local.json` → lo ignora una regla de `.gitignore`.
