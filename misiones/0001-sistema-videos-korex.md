@@ -1,6 +1,6 @@
 # MISIÓN 0001 — Sistema de videos KoreX (Remotion + mix pro)
 
-Estado: en-auditoria (Fase 1 entregada; la Fase 2 espera el OK de Fabian) · Rama: `feat/sistema-videos-korex`
+Estado: en-auditoria (Paso 0 + Fase 1 en PR; Fases 2-8 después, una por PR) · Rama: `feat/sistema-videos-korex`
 (sale de `chore/oficina-y-git`) · Autor: Fabian / Mijo · Ejecutor: Claude (Opus)
 
 Especificación: el "PROMPT MAESTRO — Construcción del sistema de videos KoreX",
@@ -183,9 +183,52 @@ Cada fase cierra con su entrada en `HISTORIAL_MEJORAS.md` y un commit en esta ra
 - `still_hero.png` no va en git (1,5 MB; `*.png` está ignorado). La hoja de
   contacto sí, con `-f`.
 
-**Pendiente**
-- **Fase 2 (rig de Tadeo): no empieza sin el OK de Fabian a esta fase.**
-- Siguen abiertos de la Fase 0: el conflicto 2 (largo del guion), el 4 (el rig
-  con hoja de poses) y el 7 (repo público, sin push).
+**Auto-verificación de la Fase 1, un artefacto por criterio**
+| # | Criterio | Artefacto | ✅/❌ |
+|---|---|---|---|
+| 1 | composición 10-15 s con paleta + karaoke sincronizado a `qw_korex` | `misiones/evidencia/0001-fase1/contactsheet.png` (hoja de contacto, 12 frames con la zona segura dibujada) + `gate.json` → `whisper.pages`: 15/15 al 100 %, deriva mediana 108 ms / p90 160 ms. Reproducible: `py kx_nucleo.py` | ✅ |
+| 2 | solo INK/PAPER + rojo ≤8 %, nunca sobre personaje | `gate.json` → `palette_still` (off 0,0021 %, debt 1,14 %, char 0) y `palette` del MP4 (off máx 0,034 %, debt máx 1,58 %, char 0); `safe_zone` 0 | ✅ |
+| 3 | ni Flow ni Wan; solo Remotion | `kx_nucleo.py:70` invoca `npx remotion render`; `grep -il "flow\|wan" motion_graphics/src/kx/* kx_*.py` → solo el comentario de `kx_nucleo.py` que lo declara | ✅ |
 
-**Rama / PR:** `feat/sistema-videos-korex`, sin push ni PR (el repo es público).
+### Paso 0 — Desbloqueo de la rama · 23 nov 2026
+
+| # | Paso | Artefacto | ✅/❌ |
+|---|---|---|---|
+| 1 | `git merge master` (hereda oficina, `verify.py`, Stop hook, plantilla) | commit `2d95a48`; único conflicto en `misiones/cola.md`, resuelto con el estado de las 4 misiones | ✅ |
+| 2 | los 6 guiones en rojo | ver tabla siguiente | ✅ |
+| 3 | `verify.py` en verde con todo commiteado | `git status` vacío; `py scripts/verify.py --ci --base origin/master` → `VERDE · guiones revisados: 9 · tests: 7 passed` | ✅ |
+| 4 | push + PR en-auditoria | PR contra `master` (enlace en *Rama / PR*), check `verify` | ✅ |
+
+**Los 6 guiones** — la regla 3 decidió 4 de ellos:
+| Guion | Estado real | Acción |
+|---|---|---|
+| `korex-bono-1648` | **publicado** (`video_log.csv`, 15 ago) | no se edita; sale del árbol a `output/_guiones_publicados_fuera_del_repo/` (ignorado) |
+| `korex-pay-in-4` | **publicado** (17 ago, `AkENgCh4Klo`) | ídem |
+| `korex-fiado` | **publicado** (15 ago) | ídem |
+| `korex-deuda-eeuu-vs-tuya` | **publicado** (29 ago) | ídem |
+| `korex-botas-baratas` | renderizado, sin rastro de subida: no está en `video_log.csv` ni sale en la búsqueda pública de @KoreXFS | beat `*` en la escena del giro (`*tadeo/asombro`, escena 14) |
+| `korex-cinco-libros-sin-historial` | sin producir | giro 24,1 % → 25,2 %: dos frases de tensión antes de revelarlo («Ahora dime a cuál de los dos crees que el banco le abre la puerta. Piénsalo antes de seguir.») |
+
+- **Límite de la comprobación de `botas-baratas`:** los tokens OAuth de los dos
+  canales están caducados (`invalid_grant`), así que no se pudo listar lo
+  privado o no listado. Si estuviera subido en privado, hay que revertir su
+  beat y sacarlo del árbol (regla 3). El cambio es solo metadato de escena: no
+  altera ningún video.
+- **El texto de `cinco-libros` cambió.** Por la regla 1, Fabian tiene que
+  aprobarlo en el chat antes de producirlo.
+- **«Todo commiteado» metió en esta rama el árbol sucio previo** (3 commits:
+  guiones, prototipo de motion graphics del 21 nov con sus herramientas, y
+  documentación). Antes se barrió por credenciales y datos personales, sin
+  hallazgos, porque el repo ya es público. Por eso el PR es grande: la Fase 1
+  pura son los commits `ecbe2c7` y anteriores de `motion_graphics/src/kx/` y
+  `kx_*.py`.
+
+**Pendiente**
+- Auditoría de Mijo y orden de merge de Fabian. Las Fases 2-8 van después, una
+  por PR.
+- Siguen abiertos de la Fase 0: el conflicto 2 (largo del guion) y el 4 (rig con
+  hoja de poses). El 7 (repo público) quedó resuelto por la Misión 0003.
+- Reautorizar el OAuth de KOREX (`invalid_grant`): lo necesita el piloto de la
+  Fase 8 para subirse.
+
+**Rama / PR:** `feat/sistema-videos-korex` → PR contra `master`, en-auditoria, sin fusionar.
