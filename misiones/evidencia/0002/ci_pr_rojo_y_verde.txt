@@ -1,0 +1,18 @@
+$ gh pr checks 2   # PR de prueba con scripts/zz-canario-invalido.json
+verify	fail	12s	https://github.com/mr98fabian/videos-pipeline/actions/runs/45291461190/job/138100996020	
+verify	fail	10s	https://github.com/mr98fabian/videos-pipeline/actions/runs/45291467500/job/138101019562	
+
+$ gh run view 45291467500 --log-failed (extracto)
+verify: ROJO — 3 fallo(s) · guiones revisados: 1 · tests: 7 passed in 0.02s · archivos añadidos bajo el escudo: 9
+  - [formato] scripts/zz-canario-invalido.json: 2 search_terms para 3 oraciones (regla 1:1 frase↔imagen)
+  - [formato] scripts/zz-canario-invalido.json: 0 beats `*` en character_terms (debe haber exactamente uno)
+  - [formato] scripts/zz-canario-invalido.json: el giro cae al 83% del guion (banda 25-75 %)
+##[error]Process completed with exit code 1.
+
+$ gh pr close 2 --delete-branch
+{"mergedAt":null,"state":"CLOSED","url":"https://github.com/mr98fabian/videos-pipeline/pull/2"}
+$ git ls-remote origin test/ci-rojo-canario   -> (vacío: rama borrada)
+
+$ gh pr checks 3   # PR real de la Misión 0002
+verify	pass	9s	https://github.com/mr98fabian/videos-pipeline/actions/runs/45291439926/job/138100923991	
+verify	pass	10s	https://github.com/mr98fabian/videos-pipeline/actions/runs/45291488546/job/138101084250	

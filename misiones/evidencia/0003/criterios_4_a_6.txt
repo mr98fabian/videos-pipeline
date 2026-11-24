@@ -1,0 +1,14 @@
+== C4  git config --local user.email ; git log -1 --format=%ae
+257971786+mr98fabian@users.noreply.github.com
+257971786+mr98fabian@users.noreply.github.com
+
+== C5  py scripts/verify.py --ci --base origin/master
+verify: VERDE · guiones revisados: 0 · tests: 7 passed in 0.03s · archivos añadidos bajo el escudo: 2
+exit=0
+
+== C6  git diff --name-only origin/master...HEAD
+.gitignore
+misiones/0003-limpieza-pre-publico.md
+misiones/cola.md
+misiones/evidencia/0003/criterios_1_a_3.txt
+scripts/run_ep2_once.bat

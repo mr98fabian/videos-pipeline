@@ -1,0 +1,13 @@
+$ git add -f token_canario.json; echo {"stop_hook_active":false} | py scripts/verify.py --hook
+verify: ROJO — 1 fallo(s) · guiones revisados: 0 · tests: 7 passed in 0.03s · archivos añadidos bajo el escudo: 8
+  - [escudo] token_canario.json está prohibido por .gitignore (*token*.json)
+Arregla los fallos (o repórtalos) antes de cerrar el turno.
+exit=2
+$ mismo estado sin cambios, stop_hook_active=true (antibucle)
+verify: ROJO — 1 fallo(s) · guiones revisados: 0 · tests: 7 passed in 0.03s · archivos añadidos bajo el escudo: 8
+  - [escudo] token_canario.json está prohibido por .gitignore (*token*.json)
+verify: sigue en ROJO sin cambios desde el último bloqueo — se permite cerrar para REPORTARLO a Fabian/Mijo.
+exit=0
+$ canario retirado
+verify: VERDE · guiones revisados: 0 · tests: 7 passed in 0.03s · archivos añadidos bajo el escudo: 7
+exit=0
