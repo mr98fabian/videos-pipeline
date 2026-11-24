@@ -1,4 +1,7 @@
-"""Remonta un video KOREX ya producido: voz, musica con ducking y subtitulos.
+"""LEGACY (nov 2026): remontaje del camino Flow/Wan. KOREX sale por
+korex_motion.py; ver --korex-legacy en pipeline.py.
+
+Remonta un video KOREX ya producido: voz, musica con ducking y subtitulos.
 
 **La animacion imagen->video de Flow esta APAGADA por defecto** (3 ago 2026).
 El flujo vigente es: imagenes con Flow -> se descargan -> el movimiento lo pone
@@ -69,6 +72,36 @@ def run(cmd: list[str], timeout: int = 1800) -> None:
     )
 
 
+def _frame_diff(clip: Path, img: Path, at: str) -> float | None:
+    frame = clip.with_suffix(f".chk{at.replace('.', '').replace('-', 'm')}.png")
+    if at == "end":
+        # -sseof busca desde el final del archivo, no desde el arranque
+        seek = ["-sseof", "-0.15", "-i", str(clip)]
+    else:
+        seek = ["-ss", at, "-i", str(clip)]
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", *seek, "-frames:v", "1", str(frame)],
+            check=True,
+            timeout=120,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        from PIL import Image
+        import numpy as np
+
+        def thumb(p):
+            with Image.open(p) as im:
+                return np.asarray(im.convert("L").resize((64, 64)), dtype=float)
+
+        return float(np.abs(thumb(frame) - thumb(img)).mean())
+    except Exception as e:
+        print(f"    (no pude comparar {clip.name} @{at}s: {e})")
+        return None
+    finally:
+        frame.unlink(missing_ok=True)
+
+
 def clip_matches_source(clip: Path, img: Path, tol: float = 26.0) -> bool:
     """¿El clip animado ES esta escena, o Flow se inventó otra cosa?
 
@@ -83,39 +116,25 @@ def clip_matches_source(clip: Path, img: Path, tol: float = 26.0) -> bool:
     comparan en 64x64 en gris, que aguanta el reencuadre y el grano pero no
     que cambie la escena entera.
     """
-    frame = clip.with_suffix(".chk.png")
-    try:
-        subprocess.run(
-            [
-                "ffmpeg",
-                "-y",
-                "-ss",
-                "0.1",
-                "-i",
-                str(clip),
-                "-frames:v",
-                "1",
-                str(frame),
-            ],
-            check=True,
-            timeout=120,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        from PIL import Image
-        import numpy as np
+    diff = _frame_diff(clip, img, "0.1")
+    return diff <= tol if diff is not None else True
 
-        def thumb(p):
-            with Image.open(p) as im:
-                return np.asarray(im.convert("L").resize((64, 64)), dtype=float)
 
-        diff = float(np.abs(thumb(frame) - thumb(img)).mean())
-        return diff <= tol
-    except Exception as e:
-        print(f"    (no pude comparar {clip.name}: {e})")
-        return True  # ante la duda no se descarta un clip que puede ser bueno
-    finally:
-        frame.unlink(missing_ok=True)
+def clip_keeps_identity(clip: Path, img: Path, tol: float = 55.0) -> bool:
+    """¿Tadeo SIGUE SIENDO Tadeo al final del clip, o el modelo lo deformo?
+
+    BUG REAL medido el 24 ago 2026: Wan 2.2 (Lightning, 4 pasos) mueve bien la
+    escena pero NO sostiene el diseño del personaje -- en fx_0.mp4 de dos
+    videos seguidos las orejas redondas de mapache se estiran hasta parecer
+    orejas de conejo, y ya se nota a los 0.6s (clip de 5s). clip_matches_source
+    solo mira el primer fotograma, que siempre es identico porque Wan arranca
+    ahi -- esta funcion mira el ULTIMO, que es donde se ve si el personaje
+    aguanto entero el clip. Tolerancia mas ancha que clip_matches_source
+    porque aqui SI se espera movimiento (cambia pose, luz, fondo un poco);
+    lo que no puede cambiar es la silueta del personaje.
+    """
+    diff = _frame_diff(clip, img, "end")
+    return diff <= tol if diff is not None else True
 
 
 def scene_images(clips: Path) -> list[Path]:

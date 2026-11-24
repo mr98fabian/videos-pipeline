@@ -11,6 +11,7 @@ import { ArchivoDemo2 } from "./archivo/ArchivoDemo2";
 import { ArchivoVideo } from "./archivo/ArchivoVideo";
 import { StoryVideo } from "./archivo/StoryVideo";
 import { KorexVideo } from "./korex/KorexVideo";
+import { KorexMotion } from "./korex/KorexMotion";
 import { KxNucleo } from "./kx/KxNucleo";
 
 const WIDTH = 1080;
@@ -20,16 +21,6 @@ const FPS = 30;
 const RemotionRoot = () => {
   return (
     <>
-      <Composition
-        id="KxNucleo"
-        component={KxNucleo}
-        durationInFrames={FPS * 15}
-        fps={FPS}
-        width={WIDTH}
-        height={HEIGHT}
-        defaultProps={{ voice: null, pose: "", captions: [], heroMs: 0, charBox: { x: 48, y: 400, w: 420, h: 560 }, durationInFrames: FPS * 15 }}
-        calculateMetadata={({ props }) => ({ durationInFrames: props.durationInFrames || FPS * 15 })}
-      />
       <Composition
         id="MotionOverlay"
         component={MotionOverlay}
@@ -126,6 +117,31 @@ const RemotionRoot = () => {
       {/* KOREX — piel propia del canal de finanzas satiricas (Tadeo). NO
           comparte plantilla con ArchivoVideo: ese es el expediente de
           HiddenFacts y sobre un mapache comico se lee absurdo. */}
+      <Composition
+        id="KxNucleo"
+        component={KxNucleo}
+        durationInFrames={FPS * 15}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ voice: null, pose: "", captions: [], heroMs: 0, charBox: { x: 48, y: 400, w: 420, h: 560 }, durationInFrames: FPS * 15 }}
+        calculateMetadata={({ props }) => ({ durationInFrames: props.durationInFrames || FPS * 15 })}
+      />
+      <Composition
+        id="KorexMotion"
+        component={KorexMotion}
+        durationInFrames={FPS * 60}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ manifest: { scenes: [], captions: [], hook: "", twist: "", durationInFrames: FPS * 60 } }}
+        calculateMetadata={({ props }) => ({
+          durationInFrames: (props.manifest && props.manifest.durationInFrames) || FPS * 60,
+          fps: FPS,
+          width: WIDTH,
+          height: HEIGHT,
+        })}
+      />
       <Composition
         id="KorexVideo"
         component={KorexVideo}

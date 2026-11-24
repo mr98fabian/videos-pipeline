@@ -3208,6 +3208,24 @@ def _acquire_clips_loop(
 
             explicit = i < len(char_terms)
             raw_char = (char_terms[i] if explicit else None) or None
+            if raw_char:
+                import kx_cast as _kx_beat
+
+                raw_char = _kx_beat.strip_beat(raw_char)
+            # Un plano sin personaje asignado NO puede traer personaje. Nano
+            # Banana rellena las escenas de objeto con un mapache de su cosecha
+            # y, como ese plano no lleva ni lamina de referencia ni
+            # CHARACTER_LOCK, cada uno sale con un diseno distinto: el
+            # espectador no ve "un objeto", ve a Tadeo cambiando de cara.
+            # Medido el 21 ago 2026 en korex-botas-baratas: 17 de 26 planos
+            # tenian mapache y solo 9 eran Tadeo de verdad.
+            if not raw_char:
+                try:
+                    import kx_cast as _kx2
+
+                    term = f"{term}. {_kx2.SIN_PERSONAJE}"
+                except Exception:
+                    pass
             # KOREX: un character_term con forma "tadeo/codicia" nombra una pose
             # YA dibujada en assets/kx_cast/. Esa lamina se usa como imagen de
             # referencia de la escena -- es lo unico que mantiene a Tadeo
@@ -5512,6 +5530,14 @@ def main() -> int:
         "repo desde el 3 ago 2026. Requiere PIAPI_API_KEY.",
     )
     parser.add_argument(
+        "--korex-legacy",
+        action="store_true",
+        help="LEGACY (nov 2026): produce KOREX por el camino viejo de imagenes "
+        "Flow por escena (+ Wan con --wan-hero). Desde nov 2026 KOREX sale "
+        "SIEMPRE por motion graphics (korex_motion.py, Remotion KorexMotion); "
+        "este flag existe solo para una orden expresa.",
+    )
+    parser.add_argument(
         "--flow",
         action="store_true",
         help="Genera las imagenes con Google Flow por navegador (Playwright, "
@@ -5530,8 +5556,8 @@ def main() -> int:
         type=Path,
         default=None,
         metavar="PATH",
-        help="Usa un video ya animado localmente (Wan 2.2 via ComfyUI, gratis) "
-        "como escena 0 en vez de generarla; el resto sigue estatico.",
+        help="LEGACY en KOREX (solo con --korex-legacy). Usa un video ya "
+        "animado localmente (Wan 2.2) como escena 0 en vez de generarla.",
     )
     parser.add_argument(
         "--watermark",
@@ -5618,7 +5644,8 @@ def main() -> int:
     parser.add_argument(
         "--korex",
         action="store_true",
-        help="Renderiza con el motor visual de KOREX (Remotion): set fijo "
+        help="LEGACY (reemplazado por korex_motion en nov 2026). Motor KOREX "
+        "del 3 ago con acentos de color. Renderiza con Remotion: set fijo "
         "con parallax, paleta cerrada de 3 tonos + acento por villano, "
         "personaje troquelado con squash-stretch. Es la piel del canal "
         "de finanzas satiricas (Tadeo), NO el expediente de HiddenFacts. "
@@ -5682,6 +5709,8 @@ def main() -> int:
         # vino. Si cada uno atara por su lado, el mismo guion acabaria en dos
         # proyectos distintos, que es justo lo que se quiere evitar.
         try:
+            if not args.flow:
+                raise RuntimeError("sin --flow, no se ata proyecto")
             import flow_projects
 
             flow_projects.use_project(
@@ -5689,7 +5718,8 @@ def main() -> int:
                 Path(args.script_file).stem,
             )
         except Exception as e:
-            log("flow", f"no pude atar el proyecto de Flow (no critico): {e}")
+            if args.flow:
+                log("flow", f"no pude atar el proyecto de Flow (no critico): {e}")
     elif args.auto:
         if not os.getenv("ANTHROPIC_API_KEY"):
             print("ERROR: falta ANTHROPIC_API_KEY. Copia .env.example a .env")
@@ -5882,7 +5912,37 @@ def main() -> int:
                 audio_dur = float(card_duration)
                 durations = [audio_dur]
 
-        clips = acquire_media(
+        # KOREX MOTION (nov 2026): camino UNICO de KOREX. Sin imagenes por
+        # escena: el guion + las marcas de tiempo alimentan las plantillas
+        # Remotion de korex_motion.py. Flow/Wan quedan LEGACY tras
+        # --korex-legacy (codigo intacto, sin uso salvo orden expresa).
+        _es_korex_voz = str(args.voice or "").startswith(QWEN_VOICE_PREFIXES)
+        korex_motion_path = (
+            _es_korex_voz and not args.korex_legacy and not silent_card_mode
+        )
+        if korex_motion_path and (args.flow or args.wan_hero or args.flow_animate):
+            log(
+                "media",
+                "AVISO: --flow/--wan-hero ignorados: KOREX sale por motion "
+                "graphics. Para el camino viejo, --korex-legacy.",
+            )
+        if korex_motion_path:
+            import korex_motion
+
+            _atomic_write_json(
+                out_dir / "words.json", [list(w) for w in words]
+            )
+            final = korex_motion.render(
+                out_dir,
+                data,
+                words,
+                audio_path,
+                cta_text=args.cta_text,
+                cta_position=args.cta_position,
+            )
+            clips = []
+        else:
+          clips = acquire_media(
             data["search_terms"],
             n_clips,
             durations,
@@ -5898,7 +5958,9 @@ def main() -> int:
             reusar_imagenes=args.reusar_imagenes,
         )
 
-        if args.korex and not silent_card_mode:
+        if korex_motion_path:
+            pass
+        elif args.korex and not silent_card_mode:
             # Motor KOREX (3 ago 2026): piel propia del canal de finanzas
             # satiricas. NO reusa Archivo Vivo porque ese es el expediente de
             # HiddenFacts (polaroid REAL / EXHIBIT B / N. de caso) y sobre un

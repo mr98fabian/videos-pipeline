@@ -490,9 +490,16 @@ def update_video(
     tags: list[str] | None = None,
     account: str = "default",
     privacy_status: str | None = None,
+    publish_at: str | None = None,
 ) -> None:
     """Actualiza titulo/descripcion/tags de un video ya subido (ej. tras afinar
     con vidIQ despues de la subida).
+
+    publish_at (ISO 8601 UTC, '2026-08-16T13:00:00Z') PROGRAMA la publicacion.
+    YouTube solo acepta publishAt sobre un video en 'private': si esta en
+    'unlisted' la fecha se ignora en silencio y el video se queda no listado
+    para siempre, que es justo el fallo que no se ve. Por eso aqui se fuerza
+    privacyStatus='private' junto con la fecha, en la MISMA llamada.
 
     privacy_status pasa un video ya subido a 'public' (o vuelve a 'unlisted').
     Es el paso final del flujo real del canal --se sube no listado, se revisa y
@@ -521,7 +528,18 @@ def update_video(
             part="snippet", body={"id": video_id, "snippet": current}
         )
     )
-    if privacy_status:
+    if publish_at:
+        _yt_execute(
+            youtube.videos().update(
+                part="status",
+                body={
+                    "id": video_id,
+                    "status": {"privacyStatus": "private", "publishAt": publish_at},
+                },
+            )
+        )
+        print(f"[update] programado para {publish_at} (privado hasta entonces)")
+    elif privacy_status:
         _yt_execute(
             youtube.videos().update(
                 part="status",
@@ -956,6 +974,13 @@ if __name__ == "__main__":
         help="Promueve un video ya subido (el flujo del canal: subir no "
         "listado, revisar, publicar).",
     )
+    p_update.add_argument(
+        "--publish-at",
+        default=None,
+        metavar="ISO8601",
+        help="Programa la publicacion, ej. 2026-08-16T13:00:00Z (UTC). Deja el "
+        "video en privado hasta esa hora; manda sobre --privacy.",
+    )
     p_update.add_argument("--title", default=None)
     p_update.add_argument("--description", default=None)
     p_update.add_argument("--tags", default=None)
@@ -1019,6 +1044,7 @@ if __name__ == "__main__":
             tags,
             account=args.account,
             privacy_status=args.privacy,
+            publish_at=args.publish_at,
         )
     elif args.cmd == "report":
         print(

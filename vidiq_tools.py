@@ -241,7 +241,7 @@ def cmd_transcript(a) -> int:
     for vid in a.video_ids:
         try:
             d = call_json("vidiq_video_transcript", {"videoId": vid})
-            txt = d.get("transcript", d) if isinstance(d, dict) else d
+            txt = (d.get("transcription") or d.get("transcript") or "") if isinstance(d, dict) else d
             print(f"=== {vid}\n{txt}\n")
         except Exception as e:  # un video sin captions no debe tumbar el batch
             print(f"=== {vid}\nERROR: {e}\n")

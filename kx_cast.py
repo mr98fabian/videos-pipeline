@@ -103,8 +103,19 @@ CHARACTER_LOCK = (
     # es Tadeo". Pero prohibirla no era la regla: la regla es que la CARA se
     # reconozca. Lo que se rechaza es un mapache que no es el, lleve o no lleve
     # ropa; y si lleva, la cabeza sigue siendo exactamente esta.
-    "He MAY wear clothes when the scene calls for it, but his head is never "
-    "restyled: same mask, same muzzle, same eyes, same proportions. "
+    # VESTUARIO FIJO (21 ago 2026). "Puede llevar ropa" se leyo como "ropa
+    # distinta cada vez": en korex-botas-baratas salio en peto, con traje y
+    # sombrero de gangster, y con sombrero de bruja, todo en el mismo video. La
+    # regla no es prohibir la ropa, es que la ropa sea SIEMPRE LA MISMA -- un
+    # personaje sin vestuario fijo no se reconoce aunque la cara acierte.
+    "WARDROBE LOCK: Tadeo ALWAYS wears the same single outfit and nothing else: "
+    "dark denim dungarees (bib overalls) with two shoulder straps over his bare "
+    "cream chest, plus his white four-fingered gloves. He NEVER wears a hat, a "
+    "cap, a fedora, a suit, a jacket, a tie, a shirt or a scarf, and he is never "
+    "drawn without the dungarees. The only garment that may be added is footwear, "
+    "and only when the scene names it. His head is never restyled: same mask, "
+    "same muzzle, same eyes, same proportions. He does not smoke and carries no "
+    "prop that the scene does not name. "
     "Keep the character identical and change ONLY the pose, the clothes and "
     "the background. Do not redesign him, do not restyle him, do not make him "
     "realistic or furry. Draw ONE single character in a real scene: never a character "
@@ -304,10 +315,26 @@ def adopt(character: str, pose: str, source: Path) -> Path | None:
     return dest
 
 
+def strip_beat(term: str) -> str:
+    """Quita la marca de beat ('*tadeo/estafado' -> 'tadeo/estafado').
+
+    El '*' es metadato de guion (ver LATIDO_DEL_STORYBOARD.md): senala cual es
+    LA escena que importa, la que se actua con mas fuerza. No forma parte del
+    nombre de personaje/pose, asi que todo lo que resuelve character_terms
+    tiene que quitarlo primero o "*tadeo" deja de matchear cualquier carpeta.
+    """
+    return term[1:] if term.startswith("*") else term
+
+
+def is_beat(term: str) -> bool:
+    return bool(term) and term.startswith("*")
+
+
 def resolve_scene_cast(data: dict, n_scenes: int) -> list[Path | None]:
     """Traduce los character_terms del guion a poses cacheadas, una por escena.
 
-    Formato aceptado: "tadeo/grito" (personaje/pose). Un character_term vacio
+    Formato aceptado: "tadeo/grito" (personaje/pose), con un '*' opcional
+    delante para marcar el beat (ver strip_beat). Un character_term vacio
     sigue significando "esta escena NO lleva personaje", igual que en el motor.
     Cualquier otro formato devuelve None, para que el pipeline caiga al camino
     de siempre (generar la placa dentro del video) sin romperse.
@@ -315,7 +342,7 @@ def resolve_scene_cast(data: dict, n_scenes: int) -> list[Path | None]:
     terms = data.get("character_terms") or []
     out: list[Path | None] = []
     for i in range(n_scenes):
-        t = (terms[i] if i < len(terms) else "") or ""
+        t = strip_beat((terms[i] if i < len(terms) else "") or "")
         if "/" not in t:
             out.append(None)
             continue
@@ -353,6 +380,11 @@ SECONDARY_LOCK = {
 # esa cara se recuerda -- no un parecido fotografico, que en caricatura ni
 # siquiera es el objetivo.
 FIGURAS_HISTORICAS = {
+    "napoleon": (
+        "small stout figure, iconic black bicorne hat worn sideways, dark "
+        "military coat with high collar and gold buttons, right hand tucked "
+        "inside the coat over the chest, stern expression"
+    ),
     "newton": (
         "long white curly wig down to the shoulders, long oval face, straight "
         "prominent nose, heavy brow, serious unimpressed expression, 18th "
@@ -381,6 +413,13 @@ SIN_TEXTO = (
     "personaje. NO es una caratula ni un cartel de pelicula ni una portada: es "
     "UNA sola ilustracion que ocupa todo el cuadro, sin marcos, sin franjas de "
     "titulo abajo y sin dividir la imagen en vinetas."
+)
+
+
+SIN_PERSONAJE = (
+    "En esta imagen NO aparece ningun personaje: ni mapaches, ni animales, ni "
+    "personas, ni manos, ni siluetas, ni figuras de dibujo animado de ningun "
+    "tipo. Es una escena vacia, solo los objetos y el escenario descritos."
 )
 
 

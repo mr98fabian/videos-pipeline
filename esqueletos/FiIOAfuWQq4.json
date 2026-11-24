@@ -1,0 +1,138 @@
+{
+  "video_id": "FiIOAfuWQq4",
+  "metricas": {
+    "palabras": 374,
+    "frases": 25,
+    "palabras_por_frase": 15.0,
+    "preguntas": 0,
+    "cifras": 1,
+    "repetidas": [
+      [
+        "water",
+        6
+      ],
+      [
+        "bottles",
+        5
+      ],
+      [
+        "lunch",
+        5
+      ],
+      [
+        "with",
+        4
+      ],
+      [
+        "pills",
+        4
+      ],
+      [
+        "trendy",
+        4
+      ]
+    ]
+  },
+  "esqueleto": {
+    "beats": [
+      {
+        "pct": 0,
+        "funcion": "gancho",
+        "nota": "abre con confesion de identidad pasada y situacion vulnerable para generar identificacion"
+      },
+      {
+        "pct": 8,
+        "funcion": "promesa",
+        "nota": "anuncia que va a enumerar una lista de errores concretos"
+      },
+      {
+        "pct": 15,
+        "funcion": "ejemplo",
+        "nota": "presenta el primer item de la lista con autocritica"
+      },
+      {
+        "pct": 25,
+        "funcion": "promesa",
+        "nota": "adelanta que hay mas casos por mostrar para retener"
+      },
+      {
+        "pct": 32,
+        "funcion": "ejemplo",
+        "nota": "segundo item analogo al primero para reforzar el patron"
+      },
+      {
+        "pct": 42,
+        "funcion": "mecanismo",
+        "nota": "explica el principio de funcion unica que justifica por que fue un error"
+      },
+      {
+        "pct": 55,
+        "funcion": "herramienta",
+        "nota": "propone regla practica de uso hasta agotar antes de reemplazar"
+      },
+      {
+        "pct": 62,
+        "funcion": "ejemplo",
+        "nota": "tercer item con prueba visual del espacio afectado"
+      },
+      {
+        "pct": 72,
+        "funcion": "herramienta",
+        "nota": "introduce concepto alternativo de solucion sistematica"
+      },
+      {
+        "pct": 80,
+        "funcion": "ejemplo",
+        "nota": "cuarto item con casos especificos ya descartados como evidencia"
+      },
+      {
+        "pct": 90,
+        "funcion": "giro",
+        "nota": "reencuadra los objetos como dinero perdido, cambio de perspectiva"
+      },
+      {
+        "pct": 95,
+        "funcion": "prueba",
+        "nota": "declara aprendizaje adquirido por experiencia dura como credencial"
+      },
+      {
+        "pct": 100,
+        "funcion": "cta",
+        "nota": "cierra invitando a evitar los mismos errores, apela al beneficio del espectador"
+      }
+    ],
+    "bucles": [
+      {
+        "abre_pct": 0,
+        "paga_pct": 90,
+        "tipo": "identidad"
+      },
+      {
+        "abre_pct": 8,
+        "paga_pct": 80,
+        "tipo": "conocimiento"
+      },
+      {
+        "abre_pct": 25,
+        "paga_pct": 32,
+        "tipo": "resultado"
+      },
+      {
+        "abre_pct": 42,
+        "paga_pct": 72,
+        "tipo": "conocimiento"
+      }
+    ],
+    "unidad": "items comprados por categoria",
+    "promesa_pct": 8,
+    "giro_pct": 90,
+    "cierre_deja_abierto": false,
+    "por_que_funciono": [
+      "Apertura confesional que baja defensas y activa identificacion inmediata con el espectador",
+      "Estructura de lista enumerada que crea expectativa de continuidad y facilita la retencion",
+      "Reencuadre final que transforma detalles concretos en un principio abstracto de mayor impacto emocional",
+      "Posicionar los errores propios como leccion transferible convierte la vulnerabilidad en autoridad util",
+      "Micro-promesas intercaladas que anuncian el siguiente elemento antes de cerrarlo mantienen la tension"
+    ]
+  }
+}

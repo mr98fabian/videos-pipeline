@@ -1,0 +1,98 @@
+{
+  "video_id": "Dde-aeIFGp8",
+  "metricas": {
+    "palabras": 1,
+    "frases": 2,
+    "palabras_por_frase": 0.5,
+    "preguntas": 1,
+    "cifras": 1,
+    "repetidas": []
+  },
+  "esqueleto": {
+    "beats": [
+      {
+        "pct": 0,
+        "funcion": "gancho",
+        "nota": "abre con la afirmacion de que un grupo poderoso oculta cierto conocimiento al espectador"
+      },
+      {
+        "pct": 8,
+        "funcion": "promesa",
+        "nota": "anticipa que revelara varios recursos y destaca uno como el mas prohibido para crear expectativa"
+      },
+      {
+        "pct": 18,
+        "funcion": "herramienta",
+        "nota": "presenta el primer recurso de la lista numerada"
+      },
+      {
+        "pct": 28,
+        "funcion": "contexto",
+        "nota": "describe la premisa del primer recurso para dar marco"
+      },
+      {
+        "pct": 40,
+        "funcion": "mecanismo",
+        "nota": "explica que leccion aplicable se extrae del primer recurso"
+      },
+      {
+        "pct": 52,
+        "funcion": "herramienta",
+        "nota": "introduce el segundo recurso de la lista"
+      },
+      {
+        "pct": 60,
+        "funcion": "mecanismo",
+        "nota": "detalla el tipo de conocimiento oculto que ofrece el segundo recurso"
+      },
+      {
+        "pct": 72,
+        "funcion": "herramienta",
+        "nota": "anuncia el tercer recurso reforzando su caracter prohibido"
+      },
+      {
+        "pct": 80,
+        "funcion": "prueba",
+        "nota": "usa una consecuencia externa como validacion de que el contenido es peligroso o real"
+      },
+      {
+        "pct": 88,
+        "funcion": "giro",
+        "nota": "revela la naturaleza controvertida del ultimo recurso pagando el bucle inicial"
+      },
+      {
+        "pct": 96,
+        "funcion": "cierre",
+        "nota": "advertencia moral que exime de responsabilidad y refuerza el valor del conocimiento"
+      }
+    ],
+    "bucles": [
+      {
+        "abre_pct": 0,
+        "paga_pct": 88,
+        "tipo": "conocimiento"
+      },
+      {
+        "abre_pct": 8,
+        "paga_pct": 72,
+        "tipo": "conocimiento"
+      },
+      {
+        "abre_pct": 0,
+        "paga_pct": 18,
+        "tipo": "identidad"
+      }
+    ],
+    "unidad": "recursos revelados",
+    "promesa_pct": 8,
+    "giro_pct": 88,
+    "cierre_deja_abierto": false,
+    "por_que_funciono": [
+      "Enmarca el contenido como secreto que un grupo poderoso oculta, activando curiosidad por informacion prohibida",
+      "Usa una lista numerada con climax reservado para el final, obligando a quedarse hasta el ultimo item",
+      "Guarda el elemento mas controvertido para el cierre y lo teasea desde el inicio, creando tension sostenida",
+      "Cita una consecuencia externa como prueba social de peligrosidad para elevar el valor percibido",
+      "Cierra con advertencia etica que legitima el contenido y posiciona al autor como poseedor de conocimiento superior"
+    ]
+  }
+}
