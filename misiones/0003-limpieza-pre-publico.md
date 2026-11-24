@@ -1,6 +1,6 @@
 # MISIÓN 0003 — Limpieza antes de hacer público el repo
 
-Estado: en-auditoria (etapa 1) · Rama: `chore/limpieza-pre-publico` · Autor: Mijo · Ejecutor: Claude
+Estado: completada (etapa 1 fusionada en 432b0fa; etapa 2 ejecutada el 23 nov 2026) · Rama: `chore/limpieza-pre-publico` · Autor: Mijo · Ejecutor: Claude
 
 ## Objetivo
 Que el árbol de `master` pueda hacerse público sin rutas con el usuario local ni configuración local de
@@ -67,3 +67,22 @@ retomó la rama, que esa sesión había borrado en local, desde ese mismo commit
   `misiones/evidencia/0003/*.txt`, la evidencia que exige la plantilla.
 - Qué queda pendiente: auditoría de Mijo → orden de merge de Fabian → Etapa 2
   (visibilidad pública + protección de `master`).
+
+## Reporte — Etapa 2
+Ejecutada tras la auditoría aprobada de Mijo y el merge squash del PR #4
+(`master` = `432b0fa`). Evidencia: `misiones/evidencia/0003/etapa2_publico_y_proteccion.txt`.
+
+| # | Paso | Artefacto | ✅/❌ |
+|---|---|---|---|
+| 0 | barrido previo sobre `432b0fa` | 0 archivos con el usuario local; 1 acierto de patrón fuerte = falso positivo (`0000-oficina-y-git.md:68` nombra el prefijo `GOCSPX-` en la lista de patrones, sin valor) | ✅ |
+| 1 | visibilidad pública | `gh repo view` → `"visibility":"PUBLIC"` | ✅ |
+| 2 | protección de `master` | `gh api .../branches/master/protection` → `required_checks: ["verify"]`, `strict: true`, `pr_required: true` (0 aprobaciones), `enforce_admins: true`, `force_pushes: false`, `deletions: false` | ✅ |
+
+- No verificado: el rechazo real de un push directo a `master`. Se intentó con
+  un commit vacío y el modo automático de Claude Code bloqueó la acción; la
+  configuración que lo garantiza sí está confirmada por la API.
+- Consecuencia operativa: desde ahora **nada entra a `master` sin PR con
+  `verify` en verde**, tampoco para el admin (`enforce_admins`). Este mismo
+  reporte entra por PR.
+- Aceptado por orden de Fabian (opción a): el historial pasado y los 139
+  commits con el correo personal como autor quedan públicos.

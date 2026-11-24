@@ -1,0 +1,17 @@
+$ git grep (barrido previo sobre origin/master 432b0fa)
+nombre de usuario local en el árbol: 0 archivos
+patrones fuertes: 1 acierto = misiones/0000-oficina-y-git.md:68, solo el nombre del prefijo "GOCSPX-" en la lista de patrones (falso positivo, sin valor)
+
+$ gh repo edit --visibility public --accept-visibility-change-consequences ; gh repo view --json visibility,url
+{"url":"https://github.com/mr98fabian/videos-pipeline","visibility":"PUBLIC"}
+
+$ gh api -X PUT repos/mr98fabian/videos-pipeline/branches/master/protection --input prot.json
+{"required_status_checks":{"strict":true,"contexts":["verify"]},
+ "enforce_admins":true,
+ "required_pull_request_reviews":{"required_approving_review_count":0},
+ "restrictions":null,
+ "allow_force_pushes":false,
+ "allow_deletions":false}
+
+$ gh api repos/mr98fabian/videos-pipeline/branches/master/protection (resumen)
+{"approvals":0,"deletions":false,"enforce_admins":true,"force_pushes":false,"pr_required":true,"required_checks":["verify"],"strict":true}
