@@ -19,16 +19,16 @@
     }
   ],
   "char_box": {
-    "x": 186,
+    "x": 192,
     "y": 449,
-    "w": 616,
+    "w": 610,
     "h": 731
   },
   "duracion_s": 13.0,
   "palette_still": {
-    "off_palette": 6e-06,
+    "off_palette": 7e-06,
     "debt": 0.0,
-    "char_color_fraction": 5.1e-05
+    "char_color_fraction": 5.2e-05
   },
   "palette": {
     "frames": 78,
@@ -42,7 +42,7 @@
   "nunca_congelado": {
     "frames": 390,
     "pares_identicos": 0,
-    "dif_media_minima": 0.2413
+    "dif_media_minima": 0.243
   },
   "fails": []
 }

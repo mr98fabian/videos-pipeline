@@ -200,7 +200,7 @@ const Ojo = ({ id, cx, ancho, escala, pupila, mirada, parpado, cerrado, lagrima,
   const ry = 56 * escala;
   const cy = 782;
   if (cerrado) {
-    return <path d={`M ${cx - 32} ${cy - 6} Q ${cx} ${cy + 30} ${cx + 32} ${cy - 6}`} fill="none" strokeWidth={7} {...lineProps} />;
+    return <path d={`M ${cx - 32} ${cy - 6} Q ${cx} ${cy + 30} ${cx + 32} ${cy - 6}`} fill="none" strokeWidth={10} {...lineProps} />;
   }
   const px = cx + mirada.x * 16 * ancho;
   const py = cy + mirada.y * 20;
@@ -248,8 +248,8 @@ const Boca = ({ tipo, m, x, uid }) => {
   else if (tipo === "triste") el = <path d={`M -40 ${y - 14} Q 0 ${y + 14} 40 ${y - 14}`} {...st} />;
   else if (tipo === "apretada") el = <path d={`M -38 ${y - 2} Q 0 ${y + 2} 30 ${y - 2} L 42 ${y - 12}`} {...st} />;
   else if (tipo === "ladeada") el = <path d={`M -55 ${y + 16} Q -10 ${y - 22} 48 ${y + 2}`} {...st} />;
-  else if (tipo === "risa") el = open(Math.max(20, 80 * Math.min(1, m / 45)), 75, y + 9, `${uid}-boca`);
-  else if (tipo === "grito") el = open(Math.max(24, 130 * Math.min(1, m / 95)), 55, y + 4, `${uid}-boca`);
+  else if (tipo === "risa") el = open(Math.max(20, 80 * Math.min(1, m / 35)), 75, y + 9, `${uid}-boca`);
+  else if (tipo === "grito") el = open(Math.max(24, 100 * Math.min(1, m / 60)), 55, y + 4, `${uid}-boca`);
   else if (tipo === "ondulada") el = <path d={`M -30 ${y} q 7.5 7 15 0 t 15 0 t 15 0 t 15 0`} {...st} />;
   else if (tipo === "ancha") el = (
     <g>

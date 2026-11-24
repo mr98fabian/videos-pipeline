@@ -54,7 +54,8 @@ def test_defaults_validos():
         assert p["mirada"] in LIB["miradas"], pid
         for lado in ("brazoI", "brazoD"):
             assert p[lado]["guante"] in LIB["guantes"], (pid, lado)
-            assert -1 <= p[lado]["curva"] <= 1, (pid, lado)
+            cmax = LIB["rig"]["brazo"]["curvaMax"]
+            assert -cmax <= p[lado]["curva"] <= cmax, (pid, lado)
             assert p[lado]["capa"] in ("delante", "detras"), (pid, lado)
 
 

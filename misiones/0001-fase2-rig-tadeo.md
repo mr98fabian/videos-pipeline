@@ -1,6 +1,6 @@
 # MISIÓN 0001 — Fase 2: Rig vectorial de Tadeo
 
-Estado: en-curso (Parte A — diseño — entregada; Parte B — construcción — pendiente) ·
+Estado: en-auditoria (Parte A — diseño de Fable; Parte B — construcción y crítica de Opus — entregadas) ·
 Rama: `feat/sistema-videos-korex-fase2` · Autor: Mijo · Diseño: Fable · Construcción y crítica: Opus
 
 ## Objetivo
@@ -270,7 +270,104 @@ con la caja envolvente de la pose × 1,25 en las manos).
 5. ¿Los guantes siguen siendo el punto más claro de la figura?
 
 ## PARTE B — Construcción (Opus)
-_(pendiente: se construye sobre este diseño, en sesión de Opus)_
+Construido sobre A0-A9 en `motion_graphics/src/kx/tadeo/` (`partes.jsx`, `poses.js`
++ `biblioteca.json`, `acting.js`, `Tadeo.jsx`), `tokens.js` (`TADEO_TONE`, `tone()`,
+`SPRING`), `KxTadeo.jsx` (prueba + hoja), `kx_tadeo.py` y dos tests. `acting.js` es
+ESM puro sin React: Node lo ejecuta tal cual (tests) y Remotion lo dibuja (render).
+El spring es la solución analítica del oscilador (mismos parámetros que Remotion).
+
+### Desviaciones del diseño (declaradas, no silenciosas)
+1. **`curva` llega a ±2, no a ±1 (A3).** Con P1 = medio ± curva·330·0,38, el codo de
+   una Bézier cuadrática se separa la mitad, 62 u como mucho. Así, una mano a menos de
+   ~205 u del hombro no llega a 0,75× (confundido, grito, codicia, pensando, decidido D)
+   y las jarras de `orgulloso` con curva ±0,8 salieron como brazos colgando: es el
+   bloqueante de la crítica. `RIG.brazo.curvaMax = 2` y solo lo usan orgulloso (±1,8),
+   grito (±1,9), codicia (±1,8), pensando D (1,3) y confundido (±1,2).
+2. **Manos movidas respecto a la tabla A5** para entrar en 0,75-1,35× y mantener legibles
+   las siluetas: confundido ±320/450 (encogido) · decidido D 330/520 (puño fuera del
+   cuerpo; dentro, la silueta era igual a orgulloso) · explicando D 340/690 ·
+   grito ±165/620 (bocina) · senalando I −225/330 · codicia ±34/420 ·
+   asombro ±330/760 (brazos arriba) · pensando D −70/530 (bajo el hocico) e I 110/430.
+3. **`senalando` estira 0,91×, no 1,3×**: a 1,3× con la mano en x = 400 el guante sale de
+   la zona segura con el rebase de ACENTO, y A2 manda la zona segura.
+4. **El hocico va debajo del antifaz** (A2 lo ponía encima). Encima tapaba el borde bajo
+   de los lóbulos y los ojos quedaban medio fuera del antifaz, contra A0.2.
+5. **La mandíbula baja** en `risa` (35 u) y `grito` (60 u): una boca de 80 o 130 u no cabe
+   entre el ancla y = 668 y la barbilla y = 625.
+6. **Cambios discretos:** la boca cambia en t0+1, tapada por el parpadeo (A6.2). En
+   cambio, `guante` y `capa` cambian en el punto medio de la capa de brazos (t0+8 en
+   adelante), así que el parpadeo no los tapa: A4 y A6 se contradicen en esto.
+7. **`inclina` gira en pantalla** (positivo = horario), porque el rig solo tiene vista
+   frontal: «adelante/atrás» se ve como un ladeo lateral. `piernas.salto` es campo nuevo
+   (triunfo: «pies despegan 20 u»). Las orejas y el `giro` del guante van en espejo.
+8. **Orden de capas:** las dos piernas se dibujan antes del torso. Si van después del
+   torso, su línea de contorno corta la base de la panza.
+
+### Crítica: qué se corrigió y qué queda
+- Corregidos los 2 bloqueantes: `orgulloso` tiene jarras con codos fuera (curva ±1,8) y
+  `pensando` lleva la mano bajo el hocico sin tocar el antifaz. También los menores de
+  confundido/asombro (alturas 450 vs 760), `grito` (bocina junto al hocico), boca de
+  `grito` (sale ≤ 35 u bajo la barbilla) y el «^» de `risa`/`guino` (trazo de 10 u).
+- **Pendiente para Fable (diseño):** máscara facial crema en el tercio inferior de la
+  cara · `T_CREAM` 0,07 → 0,13-0,15 · cara propia para `orgulloso` (barbilla arriba,
+  cejas relajadas).
+- **Menores aún abiertos:** puente del antifaz ≤ 40 u y ojos ×1,15 (son medidas de A2, así
+  que las decide Fable) · anillos de la cola en cuña y punta gruesa · curva mínima |0,15|
+  en neutro/estafado · `codicia` sigue con las manos sobre la panza (ahora con los codos
+  fuera).
+
+## Crítica A9 (Opus, sesión separada)
+Juzgado sobre `evidencia/0001-fase2/hoja_de_poses.png` contra `_hojas/model_sheet.png`. Sin leer código.
+
+**1. Cabeza sola = hoja madre → PARCIAL.** El «limón acostado», orejas, mechón y pecas están. Faltan dos rasgos de peso:
+- *Mejillas crema.* En la hoja madre todo el tercio inferior de la cara (debajo del antifaz, hasta los mechones) es crema; el gris solo cubre la coronilla. El rig pinta la cabeza entera gris con un hocico crema pequeño: se lee como otro mapache, más oscuro y más «gato». Afecta a las 40 cabezas. **DESVIACIÓN-DE-DISEÑO** (A0.4/A2 piden solo «hocico 250×130»). Fix: máscara facial `T_CREAM` que va de mechón a mechón bajo el antifaz, con el hocico encima.
+- *Antifaz de dos lóbulos.* El puente es casi tan alto como los lóbulos: se lee como una banda continua de bandido, no como dos gotas unidas. Además, los ojos solo llenan ~50 % del lóbulo (en la hoja madre, ~75 %). **CORREGIBLE-MENOR**: puente a ≤40 u con cintura marcada; ojo ×1,15.
+
+**2. ¿Antifaz envuelve los ojos en las 10? → SÍ, con dos matices.** Ningún blanco, pupila ni párpado se sale en las 40 celdas; las cejas viven sobre el borde superior del antifaz y no flotan. Matices:
+- `risa` × las 4 y `guino` (ojo D): el «^» es tinta sobre `T_MASK` 0,72, y a 640 px casi desaparece; en `risa` el antifaz además parece más grande y oscuro que en el resto de las celdas, y la cara se vuelve una franja negra. **CORREGIBLE-MENOR**: «^» de 6 u o con un filo `T_FUR`, y comprobar que `risa` no escala el antifaz.
+- `grito` × las 4: la boca saca el hocico por debajo de la barbilla y la cabeza pasa a ser más alta que ancha (rompe A0.1). Como estiramiento de grito es aceptable; hay que limitarlo a ≤40 u bajo la barbilla. **CORREGIBLE-MENOR**.
+
+**3. ¿14 siluetas distinguibles? → NO.**
+- **pose: orgulloso.** No está construida como dice A5: los brazos cuelgan rectos con los guantes abiertos junto a las caderas. No hay puños en la cadera ni codos fuera (curva ±0,8), así que tampoco hay los dos triángulos de aire que la definen. En silueta, `orgulloso` ≈ `neutro` ≈ `bolsillos`. **BLOQUEANTE**: bajar las manos a las caderas (x ≈ ±150, y ≈ 280) con guante `puno` y curva ±0,8 hacia fuera.
+- `decidido` vs `orgulloso`: se distinguen, pero solo porque `orgulloso` está rota; tras el fix habrá que revisarlo (el brazo I de `decidido` también va a la cadera).
+- **pose: codicia** ≈ **pose: estafado**: las manos quedan dentro de la silueta del cuerpo y el encorvado +6° no se nota (el torso sale recto). **CORREGIBLE-MENOR**: manos a y ≈ 520, fuera de la panza; inclinación real de +6° y cabeza adelantada.
+- `confundido` vs `asombro`: las dos tienen dos manos abiertas a los lados, a la altura de los hombros. Hoy solo las separan la inclinación de la cabeza y la asimetría de los brazos. **CORREGIBLE-MENOR**: en `confundido`, codos pegados y manos más bajas (y ≈ 480) con hombros arriba (encogerse); en `asombro`, brazos más altos y abiertos (y ≈ 720).
+- **pose: pensando.** El brazo D cruza la cara y el guante tapa el ojo y el lóbulo izquierdo del antifaz, cuando A5 dice «bajo el hocico». Esconde el rasgo n.º 2 de A0. **BLOQUEANTE**: muñeca a y ≈ 640 (barbilla), nunca por encima de y = 700.
+- pose: grito: las manos van sobre la cabeza (pánico), no haciendo bocina junto al hocico. La silueta es distinta, pero el gesto significa otra cosa. **CORREGIBLE-MENOR**: muñecas a x ≈ ±150, y ≈ 690.
+
+**4. ¿Algún brazo con codo? → NO.** No hay quiebres. El problema es el contrario: en `neutro`, `orgulloso`, `decidido` (I) y `estafado` los brazos son tubos rectos, más tubería que manguera. **CORREGIBLE-MENOR**: curva mínima |0,15| en reposo, nunca 0.
+
+**5. ¿Guantes = punto más claro? → PARCIAL.** Numéricamente sí (0,00 frente a 0,07). A la vista, la panza crema compite con los guantes, y en `codicia` y `estafado`, con los guantes sobre la panza, solo los separa la línea. **DESVIACIÓN-DE-DISEÑO** (A1): `T_CREAM` a 0,13-0,15 (la hoja madre es claramente más oscura que el blanco del guante).
+
+**Extra — cola (todas las poses):** los anillos salen como cuñas radiales y la punta es gorda, así que la cola se lee como abanico o concha, no como cola anillada (A0.7). **CORREGIBLE-MENOR**: franjas perpendiculares a la espina y punta que se afina.
+
+**Vigilancia de Mijo — `orgulloso` frente a `codicia`: NO se lee como suficiencia.** Las dos comparten la cara `codicia`, y como el cuerpo de `orgulloso` no tiene el akimbo, nada lo separa: se lee como «neutro con cara de tramposo», es decir, avaricia por contagio. El akimbo (bloqueante de arriba) arregla la mitad. La otra mitad la pide el diseño: hace falta barbilla arriba (`cabeza.inclina` hacia atrás, `dy` +10) y cejas relajadas altas en vez de «bajas y arqueadas», como variante `suficiencia`, o un override de cejas en la pose. **DESVIACIÓN-DE-DISEÑO.**
 
 ## Reporte
-_(lo escribe el ejecutor al terminar la Parte B)_
+Rama `feat/sistema-videos-korex-fase2`. Evidencia en `misiones/evidencia/0001-fase2/`.
+
+| # | Criterio | Artefacto |
+|---|---|---|
+| 1 | Hoja = biblioteca | `hoja_de_poses.png` (14 poses + 14 siluetas + 10×4 cabezas + hoja madre + orgulloso/codicia) y `hoja_celdas.json`. `py -m pytest tests/test_tadeo_lib.py` → verde (celdas == `bibliotecaJSON()`; `biblioteca.json` re-exportado == el commiteado) |
+| 2 | Gate de la prueba | `py kx_tadeo.py` → OK. `gate.json`: `palette.off_palette_max = 0.0`, `safe_zone.dark_outside_safe_max = 0.0`, `palette.char_color_fraction = 0.0` (78 frames). Además `nunca_congelado`: 0 pares idénticos en 390 frames (A6.9). Still sin pérdida: `char_color_fraction 5,2e-05` (< 0,0005, por el antialias del grano) |
+| 3 | Sin DEBT | `grep -rn "DEBT" motion_graphics/src/kx/tadeo/` → sin salida; `test_sin_deuda_ni_hex_en_tadeo` también prohíbe hex |
+| 4 | Acting medido | `tests/test_tadeo_acting.py` (Node sobre `acting.js`, sin render): arranque pupilas 0 < cabeza 3 < torso 6 < brazos 8 < cola 12; curva de parpadeo con pico en 2,5/6 (42/58), ease-in/out, uno por cambio y ≥ 20 f de separación, ninguno en risa ni al empezar grito; `sx·sy = 1 ± 0,001` (torso y cabeza) en todo frame de la prueba y de las 28 transiciones; hold ≥ 10 f medido antes de cada cambio, y `validarLinea` rechaza un cambio sin hold |
+| 5 | verify | `python scripts/verify.py` → VERDE (61 tests). CI: ver el PR |
+
+Composición de prueba (13 s): neutro (3 s de idle) → explicando → confundido → *decidido (beat).
+`contactsheet.png` muestra las transiciones con spring; `still.png` es el beat asentado.
+
+**Vigilancias de Mijo**
+1. *orgulloso = suficiencia, no avaricia:* en la primera hoja **no** se leía así: sin las
+   jarras era «neutro con cara de tramposo» (desviación 1). Con las jarras, el cuerpo
+   ya separa las dos poses: en el panel de vigilancia 1, `orgulloso` tiene codos fuera y
+   puños en la cadera, y `codicia` las manos juntas al centro. La cara es la misma
+   (`codicia`, por diseño), así que la mitad facial sigue pendiente de Fable. **Que lo juzgue Fabian.**
+2. *Antifaz envuelve los ojos en las 10:* sí, en las 40 celdas de la rejilla ningún
+   blanco, pupila ni párpado se sale (crítica, pregunta 2). Las cejas van encima del
+   antifaz, en la frente, como pide A2. El «^» de `risa`/`guino` pasó a 10 u; no lo he vuelto a revisar celda por celda.
+3. *Siluetas distinguibles:* confundido (manos bajas, encogido) vs asombro (brazos arriba),
+   y decidido (puño fuera a la derecha) vs orgulloso (jarras simétricas) se separan en la fila
+   de siluetas. No he vuelto a pasar el resto de pares tras los fixes: lo revisa Fabian en la hoja.
+
+⏸ **Puerta dura:** el PR no se fusiona sin la aprobación visual de Fabian sobre `hoja_de_poses.png`.

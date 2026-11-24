@@ -10,7 +10,9 @@ export const RIG = {
   cadera: [85, 235],
   cuelloLocal: [0, 625], // barbilla: la cabeza se apoya aquí (solape 30 u)
   cabezaCentro: 770,
-  brazo: { largo: 330, grosor: 52, factorCurva: 0.38, min: 0.75, max: 1.35 },
+  // curvaMax 2 (A3 decía 1): con 1 el codo sale como mucho 62 u y las jarras de
+  // `orgulloso` o la bocina de `grito` son imposibles. Desviación declarada en el Reporte.
+  brazo: { largo: 330, grosor: 52, factorCurva: 0.38, min: 0.75, max: 1.35, curvaMax: 2 },
   pierna: { largo: 175, grosor: 78, curvaMax: 0.35 },
   cola: { base: [95, 250], largo: 420, grosor: [90, 150], anillos: 5 },
   guante: { radio: 110 }, // radio envolvente del guante abierto desde la muñeca
@@ -53,7 +55,7 @@ export const POSES = {
   }),
   confundido: pose("confundido", "confundido", "camara", {
     cabeza: { inclina: 10 }, torso: { sy: 1.04 },
-    brazoI: brazo([-330, 510], 1, "palma", 90), brazoD: brazo([330, 510], -1, "palma", 90),
+    brazoI: brazo([-320, 450], 1.2, "palma", 90), brazoD: brazo([320, 450], -1.2, "palma", 90),
     orejas: { i: 10, d: -6 },
   }),
   decidido: pose("decidido", "decidido", "camara", {
@@ -72,12 +74,12 @@ export const POSES = {
   }),
   orgulloso: pose("orgulloso", "codicia", "camara", {
     torso: { inclina: -5, sy: 1.04 },
-    brazoI: brazo([-180, 320], -0.8, "puno"), brazoD: brazo([180, 320], 0.8, "puno"),
+    brazoI: brazo([-160, 340], -1.8, "puno", 90), brazoD: brazo([160, 340], 1.8, "puno", 90),
     cola: { rizo: 0.6, alza: 12 },
   }),
   grito: pose("grito", "grito", "camara", {
     torso: { inclina: 8, sy: 1.08 },
-    brazoI: brazo([-255, 805], 1, "abierta", 40), brazoD: brazo([255, 805], -1, "abierta", 40),
+    brazoI: brazo([-165, 620], 1.9, "abierta", -75), brazoD: brazo([165, 620], -1.9, "abierta", -75),
     orejas: { i: -12, d: -12 },
   }),
   senalando: pose("senalando", "decidido", "der", {
@@ -91,7 +93,7 @@ export const POSES = {
   }),
   codicia: pose("codicia", "codicia", "abajo", {
     cabeza: { dy: -10 }, torso: { inclina: 6 },
-    brazoI: brazo([-32, 380], -1, "agarra", 70), brazoD: brazo([32, 380], 1, "agarra", 70),
+    brazoI: brazo([-34, 420], -1.8, "agarra", 70), brazoD: brazo([34, 420], 1.8, "agarra", 70),
     cola: { rizo: 0.5 },
   }),
   bolsillos: pose("bolsillos", "triste", "abajo", {
@@ -101,7 +103,7 @@ export const POSES = {
   }),
   asombro: pose("asombro", "asombro", "camara", {
     torso: { inclina: -6, sy: 1.06 },
-    brazoI: brazo([-370, 620], 0.6, "abierta", 50), brazoD: brazo([370, 620], -0.6, "abierta", 50),
+    brazoI: brazo([-330, 760], 0.4, "abierta", 20), brazoD: brazo([330, 760], -0.4, "abierta", 20),
     orejas: { i: -12, d: -12 }, cola: { rizo: 0.7, alza: 20 },
   }),
   picaro: pose("picaro", "guino", "camara", {
@@ -110,7 +112,7 @@ export const POSES = {
   }),
   pensando: pose("pensando", "confundido", "izq", {
     cabeza: { inclina: -6 },
-    brazoI: brazo([110, 430], -0.35, "agarra", 0), brazoD: brazo([-80, 640], 1, "agarra", 0),
+    brazoI: brazo([110, 430], -0.35, "agarra", 0), brazoD: brazo([-70, 530], 1.3, "agarra", -90),
   }),
 };
 
@@ -133,8 +135,8 @@ export const EXPRESIONES = {
   triste: expr("triste", { cejaI: ceja(tan(16), -tan(16), 2), parpadoI: 0.25, boca: "triste" }),
   decidido: expr("decidido", { cejaI: ceja(-tan(18) - 6, tan(18) - 6, 0), parpadoI: 0.3, boca: "apretada" }),
   guino: expr("guino", { cejaI: ceja(10, 12, 8), cejaD: ceja(-6, -8, 4), cerradoD: true, boca: "ladeada" }),
-  risa: expr("risa", { cejaI: ceja(10, 10, 8), cerradoI: true, cerradoD: true, boca: "risa", mandibula: 45 }),
-  grito: expr("grito", { cejaI: ceja(-tan(22) - 10, tan(22) - 10, 0), pupila: 0.8, ojo: 1.05, boca: "grito", mandibula: 95 }),
+  risa: expr("risa", { cejaI: ceja(10, 10, 8), cerradoI: true, cerradoD: true, boca: "risa", mandibula: 35 }),
+  grito: expr("grito", { cejaI: ceja(-tan(22) - 10, tan(22) - 10, 0), pupila: 0.8, ojo: 1.05, boca: "grito", mandibula: 60 }),
   confundido: expr("confundido", { cejaI: ceja(16, 16, 10), cejaD: ceja(-4, -6, 2), parpadoD: 0.25, boca: "ondulada" }),
   codicia: expr("codicia", { cejaI: ceja(-8, 2, 10), parpadoI: 0.4, boca: "ancha" }),
   estafado: expr("estafado", { cejaI: ceja(tan(22), -tan(22), 2), parpadoI: 0.35, boca: "temblorosa", lagrima: true }),
