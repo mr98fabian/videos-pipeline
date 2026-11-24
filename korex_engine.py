@@ -1,4 +1,7 @@
-"""Motor visual de KOREX — canal de finanzas satiricas (Tadeo el mapache).
+"""LEGACY (nov 2026): reemplazado por korex_motion.py + KorexMotion.jsx.
+Este motor usaba acentos de color por villano; el canal es estrictamente B/N.
+
+Motor visual de KOREX — canal de finanzas satiricas (Tadeo el mapache).
 
 POR QUE EXISTE APARTE DE archivo_engine.py (3 ago 2026):
 "Archivo Vivo" es la piel de HiddenFacts -- expediente de misterio con polaroid

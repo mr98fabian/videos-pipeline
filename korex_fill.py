@@ -1,4 +1,7 @@
-"""Completa las escenas que le faltan a una carpeta de salida ya producida,
+"""LEGACY (nov 2026): solo aplica al camino viejo de imagenes Flow
+(--korex-legacy). El camino motion no tiene escenas que completar.
+
+Completa las escenas que le faltan a una carpeta de salida ya producida,
 insistiendo SOLO en las que faltan.
 
 Flow falla de forma intermitente: en una misma corrida la misma escena puede
@@ -73,7 +76,7 @@ def main() -> int:
         print(f"\n--- ronda {ronda}/{rondas}: faltan {faltan} ---")
         for i in faltan:
             term = terms[i]
-            raw_char = char_terms[i] if i < len(char_terms) else ""
+            raw_char = kx_cast.strip_beat(char_terms[i] if i < len(char_terms) else "")
             refs = []
             prompt = term
             if raw_char and "/" in raw_char:

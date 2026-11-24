@@ -1,0 +1,163 @@
+{
+  "video_id": "IRNBKNa59rc",
+  "metricas": {
+    "palabras": 1914,
+    "frases": 122,
+    "palabras_por_frase": 15.7,
+    "preguntas": 3,
+    "cifras": 31,
+    "repetidas": [
+      [
+        "musica",
+        46
+      ],
+      [
+        "vehiculo",
+        12
+      ],
+      [
+        "camion",
+        9
+      ],
+      [
+        "blindaje",
+        8
+      ],
+      [
+        "acero",
+        7
+      ],
+      [
+        "tiene",
+        7
+      ]
+    ]
+  },
+  "esqueleto": {
+    "beats": [
+      {
+        "pct": 0,
+        "funcion": "gancho",
+        "nota": "Abre con un contraste extremo entre dos magnitudes opuestas para generar intriga inmediata"
+      },
+      {
+        "pct": 3,
+        "funcion": "promesa",
+        "nota": "Plantea preguntas retoricas que anticipan revelaciones y promete recorrido completo capa por capa"
+      },
+      {
+        "pct": 7,
+        "funcion": "promesa",
+        "nota": "Reformula la promesa central prometiendo un cambio de percepcion al terminar"
+      },
+      {
+        "pct": 11,
+        "funcion": "contexto",
+        "nota": "Reubica el problema real donde nadie lo espera, desmontando la creencia comun"
+      },
+      {
+        "pct": 18,
+        "funcion": "ejemplo",
+        "nota": "Describe paso a paso el intervalo critico como caso concreto de vulnerabilidad"
+      },
+      {
+        "pct": 26,
+        "funcion": "objecion",
+        "nota": "Enumera las tacticas del adversario para demostrar por que la fuerza bruta fracasa"
+      },
+      {
+        "pct": 33,
+        "funcion": "giro",
+        "nota": "Punto de inflexion: se abandona proteger el objeto y se cambia el objetivo por completo"
+      },
+      {
+        "pct": 38,
+        "funcion": "mecanismo",
+        "nota": "Explica la arquitectura fisica del sistema, capa material por capa material"
+      },
+      {
+        "pct": 52,
+        "funcion": "mecanismo",
+        "nota": "Revela la separacion en compartimentos independientes como principio de diseno"
+      },
+      {
+        "pct": 60,
+        "funcion": "mecanismo",
+        "nota": "Introduce el mecanismo temporal como pieza clave contraintuitiva"
+      },
+      {
+        "pct": 68,
+        "funcion": "prueba",
+        "nota": "Contrapone el mecanismo con el reloj del adversario para validar su eficacia"
+      },
+      {
+        "pct": 75,
+        "funcion": "mecanismo",
+        "nota": "Anade la capa final que resuelve el problema: neutralizacion del premio"
+      },
+      {
+        "pct": 83,
+        "funcion": "recapitulacion",
+        "nota": "Sintetiza la secuencia completa de defensas en una sola frase encadenada"
+      },
+      {
+        "pct": 86,
+        "funcion": "prueba",
+        "nota": "Aporta la logica economica y el dato del desplome como validacion del sistema"
+      },
+      {
+        "pct": 92,
+        "funcion": "contexto",
+        "nota": "Amplia con ironias economicas y contradicciones del sector para dar profundidad"
+      },
+      {
+        "pct": 97,
+        "funcion": "cierre",
+        "nota": "Vuelve a la escena inicial resignificada y cierra con una conclusion elegante"
+      },
+      {
+        "pct": 99,
+        "funcion": "cta",
+        "nota": "Abre un nuevo enigma paralelo y remite a otro video para continuar"
+      }
+    ],
+    "bucles": [
+      {
+        "abre_pct": 3,
+        "paga_pct": 60,
+        "tipo": "conocimiento"
+      },
+      {
+        "abre_pct": 4,
+        "paga_pct": 86,
+        "tipo": "conocimiento"
+      },
+      {
+        "abre_pct": 7,
+        "paga_pct": 97,
+        "tipo": "identidad"
+      },
+      {
+        "abre_pct": 33,
+        "paga_pct": 75,
+        "tipo": "resultado"
+      },
+      {
+        "abre_pct": 99,
+        "paga_pct": -1,
+        "tipo": "conocimiento"
+      }
+    ],
+    "unidad": "kilogramos por valor transportado",
+    "promesa_pct": 3,
+    "giro_pct": 33,
+    "cierre_deja_abierto": true,
+    "por_que_funciono": [
+      "Abre con un contraste numerico extremo entre dos magnitudes opuestas que crea tension antes de explicar nada",
+      "Reubica el problema real donde el espectador no lo espera, invalidando su suposicion inicial para retener atencion",
+      "Retrasa la revelacion de la pieza clave usando preguntas retoricas iniciales como promesas de pago diferido",
+      "Estructura el desarrollo como recorrido progresivo capa por capa, dando sensacion de avance y acumulacion",
+      "Cierra reinterpretando la escena de apertura y abre inmediatamente un nuevo enigma para encadenar hacia otro contenido"
+    ]
+  }
+}

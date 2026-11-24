@@ -1,4 +1,8 @@
-"""Automatiza Google Flow (labs.google/fx/tools/flow) via Playwright para
+"""LEGACY PARA KOREX (nov 2026): KOREX ya no genera imagenes en Flow; sale por
+korex_motion.py. Este modulo se conserva intacto para otros canales o una
+orden expresa (pipeline.py --korex-legacy).
+
+Automatiza Google Flow (labs.google/fx/tools/flow) via Playwright para
 generar imagenes gratis (modelo Nano Banana 2) en vez de pagar la API de
 Gemini/PiAPI. Reemplaza la extension de Chrome 'Zappy Flow' (tercero no
 verificado, zapiwala.ai) con automatizacion propia sobre la misma pagina --
@@ -222,34 +226,58 @@ _REF_CACHE = Path(__file__).parent / "assets" / "cache" / "flow_refs"
 
 
 def _flatten_alpha(path: Path) -> Path:
-    """Aplana el canal alfa sobre blanco antes de subir la referencia.
+    """Aplana el canal alfa sobre blanco antes de subir la referencia, y de
+    paso le pone un nombre unico por CONTENIDO.
 
-    MEDIDO el 4 ago 2026, no es precaucion: Flow contesta 'No se pudo generar'
-    cuando la UNICA referencia es un PNG con transparencia. Misma escena, misma
-    pose, unica variable el alfa -> RGBA falla, la misma imagen aplanada pasa.
-    Las 33 laminas de assets/kx_cast/tadeo/ estan recortadas, asi que fallaban
-    casi siempre; solo colaban cuando ademas iba una referencia opaca al lado, y
-    eso hacia que el fallo pareciera aleatorio (o de cuota, o de politicas).
+    Lo del alfa: MEDIDO el 4 ago 2026, no es precaucion. Flow contesta 'No se
+    pudo generar' cuando la UNICA referencia es un PNG con transparencia.
+    Misma escena, misma pose, unica variable el alfa -> RGBA falla, la misma
+    imagen aplanada pasa. Las 33 laminas de assets/kx_cast/tadeo/ estan
+    recortadas, asi que fallaban casi siempre; solo colaban cuando ademas iba
+    una referencia opaca al lado, y eso hacia que el fallo pareciera
+    aleatorio (o de cuota, o de politicas).
+
+    Lo del nombre unico: BUG REAL medido el 23 ago 2026. `_attach` evita
+    volver a subir un archivo buscando en la biblioteca del proyecto de Flow
+    una imagen cuyo `alt` coincida con el NOMBRE del archivo -- no compara
+    contenido. `assets/characters/tadeo/default_model_sheet.png` y
+    `assets/characters/bruja-del-banco/default_model_sheet.png` se llaman
+    IGUAL (el nombre lo genera `_canonical_sheet`/`get_named_character_sheet`
+    a partir de un patron fijo, no del personaje). Como KOREX usa un proyecto
+    de Flow FIJO para siempre (`_open_project`), la hoja de la Bruja subida en
+    un video anterior seguia en la biblioteca, y al pedir la hoja de Tadeo en
+    un video posterior `_attach` encontro "default_model_sheet.png" ya
+    subido, hizo clic en ESE (la Bruja) y jamas subio el archivo nuevo. Salio
+    la Bruja en una escena donde ningun prompt la nombraba. Por eso TODO
+    archivo que se sube pasa por aqui y sale con el hash del contenido en el
+    nombre, tenga alfa o no: dos imagenes con el mismo nombre pero contenido
+    distinto ya no pueden colisionar en la biblioteca del proyecto.
     """
+    import hashlib
+
+    try:
+        key = hashlib.sha1(path.read_bytes()).hexdigest()[:16]
+    except Exception as e:
+        _log(f"no pude leer {path.name} para el hash ({e}); va tal cual")
+        return path
+    _REF_CACHE.mkdir(parents=True, exist_ok=True)
+    dst = _REF_CACHE / f"{path.stem}_{key}.png"
+    if dst.exists():
+        return dst
     try:
         from PIL import Image
 
         with Image.open(path) as im:
-            if im.mode not in ("RGBA", "LA", "PA") and "transparency" not in im.info:
-                return path
-            im = im.convert("RGBA")
-            import hashlib
-
-            key = hashlib.sha1(path.read_bytes()).hexdigest()[:16]
-            _REF_CACHE.mkdir(parents=True, exist_ok=True)
-            dst = _REF_CACHE / f"{path.stem}_{key}.png"
-            if not dst.exists():
+            if im.mode in ("RGBA", "LA", "PA") or "transparency" in im.info:
+                im = im.convert("RGBA")
                 bg = Image.new("RGB", im.size, (255, 255, 255))
                 bg.paste(im, mask=im.split()[3])
                 bg.save(dst)
-            return dst
+            else:
+                im.convert("RGB").save(dst)
+        return dst
     except Exception as e:
-        _log(f"no pude aplanar {path.name} ({e}); va tal cual")
+        _log(f"no pude preparar {path.name} ({e}); va tal cual")
     return path
 
 
@@ -421,11 +449,42 @@ class FlowSession:
             "cambio el build"
         )
 
+    def _dismiss_changelog(self) -> None:
+        """El aviso de 'novedades' de Flow es un iframe de otro origen
+        (gstatic.com) que se abre SOBRE el panel de configuracion y se come
+        todos los clicks -- medido el 28 ago 2026 tras el build del 26 ago
+        (nuevo modelo 'Nano Banana 2 Lite'): una tanda entera de 13 escenas
+        fallo 100% con timeout en el chip de aspecto, sin ningun error propio
+        porque _log solo imprime con FLOW_DEBUG activo. Al ser cross-origin,
+        Escape no llega adentro del iframe; lo unico que funciona es click
+        fuera de el. Es intermitente (parece salir una vez por sesion), asi
+        que esto se llama SIEMPRE antes de abrir el panel, no solo si falla."""
+        page = self._page
+        if not page.locator("iframe[src*='changelog']").count():
+            return
+        _log("aviso de novedades de Flow tapando el panel; cerrando")
+        for _ in range(4):
+            if not page.locator("iframe[src*='changelog']").count():
+                return
+            try:
+                page.mouse.click(20, 8)
+            except Exception:
+                pass
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(500)
+
     def _configure(self, mode: str | None = None) -> None:
         page = self._page
         mode = mode or self.mode or "image"
-        self._config_chip().click(timeout=15_000)
+        self._dismiss_changelog()
+        try:
+            self._config_chip().click(timeout=15_000)
+        except Exception:
+            # el aviso pudo abrirse justo entre el chequeo y el click
+            self._dismiss_changelog()
+            self._config_chip().click(timeout=15_000)
         page.wait_for_timeout(1200)
+        self._dismiss_changelog()
 
         self._tab("Video" if mode == "video" else "Imagen").first.click(timeout=10_000)
         page.wait_for_timeout(1200)

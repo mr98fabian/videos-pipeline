@@ -1,0 +1,88 @@
+{
+  "style": "Animacion vectorial plana estilo 'rubber hose' anos 30, ESTRICTAMENTE en blanco y negro puro con grises neutros: cero sepia, cero tono crema, cero papel amarillento, cero color de ningun tipo. Grano de film vintage y parpadeo sutil. Protagonista Tadeo el mapache con guantes blancos de boton",
+  "title": "🏦 El banco no te bloqueó la compra por error, fue A PROPÓSITO",
+  "description": "Pelando cable. Por que el sobregiro 'de cortesia' no es un favor del banco, como reordenan tus compras para cobrartelo mas veces, y el boton que casi nadie sabe que puede apagar. Con Tadeo el mapache. Canal KoreX. ¿Tú tienes el sobregiro activado o ya lo apagaste? Escribe A o B.",
+  "hook_card": "No fue un error. Fue a propósito.",
+  "music_mood": "comedic_tense",
+  "target_emotion": "outrage",
+  "twist_phrase": "Las reordenan de mayor a menor",
+  "comment_cta": "¿Tú tienes el sobregiro activado o ya lo apagaste? Escribe A o B.",
+  "series": "Pelando cable",
+  "hook_punch": true,
+  "search_terms": [
+    "Tadeo character: close-up de Tadeo pagando con tarjeta en un mostrador, esperando el rechazo, cara de tension",
+    "Tadeo character: el mismo Tadeo relajado al ver que la compra paso, media sonrisa de alivio",
+    "Bruja del Banco character: sonriendo de lado detras de un mostrador, aprobando un papel con un sello sin que Tadeo la vea",
+    "Un recibo diminuto de seis dolares junto a un sello enorme de treinta y cinco dolares aplastandolo, primer plano, sin personajes, sin texto legible ni numeros",
+    "Varios recibos pequenos en fila sobre una mesa, sin personajes, sin texto ni letras",
+    "Bruja del Banco character: reordenando los mismos recibos de mayor a menor con dedos largos y gesto calculador, sonrisa satisfecha",
+    "Un papel con una firma diminuta casi invisible en la esquina inferior, lupa senalando la firma, sin personajes, sin texto legible",
+    "Tadeo character: Tadeo con las manos vacias mostrando que nunca firmo nada, cara de incredulidad",
+    "Un interruptor grande de palanca con dos posiciones, uno de los lados brillando como si acabara de encenderse, primer plano, sin personajes, sin texto ni letras",
+    "Tadeo character: Tadeo pagando con tarjeta y esta vez la maquina muestra un simple rechazo limpio, sin drama, Tadeo encogiendose de hombros tranquilo",
+    "Una lista corta de recibos de pagos automaticos revisada con una palomita al lado de cada uno, primer plano, sin personajes, sin texto legible",
+    "Tadeo character: Tadeo mirando directo a camara senalando un papel con la palabra sobregiro tachada, media sonrisa segura",
+    "Tadeo character: close-up de Tadeo con el pulgar sobre un interruptor, mirando directo a camara con confianza total"
+  ],
+  "script": "Traes cinco dólares en la cuenta, y compras un café de seis. El banco te lo deja pasar. Y ahí está la trampa: no te lo bloqueó, te lo aprobó a propósito. Ese pequeño arrastre te acaba de costar treinta y cinco dólares de sobregiro. Y si ese día hiciste varias compras chiquitas, muchos bancos no las cobran en el orden en que las hiciste. Las reordenan de mayor a menor, para que la cuenta se vacíe más rápido y caigas en sobregiro varias veces, no solo una. A eso se le llama sobregiro de cortesía, y por ley tienes que haber dicho que sí tú mismo. Si nunca lo aceptaste, no deberían cobrártelo. La mayoría de los bancos grandes ya tienen la opción de apagarlo: se llama declinar automáticamente. Con eso activado, la tarjeta simplemente se rechaza si no hay fondos. Eso sí, revisa primero qué pagos automáticos tienes activos, porque esos pueden rebotar. La próxima vez que veas sobregiro en tu estado de cuenta, no es mala suerte. Es un botón que nunca apagaste.",
+  "character_terms": [
+    "tadeo/confundido",
+    "tadeo/orgulloso",
+    "bruja/malvada",
+    "",
+    "",
+    "*bruja/malvada",
+    "",
+    "tadeo/confundido",
+    "",
+    "tadeo/decidido",
+    "",
+    "tadeo/decidido",
+    "tadeo/orgulloso"
+  ],
+  "music": "korex30s",
+  "motion": {
+    "hero": {
+      "scene": 3,
+      "text": "$35",
+      "label": "de sobregiro",
+      "label_top": "un café de $6 te costó"
+    },
+    "scenes": {
+      "4": {
+        "concept": {
+          "type": "bars",
+          "reorder": false,
+          "values": [
+            2,
+            3,
+            2,
+            4,
+            3
+          ],
+          "label": "varias compras chiquitas"
+        }
+      },
+      "6": {
+        "concept": {
+          "type": "doc",
+          "label": "tú tenías que decir que sí"
+        }
+      },
+      "8": {
+        "concept": {
+          "type": "toggle",
+          "off": "SOBREGIRO",
+          "on": "DECLINAR",
+          "label": "declinar automáticamente"
+        }
+      },
+      "10": {
+        "concept": {
+          "type": "check",
+          "label": "revisa tus pagos automáticos"
+        }
+      }
+    }
+  }
+}

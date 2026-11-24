@@ -36,10 +36,12 @@ leer nunca.
 | [[IDIOMA_KOREX]] | **El diccionario mapache y la firma de título.** Obligatorio antes de escribir un guion |
 | [[ESTUDIO_REFERENTES]] | Los Ecomonos y Zenn medidos con la API. **Manda sobre cualquier consejo genérico de títulos** |
 | [[STORYBOARD_KOREX]] | Cómo se planifica cada plano: 絵コンテ, sincronía, jerarquía de planos |
+| [[LATIDO_DEL_STORYBOARD]] | Falta corazón: el beat board, y por qué nuestras poses se repiten sin marcar la escena que importa |
 | [[PERSONAJE_MODEL_SHEET]] | Cómo se mantiene a Tadeo idéntico. Leer antes de generar cualquier lámina |
 | [[SERIES_PELAR_CABLE]] | La serie de episodios en marcha |
 | [[STORYBOARD_DOS_SUELDOS]] | El storyboard del primer largo: 104 planos sobre 30 imágenes |
 | [[INVESTIGACION_COSTE_ANIMACION]] | Qué cuesta animar y por qué solo se anima la apertura |
+| [[INSTALACION_WAN]] | Animar en local con Wan 2.2 (WanGP): estado, uso y config. Leer antes de animar |
 
 ## 2. Cómo decide YouTube (distribución)
 
@@ -57,6 +59,10 @@ leer nunca.
 | Documento | Cuándo leerlo |
 |---|---|
 | [[RETENTION_CHECKLIST]] | Las reglas duras de guion. El paso 0 (outliers) vive aquí |
+| [[ANALISIS_SEMANAL]] | Las 7 preguntas de la revisión de los sábados y el método multiidioma detrás |
+| [[GANCHO_SHORTS_2026]] | **Cómo subir el 27,1% de "se quedaron para mirar".** Investigación EN/ES/JA/KO/ZH y las aperturas reescritas |
+| [[CALENDARIO_PUBLICACION]] | Qué día y a qué hora sale cada Short y cada largo, y por qué esa cadencia |
+| [[GUERRILLA_Y_ADS_2026]] | Pago vs. guerrilla para tracción orgánica: por qué NO pagar todavía, y la condición para reabrirlo |
 | [[INVESTIGACION_GUION_BUCLES]] | Bucles de curiosidad: 3-5 en tres niveles, y por qué la promesa sin pago frustra |
 | [[PSICOLOGIA_SEGUNDO_0]] | Qué dispara la curiosidad en el primer segundo |
 | [[PLAN_SEGUNDO_6]] | La fuga medida entre el segundo 5,5 y el 10 |
@@ -92,6 +98,7 @@ leer nunca.
 | [[ESTUDIO_REFERENTES]] | Incluye los datos reales de KOREX por vídeo (vistas y retención) |
 | [[INVESTIGACION_MACK]] | @MackExplains7 verificado a mano — canal referente |
 | [[CREATOR_RANT_IDEAS]] | Ideas de la fuente validada (John Scott) |
+| [[ESCUELA_ROMUALD]] | Romuald Fons filtrado: qué aplica al largo, qué a Shorts y qué no. Leer antes de tocar el largo |
 | [[FEEDBACK_DIGEST]] | Datos → prompt, digest automático |
 | [[PROGRESO_CANAL]] | Histórico de auditorías |
 

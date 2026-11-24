@@ -13,7 +13,48 @@ lo que quedó a medias, y qué sigue. Se lee al empezar y se actualiza al termin
 
 ---
 
-## Actualizado: 13 ago 2026 — largo de KOREX publicado (no listado) y miniaturas
+## Actualizado: 17 ago 2026 — canal reordenado, calendario fijo y dos Shorts programados
+
+**Otra sesión.** El grueso del día no fue producir: fue descubrir que medíamos mal.
+
+- **CORRECCIÓN QUE MANDA SOBRE TODO:** el gancho SÍ es el cuello. "Se quedaron a
+  mirar" está en **27,1%** (banda sana 70-90%). La curva de `youtube_api.py
+  retention` viene normalizada y NO ve a los que se van: ese dato solo está en
+  Studio > vídeo > Participación. Detalle e hipótesis en `HISTORIAL_MEJORAS.md`;
+  reglas en `RETENTION_CHECKLIST.md` y `GANCHO_SHORTS_2026.md` (investigación
+  EN/ES/JA/KO/ZH con las aperturas reescritas).
+- **Público: hispanos en EE.UU.**, español con la voz de siempre pero productos
+  gringos y dólares. El keyword research va con `country: US`.
+- **Calendario fijo** en `CALENDARIO_PUBLICACION.md`: Shorts martes, jueves y
+  sábado 19:00 MX (sábado 11:00), y **un largo todos los domingos**.
+- **Programados**: `AkENgCh4Klo` (pay in 4) el 19 ago 01:00 UTC y `WD4xyKgPEew`
+  (Pelando cable #2) el 21 ago 01:00 UTC. Ambos privados con `publishAt`.
+- **Canal optimizado**: banner nuevo (arte de Flow con la hoja madre + texto en
+  la zona segura), bio sin las acotaciones de guion que estaban públicas,
+  keywords al día, país US, trailer para no suscritos, 4 playlists con keyword
+  por título y 16 descripciones enlazando a su playlist (antes: cero).
+- **El largo está muerto de distribución, no de calidad**: 6 impresiones en 3
+  días. Un largo sin audiencia previa solo entra por búsqueda, y su tema no
+  responde a ninguna. Ver `ESCUELA_ROMUALD.md` con la demanda medida.
+- **Wan 2.2 en local funcionando**: 7m41s por clip a 480x832. Se mete al vídeo
+  con `pipeline.py --wan-hero <clip> --reusar-imagenes`, NO con `korex_animate`.
+  Ver `INSTALACION_WAN.md`.
+
+### Pendiente inmediato
+
+1. **Guion `scripts/korex-historial-invisible.json` escrito y sin producir** —
+   el de "te negaron la tarjeta" (crédito, competencia 12,2). Falta tu visto
+   bueno final; iba para el sábado 11:00.
+2. **El largo de los domingos no tiene tema elegido.** El candidato con datos es
+   "cómo salir de deudas sin ganar más" (8.020 búsquedas/mes).
+3. El vídeo "Deja de pelar: el secreto de los lacras" rechaza toda edición de
+   metadatos con un 400 de YouTube. Sin resolver.
+4. Ocho vídeos promo antiguos de KOREXF quedaron fuera de las playlists a
+   propósito: romperían la reproducción encadenada.
+
+---
+
+## 13 ago 2026 — largo de KOREX publicado (no listado) y miniaturas
 
 **Sesión de Claude.** Lo terminado hoy, en orden:
 
