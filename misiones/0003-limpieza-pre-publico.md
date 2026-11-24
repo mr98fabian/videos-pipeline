@@ -1,6 +1,6 @@
 # MISIÓN 0003 — Limpieza antes de hacer público el repo
 
-Estado: en-curso · Rama: `chore/limpieza-pre-publico` · Autor: Mijo · Ejecutor: Claude
+Estado: en-auditoria (etapa 1) · Rama: `chore/limpieza-pre-publico` · Autor: Mijo · Ejecutor: Claude
 
 ## Objetivo
 Que el árbol de `master` pueda hacerse público sin rutas con el usuario local ni configuración local de
@@ -35,5 +35,35 @@ Fuera de alcance: reescribir el historial; la etapa 2 (visibilidad pública y pr
 Mijo comprueba los 6 criterios. Regla de la casa 9 (secretos fuera del repo): `git status` limpio de
 credenciales antes del commit.
 
-## Reporte
-_(lo escribe el ejecutor al terminar)_
+## Reporte — Etapa 1
+_(los criterios los escribió otra sesión de Claude en `27356ca`; esta sesión
+retomó la rama, que esa sesión había borrado en local, desde ese mismo commit)_
+
+- Qué se hizo:
+  - `scripts/run_ep2_once.bat`: `cd /d "%~dp0.."` en lugar de la ruta fija con
+    el usuario local. `%~dp0` es la carpeta del `.bat` (`scripts\`), así que
+    `..` es la raíz del repo: en el checkout principal es la misma carpeta
+    `Videos` de antes, y además funciona en cualquier otro checkout.
+  - `.gitignore`: `.claude/settings.local.json` (antes solo lo cubría el
+    ignore global de la máquina).
+  - `git config --local user.email` = noreply de la cuenta.
+
+- **Auto-verificación, un artefacto por criterio**
+  | # | Criterio | Artefacto | ✅/❌ |
+  |---|---|---|---|
+  | 1 | sin rutas con el usuario | `misiones/evidencia/0003/criterios_1_a_3.txt`: `git grep` → exit 1 | ✅ |
+  | 2 | el `.bat` entra en la raíz | mismo archivo: sus líneas hasta el `cd`, lanzadas desde `C:\`, imprimen la raíz del checkout | ✅ |
+  | 3 | ignorado por el repo | mismo archivo: `.gitignore:137:.claude/settings.local.json` | ✅ |
+  | 4 | commits con noreply | `misiones/evidencia/0003/criterios_4_a_6.txt` | ✅ |
+  | 5 | verify VERDE | mismo archivo | ✅ |
+  | 6 | diff limitado a 4 archivos (+ evidencia) | mismo archivo | ✅ |
+
+- Fallos encontrados y su arreglo: el `user.email` local con el noreply no
+  estaba puesto (solo el global, con el gmail); se configuró aquí. El email
+  que da `gh api user/emails` necesita el scope `user`, que el token no tiene:
+  se construyó con el formato oficial `<id>+<login>@users.noreply.github.com`
+  a partir de `gh api user` (igual al que muestra Settings → Emails).
+- Desviación: el criterio 6 lista 4 archivos; el diff trae además
+  `misiones/evidencia/0003/*.txt`, la evidencia que exige la plantilla.
+- Qué queda pendiente: auditoría de Mijo → orden de merge de Fabian → Etapa 2
+  (visibilidad pública + protección de `master`).
