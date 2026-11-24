@@ -1,0 +1,9 @@
+== C1  git grep -n -i -E "Users[\/]+<usuario-local>"
+exit=1
+
+== C2  líneas del .bat hasta su cd + "cd" para imprimir el directorio, lanzado desde C:\ (otro directorio)
+C:\Users\<usuario>\AppData\Local\Temp\claude\44c478442bd70880\027c9dcf-57e7-47f4-b306-0dcfbbb36e32\scratchpad\wt-0002
+(esperado: la raíz del checkout; en el checkout principal = la carpeta Videos, igual que la ruta fija de antes)
+
+== C3  git check-ignore -v .claude/settings.local.json
+.gitignore:137:.claude/settings.local.json	.claude/settings.local.json

@@ -132,3 +132,6 @@ motion_graphics/public/kxm/
 
 # caches de herramientas
 .ruff_cache/
+
+# Configuracion local de Claude Code (permisos de esta maquina): no se comparte.
+.claude/settings.local.json
