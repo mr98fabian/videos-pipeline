@@ -315,3 +315,48 @@ búsquedas/mes, score 58 — mismo tema, resultado opuesto). Antes de subir:
 - `youtube_api.py comment <id> --text "…"` publica un comentario-pregunta como el canal para
   subir engagement velocity temprano. El **pin es manual** (1 clic en Studio; la API no lo
   permite).
+
+## KOREX — la frase 2 (regla medida el 15 ago 2026)
+
+**La frase 2 entrega el primer trozo de la promesa. No presenta a Tadeo.**
+
+Medido sobre las curvas de retencion propias de los 5 videos KOREX con datos: a los 3
+segundos sigue ahi el 89-95% —el gancho funciona—, pero entre el 5% y el 25% del video se
+va del 34% al 60% del publico, y en los cinco la frase donde se van es la misma
+construccion: *"Miren a Tadeo: ..."*.
+
+Es el beat de presentacion. El espectador se quedo por la promesa y lo que recibe a
+continuacion es contexto, asi que se va antes de cobrar nada.
+
+- El personaje entra **dentro** de la explicacion, no antes de ella.
+- Si la presentacion es imprescindible, media frase y con dato concreto: el mejor video
+  (−34%) dice "cuatro deudas y un solo sueldo"; el peor (−60%) gasta dos frases y una fecha.
+- Nada de fechas ni de ambientacion historica en los primeros 15 segundos.
+
+Detalle completo, tabla y contra-hipotesis en `HISTORIAL_MEJORAS.md` (entrada 15 ago 2026).
+
+## LA METRICA NUMERO UNO: "se quedaron para mirar" (17 ago 2026)
+
+**Medida en KOREX: 27,1%.** La banda sana es 70-90%; por debajo de 60% la
+distribucion se cae. O sea que de cada 100 personas a las que YouTube nos
+enseña, 73 se van antes de empezar. Todo lo demas de este checklist reparte
+mejor a los 27 que entran; esto cambia cuantos entran.
+
+**No se mide con la API.** `youtube_api.py retention` devuelve una curva
+normalizada que empieza en 100% por definicion y NO ve a los que se fueron
+antes. El dato real esta en **Studio > el video > Participacion > "Se quedaron
+para mirar"**, o en `Retencion de publico`. Si alguna vez una curva de la API
+parece sana y el canal no crece, es esto.
+
+**Las tres cosas que la mueven, en orden de sospecha:**
+
+1. **La primera frase no puede ser el titulo.** Hoy nuestros guiones abren
+   anunciando el tema ("Como decir que no cuando te piden plata prestada"). Eso
+   informa, no engancha: el espectador ya sabe de que va y decide que no le
+   urge. Abrir dentro de la escena, con el conflicto ya ocurriendo, y que la
+   promesa llegue en la segunda frase.
+2. **El fotograma 0 no puede parecer una ilustracion quieta.** Desde el 17 ago
+   se anima la escena 1 con Wan 2.2 en local (~7 min de GPU, ver
+   `INSTALACION_WAN.md`). Pendiente de medir si mueve la aguja.
+3. **La duracion es una promesa implicita.** Un Short de 1:11 pide mucho mas en
+   el segundo 1 que uno de 40 s. Nuestro rango objetivo sigue siendo 30-45 s.

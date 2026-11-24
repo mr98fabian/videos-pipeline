@@ -81,27 +81,37 @@ Nuestro material de partida es mejor que inventado, porque **ya ganó**: el víd
 de 9.668 vistas y 85,4% de retención se llama *"Cómo salir de deudas y dejar de
 pelar cable"*.
 
-**Firma elegida:**
+**El sufijo `, explicado para pelacables` queda RETIRADO (15 ago 2026).** La
+jerga sigue viva dentro del guion — ahí es donde nombra a la tribu —, pero en el
+título restaba: gastaba un tercio de los caracteres visibles antes del corte del
+feed en algo que no es la promesa, y en búsqueda no lo busca nadie.
 
-> **`<promesa o hecho concreto>, explicado para pelacables`**
+**Firma nueva:**
 
-Hace tres cosas a la vez: lleva su jerga, **nombra a la tribu** (igual que ellos
-le dicen "Mono espectador" al espectador) y funciona tanto en tema práctico como
-en historia.
+> **`<emoji> <promesa o hecho concreto con UNA palabra en mayúscula>`**
+
+Tres reglas, y no más:
+
+1. **Un emoji al principio**, concreto y del tema (📜 pergamino, 🌷 tulipán,
+   💳 tarjeta). Como mucho un segundo al final. Nunca en medio de la frase: parte
+   la lectura justo donde el ojo va rápido.
+2. **Exactamente una palabra en MAYÚSCULA**, la que carga la promesa. Si van dos
+   o tres, deja de resaltar y se lee como grito.
+3. **Afirmación con promesa, nunca pregunta** — esto no cambia: lo dicen los 91
+   vídeos del referente (4% preguntas) y lo dice nuestro propio ganador.
 
 Ejemplos con lo que ya tenemos escrito:
 
-| Ahora | Con la firma |
+| Antes | Ahora |
 |---|---|
-| ¿A dónde se va tu quincena si no compras nada grande? | La quincena se va en migas, explicado para pelacables |
-| ¿Qué pasa si dejas de pagar la tarjeta de crédito? | Dejar de pagar la tarjeta, explicado para pelacables |
-| ¿Cómo se sale de deudas sin ganar más dinero? | Salir del cepo sin ganar más, explicado para pelacables |
-| ¿Cuánto tengo que ahorrar de mi sueldo? | Cuánto guardar de la ronda, explicado para pelacables |
-| ¿Cómo pudo una flor costar más que una casa? | La flor que costó más que una casa, explicado para pelacables |
+| La quincena se va en migas, explicado para pelacables | 💸 Tu quincena se va en MIGAS, no en lujos |
+| Dejar de pagar la tarjeta, explicado para pelacables | 💳 Lo que pasa de VERDAD si dejas de pagar la tarjeta |
+| Cuánto guardar de la ronda, explicado para pelacables | 🪙 Cuánto guardar del sueldo SIN dejar de vivir |
+| La flor que costó más que una casa, explicado para pelacables | 🌷 La flor que costó MÁS que una casa |
+| El papel de 1648 que todavía paga intereses, explicado para pelacables | 📜 Este papel de 1648 TODAVÍA paga intereses |
 
-**Regla dura:** la firma **no se toca en 20 vídeos**. Una firma que cambia no es
-una firma. Y el título es **afirmación con promesa, nunca pregunta** — lo dicen
-sus 91 vídeos (4% preguntas) y lo dice nuestro propio ganador.
+La descripción sigue la misma norma: emoji por bloque, la palabra clave del
+bloque en mayúscula, y hashtags al final.
 
 ## 3. Qué cambia en el pipeline
 

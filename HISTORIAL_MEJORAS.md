@@ -426,6 +426,443 @@ de vista->sub con retencion sana. Sin datos aun; es oficio, no dato.
 **Donde se publico:** pendiente. Probado end-to-end con `scripts/korex-interbolsa.json` (cuyos `character_terms` pasaron de descripciones a claves `tadeo/<pose>`)
 **Que esperamos ver:** el disenio de Tadeo deja de variar entre escenas sin depender de pegar la misma lamina recortada, asi que el personaje puede actuar dentro del plano (no solo estar troquelado encima). La animacion es la que hay que mirar con lupa: 8s por escena a varios minutos de espera, y todavia sin medir si el movimiento real retiene mejor que el Ken Burns
 
+## 2026-08-15 — La caida no esta en el gancho: esta en la frase 2 ("Miren a Tadeo")
+**Investigacion/fuente:** curvas de retencion reales de KOREX (`youtube_api.py retention`,
+cuenta korex), los 5 videos con datos suficientes, cruzadas frase a frase con el
+`script.json` de cada carpeta. No es teoria ni benchmark ajeno: es el guion propio contra
+su propia curva.
+
+| video | 5% | 25% | 50% | fin | pierde 5→25% |
+|---|---|---|---|---|---|
+| salir de deudas | 89% | 55% | 43% | 33% | **−34%** |
+| quincena | 94% | 53% | 43% | 30% | −41% |
+| dejar de pagar tarjeta | 90% | 44% | 37% | 21% | −46% |
+| cuanto ahorrar | 95% | 43% | 28% | 7% | −52% |
+| la flor (tulipanes) | 93% | 32% | 20% | 12% | **−60%** |
+
+**El hallazgo.** El "se quedaron a mirar" NO es el cuello: a los 3 segundos siguen ahi el
+89-95%. La sangria ocurre entre el segundo 5 y el 15, y en los cinco videos la frase donde
+se van es la misma construccion: **"Miren a Tadeo: ..."**. Es el beat de presentacion —
+despues de prometer, el video se para a montar la escena del personaje en vez de empezar a
+pagar la promesa. El espectador ya decidio quedarse por la promesa; lo que le llega
+despues es contexto, y se va.
+
+Lo confirman los extremos: el que menos pierde (−34%) tiene la presentacion mas corta y
+con dato dentro ("cuatro deudas y un solo sueldo"); el que mas pierde (−60%) gasta dos
+frases en presentar y encima mete una fecha ("año mil seiscientos treinta y seis").
+
+**Cambio aplicado.** Regla nueva en `RETENTION_CHECKLIST.md` (seccion KOREX): **la frase 2
+entrega el primer trozo de la promesa, no presenta a Tadeo.** El personaje entra DENTRO de
+la explicacion, no antes de ella. Si la presentacion es imprescindible, va con dato
+concreto y en media frase, nunca en frase propia.
+
+**Donde se aplico.** Todavia en ningun video. `scripts/korex-fiado.json` (Pelando cable #3,
+programado para el 16 ago 13:00 UTC) lleva el patron viejo en la frase 2 ("A Tadeo le
+escribe su primo...") y sale tal cual: no se rehace lo ya subido. La regla arranca con el
+guion siguiente.
+
+**Hipotesis a medir (revisar en la proxima lectura de estadisticas).** Si la causa es el
+beat de presentacion, el primer guion sin el debe perder claramente menos del **−34%**
+entre el 5% y el 25%, que es hoy el mejor caso. Si se queda en la banda −34/−60% con el
+resto igual, la hipotesis es falsa y el problema esta en otro sitio (densidad, ritmo o
+velocidad de narracion: este video salio a 188 wpm contra el objetivo medido de 145).
+
+## 2026-08-16 — Revision semanal: la hipotesis de la frase 2 sigue sin poder probarse
+
+**Investigacion/fuente:** `youtube_api.py --account korex top/retention` (30 dias) +
+`script.json` de cada carpeta nueva, siguiendo el metodo de `ANALISIS_SEMANAL.md`.
+
+**Estado de la hipotesis del 15 ago (regla: la frase 2 no debe presentar a Tadeo).**
+No se puede confirmar ni refutar todavia. Los tres guiones que ya evitan la presentacion
+en frase 2 se publicaron en las ultimas 13-37 horas y YouTube Analytics no tiene curva de
+retencion para ninguno:
+
+| video | publicado | cumple regla frase 2 |
+|---|---|---|
+| bono-1648 (`GaHZHjPE_tI`) | 16 ago 01:00 UTC | si — frase 2 no menciona a Tadeo |
+| muela-babilonia (`q2JQUXGxU7U`) | 16 ago 03:48 UTC | si — abre con Tadeo ya en accion, sin beat de presentacion |
+| fiado (`3YqHh9gGTHQ`) | 16 ago 13:00 UTC | no — programado antes de la regla, sale tal cual (ya anotado el 15 ago) |
+
+**Dato incidental, no diseñado como test.** El unico video nuevo con curva de retencion
+esta semana es Isaac Newton (`srbLjsiKoho`, 124 vistas, publicado el 14 ago, ANTES de que
+la regla existiera). Su frase 2 tampoco presenta a Tadeo ("Pero eso paso mucho despues de
+la manzana" — Tadeo no aparece hasta la frase 4, como personaje paralelo, no presentado).
+Perdida 5%→25%: de 102,8% a 55,6% = **−46%**, dentro de la banda vieja (−34/−60%) y peor
+que el mejor caso medido. Esto pesa levemente EN CONTRA de la hipotesis, pero el dato es
+debil: 124 vistas (curva ruidosa, pasos de 1% representan pocos espectadores), estructura
+distinta (presenta a un personaje historico en frase 1, no a Tadeo) y no fue producido para
+probar la regla. No alcanza para tumbarla.
+
+**Hallazgo aparte, para investigar, no para actuar todavia (pregunta 4 del metodo).**
+El video con mas vistas del mes (`rbDWlLKpcjA`, quincena, 1462 vistas, 65,86% retencion)
+convirtio **0 suscriptores**. El de peor retencion del mes (`iKlL-98fJb8`, flor/tulipanes,
+1190 vistas, 30,85% retencion) convirtio **5 suscriptores** (0,42%, la mejor tasa del canal
+este mes) y tiene el doble de likes que el de quincena. Vistas × retencion no predice
+conversion aqui. Un solo caso — no se construye regla sobre esto todavia, se deja anotado
+para cruzar contra la proxima tanda.
+
+**Cambio aplicado.** Ninguno. Construir una regla nueva sobre datos que no existen todavia
+seria la propia advertencia de la pregunta 7 del metodo. `RETENTION_CHECKLIST.md` queda
+igual que el 15 ago.
+
+**Donde se aplico.** N/A esta semana.
+
+**Que NO se puede concluir todavia.** Si evitar la presentacion de Tadeo en frase 2 mejora
+la retencion 5-25%: cero videos que cumplen la regla tienen datos. El hallazgo de conversion
+de subs (parrafo anterior) tiene un solo caso de cada lado.
+
+**Hipotesis a medir (revisar en la proxima lectura de estadisticas, ~23 ago).** Mismo
+umbral que el 15 ago, ahora con los guiones que si cumplen: `bono-1648` y `muela-babilonia`
+deben perder claramente menos del **−34%** entre el 5% y el 25% una vez tengan curva de
+retencion; `fiado` (no cumple la regla) sirve de control y se espera que caiga en la banda
+vieja −34/−60%. Si `bono-1648`/`muela-babilonia` tambien caen en esa banda, la hipotesis
+es falsa pese al Newton incidental de esta semana.
+
+## 2026-08-17 — CORRECCION de la entrada anterior: el gancho SI es el cuello (27,1%)
+**Que estaba mal.** La entrada del 15 ago concluyo que "el gancho no es el
+problema: a los 3 segundos sigue ahi el 89-95%". **Es falso, y el error fue de
+metodo:** la curva de `youtube_api.py retention` se normalizo contra su propio
+primer punto (elapsedVideoTimeRatio 0.01), o sea que mide la retencion **entre
+los que ya decidieron quedarse**. Por construccion empieza en 100% y no puede
+ver a los que se fueron antes.
+
+**El dato real, de Studio (pestaña Participacion del Short de la quincena,
+rbDWlLKpcjA, 1:11):**
+
+| Metrica | Valor |
+|---|---|
+| Se quedaron para mirar | **27,1%** |
+| Descartado | 72,9% |
+| Duracion promedio de vistas | 0:46 |
+| Vistas interesadas | 398 sobre ~1.461 |
+
+Y segun Fabian, **en casi todos los videos es lo mismo**. La banda sana esta en
+70-90%; por debajo de 60% la distribucion se cae. Estamos a menos de la mitad.
+
+**Que sigue siendo cierto de la entrada anterior.** El hallazgo de la frase 2
+("Miren a Tadeo") no se cae: describe correctamente donde se van los que SI se
+quedaron. Lo que cambia es la prioridad — arreglar la frase 2 reparte mejor a
+los 27 de cada 100 que entran; arreglar el gancho cambia cuantos entran.
+
+**Cambio aplicado.** `RETENTION_CHECKLIST.md` pasa a marcar "se quedaron para
+mirar" como la metrica numero uno del canal, y deja escrito que **no se mide con
+la API** (que no la expone) sino en Studio > video > Participacion.
+
+**Leccion de metodo, que vale mas que el dato.** Una curva que empieza en 100%
+por definicion no puede decirte cuanta gente no entro. Cuando una metrica se ve
+sana pero el canal no crece, sospechar de la normalizacion antes que del canal.
+
+**Hipotesis a medir.** El Short `3YqHh9gGTHQ` (Pelando cable #3, 17 ago) es el
+primero con el fotograma 0 en movimiento (Wan 2.2). Si el movimiento inicial es
+la palanca, su "se quedaron para mirar" debe superar claramente el 27% de los
+anteriores. Si se queda igual, el cuello es el texto de las primeras palabras y
+no la imagen, y hay que atacar la primera FRASE, no el primer plano.
+
+## 2026-08-23 — Beat marcado con '*' en produccion, y un fallo nuevo: personaje ajeno colandose por el proyecto compartido de Flow
+**Cambio aplicado.** `LATIDO_DEL_STORYBOARD.md` (17 ago) pasa de teoria a codigo:
+`kx_cast.strip_beat()`/`is_beat()`, aplicado en `pipeline.py`, `korex_fill.py` y
+`korex_qa.py` (que ahora avisa -- no bloquea -- si un guion no marca ningun
+beat o marca mas de uno). Primer guion real: `korex-historial-invisible.json`
+(Pelando cable #5, credito). Su giro caia sobre un plano de dos siluetas sin
+cara; se reescribio a un close-up de Tadeo viendose invisible en su propio
+reflejo, marcado `*tadeo/asombro` (pose no usada en el resto del guion).
+
+**Fallo nuevo, no documentado hasta hoy: contaminacion entre corridas del
+proyecto FIJO de Flow.** La escena 0 de este guion (ningun `search_term` ni
+`character_term` menciona a la Bruja del Banco) volvio como la Bruja del
+Banco -- capa, sombrero, todo -- y la escena 15 volvio como una hoja de
+personaje en rejilla en vez de una sola ilustracion. El vídeo ANTERIOR
+producido en el mismo proyecto (`pay-in-4`) si llevaba a la Bruja. Sospecha:
+el proyecto fijo por canal (`_open_project`, 14 ago) resuelve la consistencia
+de Tadeo entre corridas, pero el mismo mecanismo puede filtrar referencias de
+la corrida anterior a una corrida donde no se pidieron. **Se arreglo con
+reintento y prompt reforzado** ("El personaje es Tadeo, NO una bruja", "UNA
+sola ilustracion, NO una hoja de personaje"), no se investigo la causa.
+
+**Hipotesis a medir.** Si el patron se repite (un personaje no nombrado en el
+guion aparece de todos modos), el proyecto fijo por canal deja de ser
+gratuito: hay que decidir entre perder la consistencia de Tadeo entre videos o
+aceptar este tipo de fallo silencioso, y `korex_qa` necesitaria un chequeo
+nuevo (personaje inesperado) que hoy no existe -- el chequeo de duplicado/color
+no lo cazo, lo cazo una revision visual manual de la hoja de contacto.
+
+## 2026-08-23 (2) — Causa real de la contaminacion del proyecto fijo de Flow: colision de nombre de archivo
+**Investigacion.** El fallo de hoy (la Bruja del Banco aparecio en una escena
+de Tadeo sin que ningun prompt la nombrara) no era el modelo de Flow
+"recordando" nada: era mecanico. `flow_automation._attach()` evita re-subir un
+archivo buscando en la biblioteca del proyecto una imagen cuyo `alt` coincida
+con el NOMBRE del archivo, sin comparar contenido. `_canonical_sheet` nombra
+la hoja de cualquier personaje `default_model_sheet.png` -- barrido de
+`assets/characters/`: Tadeo y Bruja del Banco comparten ese nombre exacto, y
+por el mismo patron cinco personajes de HiddenFacts comparten
+`default_1990s-nickelodeon-...png` entre si, y cinco campeones de ImPixxel
+comparten `default_roblox-blocky-...png`.
+
+**Por que solo revento en KOREX.** Es el unico canal con un proyecto de Flow
+FIJO para siempre (`_open_project`, 14 ago). HiddenFacts abre un proyecto
+nuevo por guion (`flow_projects.py`), asi que la colision nunca tiene tiempo
+de acumularse ahi. En KOREX la hoja de la Bruja llevaba semanas en la
+biblioteca; al pedir la de Tadeo con el mismo nombre, `_attach` encontro la
+ficha ya existente (la Bruja) y clicó esa, sin subir el archivo nuevo.
+
+**Cambio aplicado.** `_flatten_alpha` (`flow_automation.py`) ahora nombra
+SIEMPRE el archivo con el hash de su contenido
+(`default_model_sheet_<sha1>.png`), tenga o no canal alfa. Verificado: Tadeo y
+Bruja ya producen nombres distintos. El riesgo latente en HiddenFacts/ImPixxel
+(si algun dia dos personajes coinciden dentro del MISMO proyecto) tambien
+queda cerrado por el mismo cambio, aunque ahi nunca se habia medido el fallo.
+
+**Donde se aplico.** Las 4 escenas rotas de `korex-historial-invisible.json`
+se arreglaron a mano con reintento y prompt reforzado (ver entrada anterior de
+hoy), sin este fix. El fix protege TODOS los videos siguientes.
+
+## 2026-08-23 (3) — Barrido completo de colisiones de nombre (verificacion del fix anterior)
+**Investigacion.** Pedido explicito de Fabian: revisar si quedaban mas
+colisiones ademas de Tadeo/Bruja. Barrido por hash de TODO lo que se puede
+subir como referencia a Flow (`assets/characters/`, `assets/kx_cast/`,
+`assets/creator_reference/`, `assets/referencia/`): 55 nombres unicos, **6
+colisiones reales, 17 archivos**:
+- `default_1990s-nickelodeon-...png`: 5 protagonistas de HiddenFacts (Turing,
+  McWorter, Keyes, Lamarr, Baker)
+- `default_roblox-blocky-...png`: 5 de ImPixxel (Jhin, Kayn, Senna, Skick, Viego)
+- `default_model_sheet.png` y su duplicado en ruta vieja `kx_cast/_hojas/`: Tadeo/Bruja
+- `ghost_` y `spectral_roblox-blocky-...png`: Senna/Viego
+
+**Por que HiddenFacts no habia reventado:** cada guion abre y cierra su propio
+proyecto de Flow (`flow_projects.py`), asi que dos protagonistas distintos
+nunca coinciden en la misma biblioteca. **Riesgo real que si existe:** Senna y
+Viego son del mismo canal (ImPixxel/LoL) y comparten universo -- si algun dia
+corren en el mismo proyecto persistente, mismo bug que Tadeo/Bruja.
+
+**No hizo falta tocar ningun archivo.** El fix de hoy en `_flatten_alpha`
+(nombrar por hash de contenido, no por el nombre generado del estilo) cubre
+las 6 colisiones por igual, pasadas y futuras -- no es un parche por par de
+personajes.
+
+## 2026-08-24 — Tadeo se deformaba en conejo durante la animacion de Wan
+**Reporte de Fabian:** "estas sacando a Tadeo como conejo". Confirmado en los
+dos ultimos videos con escena animada (`pay-in-4`, `historial-invisible`): el
+fotograma 0 del clip de Wan siempre es Tadeo correcto (arranca ahi por
+definicion), pero a partir de ~0.6s las orejas se estiran hasta parecer
+orejas de conejo, empeora sin parar y se estabiliza "conejo" hacia los 3s.
+
+**Medido, no supuesto.** Curva de diferencia (escala de grises 64x64) contra
+la imagen de origen a lo largo del clip: 0.3s=12, 0.6s=18, 0.9s=27, 1.2s=39,
+1.5s=41, 2.0s=50, 2.5s=53, **3.0s=60 (rompe)**, se queda plano en ~61 el
+resto del clip (5s totales, 81 frames a 16fps, modelo Lightning 4 pasos).
+
+**Cambio aplicado, dos capas:**
+1. `korex_animate.clip_keeps_identity()` (nueva): compara el ULTIMO fotograma
+   del clip contra la imagen de origen, tolerancia 55. `clip_matches_source`
+   ya existente solo miraba el primero, que siempre coincide porque Wan
+   arranca ahi -- por eso el bug pasaba el QA de siempre sin que nadie lo
+   viera hasta que Fabian lo noto a ojo.
+2. `wan_animate.py`: `FRAMES` de 81 a 32 (~5s -> ~2s). A 2s la diferencia
+   medida es 50, bajo el limite de 55 con margen real.
+
+**Verificado end-to-end**: mismo fotograma de origen, clip nuevo de 2s,
+`clip_keeps_identity` lo acepta solo (diff final 33,9), confirmado tambien a
+ojo -- orejas redondas de mapache en todo el clip, con movimiento de verdad
+(no un frame congelado).
+
+**Donde se aplica.** Solo videos futuros -- decision explicita de Fabian de
+no tocar lo ya publicado. Causa raiz sin resolver del todo: por que el modelo
+Lightning (4 pasos) no sostiene el diseño del personaje mas alla de ~2-3s.
+Hipotesis sin probar: el modelo base i2v_2_2 (20 pasos, sin distillar) podria
+aguantar mejor pero tarda ~4-5x mas por clip; no se ha testeado.
+
+## 2026-08-24 (2) — Revision semanal: el gancho SI se arreglo, ahora el cuello es alcance
+**Datos.** 30 dias, `youtube_api.py top` + `report`: 6.679 vistas, 18 subs
+(+1 en la semana), 8 compartidos. Tabla de los Shorts con datos reales:
+
+| video | vistas | duracion prom. | % visto |
+|---|---|---|---|
+| quincena | 1.452 | 46s | 65,9% |
+| papel 1648 | 1.344 | 40s | 57,3% |
+| plata prestada | 1.254 | 31s | 51,5% |
+| la flor | 1.184 | 23s | 30,9% |
+| dejar de pagar tarjeta | 915 | 36s | 49,9% |
+| **pay in 4** | **41** | **63s** | **91,7%** |
+
+**Se confirma la hipotesis del 23 ago.** `AkENgCh4Klo` (el primer Short con la
+frase 1 reescrita en media res, sin anunciar el tema, y el beat marcado) tiene
+el **91,7% de duracion promedio vista** y **55,2% de "se quedaron para
+mirar"** medido en Studio -- el doble del 27,1% que teniamos de base. El
+gancho nuevo funciona, y funciona mejor que cualquier video anterior del
+canal por este criterio.
+
+**Pero es tambien el peor en vistas: 41**, muy por debajo de los 900-1.450 de
+la semana anterior. YouTube lo marca explicito en Studio: "102 menos de lo
+habitual". No es un problema de calidad -- es que le dieron una prueba
+inicial diminuta pese a rendir mejor que nunca dentro de ella.
+
+**Lo que NO se puede concluir todavia.** Con un solo video no se sabe si el
+alcance bajo es ruido normal de Shorts, o si tiene que ver con la racha de
+incidentes de la misma semana (subida rota reventada a gradiente, video
+atascado en no listado 3 dias, personaje equivocado por colision de Flow).
+Ninguna de esas tres cosas toco a `pay in 4` directamente, pero paso en la
+misma ventana de tiempo en el mismo canal.
+
+**Hipotesis a medir la proxima revision.** `rpOTa_Yrjec` (26 ago) y
+`57MdeV3arVo` (28 ago) llevan el mismo gancho corregido y ademas el arreglo
+del conejo de Wan. Si AMBOS repiten alcance bajo (<100 vistas) pese a buena
+retencion, el problema es de distribucion del canal, no del gancho, y hay que
+investigar eso especificamente. Si recuperan el rango 900-1500, `pay in 4` fue
+ruido y no hay que tocar nada mas.
+
+**Sin cambios, y por que.** `Dos sueldos` (el largo) sigue en 2 vistas/30
+dias -- confirma otra vez que esta muerto de distribucion, ver
+`ESCUELA_ROMUALD.md`. `Pelando cable #2` se entierra sin republicar (decision
+de Fabian, 24 ago): subtitulos desincronizados de las multiples
+regeneraciones, no vale la pena repararlo.
+
+## 2026-08-24 (3) — CORRECCION de la entrada anterior: no era una escalera limpia
+**Que estaba mal.** La entrada de hoy dijo "se confirma la hipotesis del gancho"
+mezclando dos metricas: la tabla que mostre en el chat usaba
+`averageViewPercentage` (duracion vista, de la API), no "se quedaron para
+mirar" (la decision de swipe, solo en Studio). Al pedir la cifra real de las
+cuatro:
+
+| video | fecha | se quedaron a mirar | llevaba el arreglo |
+|---|---|---|---|
+| quincena | 10 ago | 27,1% | no |
+| papel 1648 | 15 ago | 37,1% | no |
+| plata prestada | 16 ago | 38,1% | parcial (frame animado) |
+| pagar en 4 | 19 ago | 55,2% | completo (gancho + beat) |
+
+**No es una escalera causal limpia.** `papel 1648` esta en 37,1% SIN ningun
+arreglo, casi igual que `plata prestada` que si lo llevaba parcial -- parte de
+la subida desde el 27,1% de base es variacion entre videos que no controlamos,
+no el cambio que hicimos.
+
+**Lo que si se sostiene:** `pagar en 4` (55,2%) esta claramente por encima de
+los otros cuatro, fuera del rango 27-38% en el que se mueven los demas. Un
+solo dato no es "confirmado" -- falta que se repita.
+
+**Hipotesis corregida para la proxima revision.** No basta con que
+`rpOTa_Yrjec` y `57MdeV3arVo` tengan buen alcance: hay que mirar su "se
+quedaron para mirar" en Studio (no en la API) y compararlo contra el rango
+27-38% de los videos sin el arreglo completo. Solo si los dos caen claramente
+por encima de ese rango (como paso una vez con pagar en 4) el gancho nuevo
+pasa de "un dato suelto" a "confirmado".
+
+## 2026-08-28 (2) — Formato de comparacion rapida sale corto por diseno, y el token de KOREX vuelve a caducar
+**Nota para el proximo guion.** El formato de pares rapidos ("dos-tadeos", lista
+de contrastes sin narrativa continua) produjo 139 palabras / 45,7s -- por
+debajo del minimo de 58s del canal. Publicado igual (decision de Fabian,
+"esta bien por hoy pero tenlo presente"): no es un guion truncado, el formato
+en si tiende a salir corto porque cada par son dos frases secas sin relleno.
+**Si se repite este formato, escribir 5 pares en vez de 4, o anadir un cierre
+mas largo, para quedar dentro del rango sin forzar `min_duration=None`.**
+
+**El token de OAuth de KOREX volvio a caducar** (mismo patron que el 17 y el
+23 ago) justo al intentar subir. Sigue sin resolverse la causa raiz: el
+proyecto de Google Cloud probablemente sigue en modo "testing", que caduca el
+refresh token cada 7 dias. Pendiente pasar la pantalla de consentimiento a
+"published" para que deje de repetirse.
+
+## 2026-08-30 — Se cierra la hipotesis del 24 ago: es distribucion del canal, no el gancho
+
+**Investigacion.** Los dos videos que debian probar la hipotesis (`rpOTa_Yrjec`,
+26 ago; `57MdeV3arVo`, 28 ago; ambos con el gancho de "pagar en 4" -- frase 1 en
+media res + beat marcado) revisados en Studio (cuenta korex, pestana
+Resumen/Alcance) via Chrome real, no la API.
+
+| video | vistas totales | vs. habitual | retencion |
+|---|---|---|---|
+| rpOTa_Yrjec | 2 | −128 | sin datos (muestra insuficiente) |
+| 57MdeV3arVo | 14 | −116 | sin datos (muestra insuficiente) |
+
+**Se cumple el criterio que quedo escrito el 24 ago.** Los dos repiten alcance
+bajo (<100 vistas) pese a llevar el gancho corregido: **el problema es de
+distribucion del canal, no del gancho.** Descartado ademas que sea un problema
+de CTR/miniatura: en `57MdeV3arVo`, "Como encuentran los usuarios este Short"
+muestra 85,7% Feed de Shorts / 14,3% funciones de exploracion -- la mezcla de
+trafico es NORMAL, el algoritmo simplemente no le dio una muestra inicial
+grande para medir CTR. No llego suficiente gente como para que la retencion o
+el gancho importen.
+
+**Lo que NO se puede concluir todavia.** Por que el canal dejo de recibir
+muestras iniciales normales (900-1500 vistas) y paso a darlas de 2-14. No se
+investigo aqui: candidatos sin descartar son el corte de publicaciones (varios
+dias sin subir nada nuevo por los incidentes de la semana del 23-24 ago),
+alguna senal de calidad acumulada, o pura varianza del algoritmo con una
+muestra tan chica que un solo video no alcanza para diferenciar causas.
+
+**Cambio aplicado.** Ninguno todavia -- hace falta indagar la causa de raiz de
+la caida de alcance antes de tocar guion o gancho de nuevo; seguir iterando el
+hook no va a mover nada mientras el algoritmo no reparta.
+
+**Hipotesis a medir.** Si las proximas publicaciones (`1NCSp2N-Bs8` deuda EE.UU.,
+`Xvc6kMG8Hec` tarjeta gratis) tambien abren en 2-15 vistas, la caida es
+estructural del canal (posible penalizacion o corte de confianza del
+algoritmo) y hay que revisar el patron de publicacion completo, no seguir
+afinando guiones. Si vuelven al rango 900-1500, la caida del 26-28 ago fue una
+ventana puntual (coincide con la semana de incidentes tecnicos) y no se repite.
+
+## 2026-08-30 (2) — Candidato encontrado: video largo publico subido en un canal 100% Shorts, justo un dia antes del corte
+
+**Investigacion.** Vistas por dia del canal (`analytics.reports().query(dimensions='day')`,
+cuenta korex, no expuesto por el CLI): 15 ago=625, 16 ago=1957, **17 ago=23** y
+nunca se recupera (24-27 ago: 2, 1, 1, 9). El corte es de un dia para otro, no
+gradual.
+
+El 16 ago 03:49 UTC se subio `q2JQUXGxU7U` ("El hombre mas rico de Babilonia")
+como **PUBLICO** (no unlisted, distinto de todo el resto del catalogo), **8m16s**
+-- muy por encima del limite de Shorts (3 min). Es el unico video largo del
+canal. Se publico horas antes de que el alcance se derrumbara.
+
+**Sospechoso descartado.** El titulo duplicado exacto ("Que pasa si solo pagas
+el minimo...", `WD4xyKgPEew` 10 ago vs `P3Q1zbsqmEE` 18 ago) ya estaba resuelto:
+`WD4xyKgPEew` esta en privado con nota "[oculto - version rota, sin usar]" desde
+antes de hoy. No es la causa activa.
+
+**No es causalidad probada, es correlacion de fecha + un mecanismo conocido:**
+mezclar contenido largo publico en un canal que el algoritmo clasifica como "de
+Shorts" puede cortar la confianza que le da al feed de Shorts. Un solo caso, sin
+descartar que sea coincidencia con una muestra tan chica.
+
+**Cambio aplicado (prueba, decision de Fabian).** `q2JQUXGxU7U` pasado a
+`unlisted` (ya no cuenta como contenido publico del canal, sigue accesible por
+el link).
+
+**Hipotesis a medir.** Si el alcance del canal se recupera hacia el rango
+900-1500 vistas/video en los proximos dias (con `1NCSp2N-Bs8` y `Xvc6kMG8Hec`
+como termometro), el video largo publico era la causa real. Si sigue plano
+en 2-15 vistas pese a estar unlisted, esta hipotesis queda refutada y hay que
+buscar otra causa (revisar restricciones/avisos del canal en Studio, que la
+API no expone).
+
+**CORRECCION el mismo dia, tras investigar afuera.** Fabian pidio revisar que
+dice internet sobre esto. Fuentes externas contradicen la hipotesis: YouTube
+separo los algoritmos de recomendacion de Shorts y contenido largo en 2025 --
+un video largo publico en un canal de Shorts no deberia disparar una
+penalizacion cruzada. La explicacion mejor sostenida en las fuentes es otra:
+"una caida repentina de vistas suele reflejar que el algoritmo dejo de
+amplificar ese contenido en el feed (fin de la ventana de prueba), no una
+penalizacion del canal" -- comportamiento normal en canales chicos con pocas
+señales acumuladas, no causado por mezclar formatos.
+
+**Que queda en pie y que no.** El `unlisted` de `q2JQUXGxU7U` se deja (no hace
+dano, es reversible, y de paso saca del catalogo publico un video que no
+deberia estar ahi de todas formas). Pero **no se sostiene como explicacion de
+la caida** -- se degrada de "candidato fuerte" a "una prueba barata que no
+cuesta nada, sin base real detras". La causa real de la caida de alcance
+sigue sin encontrarse. La hipotesis del parrafo anterior (comparar contra
+`1NCSp2N-Bs8`/`Xvc6kMG8Hec` en los proximos dias) sigue siendo el termometro
+correcto, pero ahora para diagnosticar "es varianza normal de canal chico"
+vs. "es un problema real y persistente", no para confirmar el video largo.
+
+**Fuentes.** [Panda Video — Shorts and Long-Form on Same Channel](https://www.pandavideo.com/blog/shorts-and-long-form-videos-same-channel), [YouTube Shorts Feed — Why Views Suddenly Drop](https://youtubeshortsfeed.com/youtube-short-views-suddenly-drop/), [Medium — YouTube Shorts Getting 0 Views](https://medium.com/@AlexanderErshov/youtube-shorts-getting-0-views-heres-exactly-why-and-how-to-fix-it-84202c3eb6b3)
+
+## 2026-11-21 — KOREX se moderniza: motion graphics (Remotion) como camino unico; Flow y Wan pasan a LEGACY
+**Cambio.** `korex_motion.py` + `motion_graphics/src/korex/KorexMotion.jsx`. El guion JSON y las marcas por palabra de qw_korex alimentan plantillas fijas: hook, tadeo, concept (blueprint: line/bars/toggle/doc/check), hero (cifra grande con count-up), twist (negativo + golpe) y close (se funde con el frame 0 para el bucle), mas un overlay de CTA. Tadeo son las laminas de kx_cast animadas por codigo (squash & stretch, balanceo, respiracion, "parpadeo" de squash: no hay coordenadas de ojos por pose, asi que no es un parpadeo de parpado). Hay parallax en 3 capas con whip en los cortes, el karaoke va DENTRO de la composicion (un solo render, mismo dato que el TTS) y la raiz pasa por grayscale(1), asi que el color queda fuera por construccion. Diseno sonoro sintetizado con numpy (pop, whoosh, impact, riser; cache en assets/cache/kx_sfx) y ducking bajo la voz.
+**Pipeline.** Con voz qw_ KOREX va por motion siempre. `--korex-legacy` recupera Flow/Wan, y `--flow`/`--wan-hero` se ignoran con aviso. El bloque opcional `motion` del guion fija la cifra hero y el grafico por escena. korex_qa detecta `motion_manifest.json` y verifica el VIDEO: duracion, sync de subs vs words.json, saturacion, movimiento por escena, bucle y mezcla.
+**LEGACY (codigo intacto, sin uso):** flow_automation.py, flow_projects (ya no se ata sin --flow), wan_animate.py, korex_fill.py, korex_animate.py, korex_engine.py + KorexVideo.jsx (acentos de color), y los flags --korex/--wan-hero/--flow-animate/--reusar-imagenes en KOREX.
+**Piloto:** scripts/korex-sobregiro-cortesia.json -> output/2026-11-21-el-banco-no-te-bloque-la-compra-por-erro/video.mp4, 59,2 s. QA sin fallos: saturacion 0/255, subs a 0 frames del TTS, bucle 5,9, sfx -6,9 dB bajo la voz en el peor momento. Produccion completa en 9m50s (TTS + render de 335 s); un ajuste de sonido sin cambios de imagen cuesta segundos. El camino viejo llevaba 30-60 min con rondas de korex_fill y Wan.
+**Fallos nuevos y arreglos:** (1) el rotulo de concepto chocaba con el Tadeo de esquina y con el CTA: rotulo arriba, Tadeo mas chico y CTA en la franja libre; (2) los efectos tapaban la voz (+3,3 dB): ganancias mas bajas, ducking ratio 8 y golpes adelantados 0,15 s al corte; (3) se cambio la metrica de sonido a ventanas de 100 ms y solo con voz > -30 dBFS, porque la de 400 ms comparaba contra el silencio previo a la palabra. Decision documentada, no maquillaje: la ventana mala era el golpe del giro.
+**Pendiente:** subir el piloto como UNLISTED. Fallo por token OAuth caducado (invalid_grant). Fabian aprueba el sistema antes de producir la cola publica.
+
 ## 2026-11-23 — KoreX, Misión 0001 Fase 1: núcleo Remotion (tokens + karaoke)
 - **Investigación/origen:** prompt maestro de Fabian (Misión 0001). La paleta, las 2 fuentes, el grano, el boil y el karaoke tienen que ser constantes compartidas, no decisiones de cada plantilla.
 - **Cambio:** `motion_graphics/src/kx/` (tokens, fuentes, texturas, paginación, karaoke) + `kx_captions.py` (timing: TTS primero, faster-whisper de respaldo) + `kx_gate.py` (paleta por tono, zona segura, Whisper por página, hoja de contacto).
