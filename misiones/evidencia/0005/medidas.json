@@ -1,0 +1,173 @@
+{
+ "umbral": {
+  "fondo_min": 245,
+  "margen_min": 0.015,
+  "croma_max": 10,
+  "color_max": 0.004,
+  "componentes_max": 1
+ },
+ "laminas": [
+  {
+   "archivo": "asombro_api.png",
+   "tam": [
+    896,
+    1200
+   ],
+   "fondo_min": 252,
+   "figuras": 1,
+   "margen": 0.022,
+   "color_pct": 0.0,
+   "caja": [
+    26,
+    201,
+    876,
+    1073
+   ],
+   "fallos": []
+  },
+  {
+   "archivo": "codicia_api.png",
+   "tam": [
+    896,
+    1200
+   ],
+   "fondo_min": 251,
+   "figuras": 1,
+   "margen": 0.074,
+   "color_pct": 0.37,
+   "caja": [
+    135,
+    105,
+    829,
+    1111
+   ],
+   "fallos": []
+  },
+  {
+   "archivo": "confundido_api.png",
+   "tam": [
+    896,
+    1200
+   ],
+   "fondo_min": 250,
+   "figuras": 1,
+   "margen": 0.037,
+   "color_pct": 0.0,
+   "caja": [
+    41,
+    133,
+    863,
+    1067
+   ],
+   "fallos": []
+  },
+  {
+   "archivo": "decidido_api.png",
+   "tam": [
+    896,
+    1200
+   ],
+   "fondo_min": 251,
+   "figuras": 1,
+   "margen": 0.047,
+   "color_pct": 0.0,
+   "caja": [
+    135,
+    124,
+    854,
+    1089
+   ],
+   "fallos": []
+  },
+  {
+   "archivo": "estafado_api.png",
+   "tam": [
+    896,
+    1200
+   ],
+   "fondo_min": 251,
+   "figuras": 1,
+   "margen": 0.05,
+   "color_pct": 0.15,
+   "caja": [
+    132,
+    90,
+    851,
+    1131
+   ],
+   "fallos": []
+  },
+  {
+   "archivo": "explicando_api.png",
+   "tam": [
+    896,
+    1200
+   ],
+   "fondo_min": 251,
+   "figuras": 1,
+   "margen": 0.026,
+   "color_pct": 0.27,
+   "caja": [
+    110,
+    94,
+    873,
+    1123
+   ],
+   "fallos": []
+  },
+  {
+   "archivo": "grito_api.png",
+   "tam": [
+    896,
+    1200
+   ],
+   "fondo_min": 251,
+   "figuras": 1,
+   "margen": 0.064,
+   "color_pct": 0.0,
+   "caja": [
+    102,
+    109,
+    827,
+    1123
+   ],
+   "fallos": []
+  },
+  {
+   "archivo": "orgulloso_api.png",
+   "tam": [
+    896,
+    1200
+   ],
+   "fondo_min": 251,
+   "figuras": 1,
+   "margen": 0.044,
+   "color_pct": 0.0,
+   "caja": [
+    152,
+    65,
+    851,
+    1147
+   ],
+   "fallos": []
+  },
+  {
+   "archivo": "triunfo_api.png",
+   "tam": [
+    896,
+    1200
+   ],
+   "fondo_min": 250,
+   "figuras": 1,
+   "margen": 0.102,
+   "color_pct": 0.0,
+   "caja": [
+    114,
+    123,
+    783,
+    1044
+   ],
+   "fallos": []
+  }
+ ]
+}
