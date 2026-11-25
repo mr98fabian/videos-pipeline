@@ -447,3 +447,210 @@ a la misma escala · solape al 50 % · tabla de marcas), `parecido_*.png`,
 
 ⏸ **Puerta:** Fabian aprueba la hoja nueva. Si el parecido no le convence, el PR #7
 sigue sin fusionar y la Fase 3 no arranca.
+
+---
+
+## Iteración 2 de parecido — Evaluación y especificación de pulido (Fable)
+
+Veredicto de Fabian sobre la iteración 1: «casi se ve perfecta, pero quiero que sea
+perfecta como la imagen». Esta sección es el diseño; la ejecuta Opus en la misma
+rama y reporta contra la lista de la barra (I2-3). No se fusiona sin el OK de Fabian.
+
+### I2-0. Diagnóstico en una frase
+
+La silueta ya es la de la madre (IoU 0,9802). Lo que todavía delata al rig es lo
+que está **dentro** de la silueta: la tinta se *reconstruye* (trazo de grosor fijo
+sobre el eje de cada pieza) en vez de *copiarse*, las piezas se cierran con trazo
+donde la madre no tiene línea, y el sombreado suave de la madre entró como manchas
+de umbral. El IoU de silueta no ve nada de eso; por eso esta iteración añade dos
+medidas nuevas (tinta y tono) y las convierte en ley junto al IoU.
+
+**Líneas base medidas hoy** (misma rejilla ×4 que `kx_parecido.py`, madre vs
+`rig_neutro.png`; tinta = luminancia < 60; tono = luminancia / papel, sin tinta,
+suavizada σ = 6 px):
+
+| Medida | Hoy | Qué significa |
+|---|---|---|
+| Tinta de la madre que el rig también tiene (a ≤ 6 px) | 90,2 % | falta 1 de cada 10 px de línea |
+| Tinta del rig que la madre también tiene (a ≤ 6 px) | 89,7 % | 1 de cada 10 px de línea es inventado |
+| Área de tinta rig / madre | 1,096 | el rig lleva un 10 % más de tinta |
+| Grosor del contorno (p10 / p50 / p90) | madre 6,1 / 7,3 / 8,8 u · rig 6,8 / 7,1 / 7,3 u | la madre varía ±18 %; el rig, ±3 % |
+| Grosor de líneas interiores (p50) | madre 5,1 u · rig 7,1 u | el interior del rig pesa un 40 % de más |
+| Error tonal medio | 0,048 | — |
+| Superficie con error tonal > 0,08 | 15,4 % | las manchas y el pelaje demasiado oscuro |
+
+### I2-1. Evaluación pieza por pieza
+
+**Línea**
+- *Peso.* La madre tiene dos pesos claros (contorno 7,3 u; interior 5,1 u, que se
+  afina hasta 3,7 u en los extremos libres). El rig dibuja casi todo a 7,1 u: las
+  líneas interiores (dedos, arco de la panza, mechón del pecho, pliegues) pesan
+  igual que el contorno y la figura se aplana.
+- *Variación.* El contorno de la madre engorda en las curvas de abajo (pies, base
+  de la panza, barbilla) y adelgaza arriba. El del rig es constante: es lo que se
+  lee como «vector».
+- *Extremos y esquinas.* La madre termina los trazos libres en punta; el rig, en
+  semicírculo. Las puntas de pelo (mejillas, tobillos, mechón) están bien de forma
+  pero con el vértice redondeado por `strokeLinejoin="round"` a 7 u.
+- *Líneas que faltan* (mapa de tinta ausente): el borde interior de los dos brazos
+  desde la axila, la raya que separa el puño del guante, las separaciones de dedos
+  en la punta, las curvas de cadera/entrepierna, el borde interior de las piernas,
+  las marcas de los dedos de los pies (2 por pie), los mechones de pelo de la base
+  de las orejas, las hebras interiores del mechón y los extremos del arco de la
+  panza (la madre lo dibuja de ~105 u; el rig, de ~45 u).
+- *Líneas que sobran* (mapa de tinta inventada): la raya horizontal de la coronilla,
+  las dos diagonales de la base de las orejas, los dos casquetes redondos de los
+  hombros, la raya horizontal de cada cadera y los bordes de brazos y piernas
+  desplazados media línea respecto a los de la madre.
+
+**Costuras** (por orden de lo que más se ve)
+1. *Caderas:* el torso termina en un corte recto con trazo y las piernas son tubos
+   rectos pegados debajo. Se lee como un pantalón corto. En la madre el torso fluye
+   hacia las piernas y entre ellas hay un arco de entrepierna.
+2. *Coronilla y base de orejas:* el cráneo se cierra con trazo por debajo del
+   mechón y de las orejas. Tres rayas que la madre no tiene.
+3. *Hombros:* el tubo del brazo empieza con extremo redondo y asoma como un bulto
+   sobre el hombro. En la madre el brazo sale de debajo de la mejilla sin remate.
+4. *Cola:* la unión queda tapada por la pierna; no es problema en fijo. En
+   movimiento sí (ver cola).
+
+**Sombreado.** La madre sombrea en degradado; el rig lo tradujo por umbral directo
+y quedaron manchas de borde dentado (crema de las mejillas, interior blanco de las
+orejas, banda bajo la barbilla, motas grises en la mejilla visibles en la cabeza
+de «codicia»). Además los tonos base no son los de la madre: su pelaje es más claro
+y su antifaz menos negro que `T_FUR` y `T_MASK` (medido abajo). El degradado no
+entra; entra su versión en formas planas de borde limpio (I2-2 punto 3).
+
+**Piezas finas**
+- *Orejas:* a la madre le falta en el rig la línea interior paralela al borde y el
+  mechón de la base; el interior es gris medio, no blanco.
+- *Ojos:* la pupila de la madre es un óvalo negro con un brillo grande pegado al
+  borde y uno pequeño; la del rig, un óvalo con un punto centrado. Es la diferencia
+  de identidad más barata de arreglar y de las que más se notan.
+- *Pies:* tono correcto en relación al antifaz, faltan las marcas de dedos.
+- *Guantes:* falta la raya del puño enrollado; las tres rayas del dorso están.
+- *Cola:* anillos presentes y alternados; el contorno es correcto en neutro.
+- *Mechón del pecho y arco de panza:* el mechón está; el arco, corto.
+- *Pecas:* **no entran.** La vista frontal y la cabeza frontal de «sonrisa» no las
+  llevan; solo aparecen en 3/4 y perfil. El rig solo tiene vista frontal y su ley
+  es esa vista: añadirlas sería inventar tinta que la referencia no tiene.
+
+**Expresiones** (contra las 6 cabezas de la madre)
+- *sonrisa, triste, decidido:* boca fiel. Cejas: la forma es la de la sonrisa
+  rotada; la madre dibuja la de «decidido» más gruesa por dentro y angulosa, y la
+  de «triste» con el extremo interior levantado y más fino. Hay que trazarlas.
+- *guiño:* el ojo cerrado deja todo el lóbulo en tono antifaz; en la madre el
+  párpado es una forma más clara con el arco encima.
+- *asombro:* la «o» quedó descentrada (viene de una cabeza en 3/4) y se lee como
+  una mancha bajo la comisura.
+- *risa, grito:* la mandíbula es una elipse detrás del cráneo y la boca un bloque
+  bajo la barbilla: se lee como mandíbula de cascanueces. En la madre la barbilla
+  entera baja y la boca se abre dentro de la cara.
+- *confundido, codicia, estafado:* derivadas aceptables; heredan lo que se corrija
+  en cejas y párpados.
+
+**Cola.** Gira rígida sobre su base. La madre es una curva con anillos
+perpendiculares al eje; en el rig, al cambiar `rizo`, los anillos no acompañan y la
+cola se lee como un recorte de cartón.
+
+**Movimiento** (línea hirviendo `BOIL.scale` 2,6 px + grano; Tadeo a 640 px de alto
+son 0,64 px por unidad)
+- *Lo que el movimiento tapa:* irregularidades de contorno menores de ~2 u y parte
+  de la uniformidad del grosor (el boil la rompe un poco).
+- *Lo que el movimiento destapa:* las costuras de hombro y cadera se abren y cierran
+  con el squash y el giro de los brazos; la cola rígida; las motas de sombreado más
+  pequeñas que el desplazamiento del boil parpadean; un brillo de pupila mal
+  recortado se sale del blanco del ojo al cambiar la mirada.
+- *Límite físico:* una línea de menos de 3,5 u son menos de 2,2 px y se rompe con
+  el boil. Nada por debajo de eso.
+
+### I2-2. Especificación cerrada para Opus (por impacto visual)
+
+Principio único: **la tinta se copia, no se reconstruye.** Tres reglas valen para
+todos los puntos:
+- *R1 — tinta como relleno.* Cada pieza lleva en `traza.js` un campo `tinta`: los
+  polígonos (con agujeros, `fill-rule="evenodd"`) del contorno de la máscara de
+  tinta de la madre dentro de la zona de esa pieza, simplificados a ε = 0,6 px de
+  la rejilla ×4. Se pintan en `T_INK` sin `stroke`. El `stroke` SVG desaparece de
+  toda pieza trazada.
+- *R2 — corte sin trazo, mismo tono.* En la frontera entre dos piezas no se dibuja
+  nada y las dos llevan el mismo tono a ambos lados. Una pieza solo tiene la tinta
+  que la madre tiene en su zona.
+- *R3 — deformar por la espina.* Las piezas que se doblan (brazos, piernas, cola)
+  no se redibujan como tubos: cada punto trazado (relleno, tinta y sombra) se
+  guarda como (s, d) = (fracción de longitud sobre la espina neutra, distancia con
+  signo a ella) y se coloca en `espina'(s) + d·normal'(s)` sobre la espina de la
+  pose. Polígonos densificados a segmento máximo 6 u antes de deformar. En neutro
+  la deformación es la identidad: sale la madre tal cual.
+
+| # | Pieza | Cambio exacto | Referencia en la madre | Verificación |
+|---|---|---|---|---|
+| 1 | Torso + piernas (cadera) | El borde inferior del torso es el arco de entrepierna trazado; los tramos donde se une cada pierna son cortes R2. Cada pierna se prolonga 60 u hacia dentro del torso a lo largo de su tangente y se dibuja **detrás** del torso. | Vista frontal, de la base de la panza a las rodillas | Cero tinta inventada en la franja de cadera del mapa; en la hoja no se lee pantalón |
+| 2 | Cráneo, orejas, mechón | El cráneo no lleva tinta bajo el mechón ni en la base de las orejas (R2). Orejas y mechón siguen siendo piezas propias (giran) con su tinta propia. | Vista frontal, cabeza | Cero tinta inventada en coronilla y base de orejas |
+| 3 | Hombros | El brazo no tiene remate: su relleno y su tinta se prolongan 40 u más allá del hombro por la tangente y quedan ocultos por cabeza/torso. | Vista frontal, salida del brazo bajo la mejilla | Sin bulto sobre el hombro en ninguna de las 14 poses |
+| 4 | Toda pieza rígida (cabeza, orejas, mechón, torso, guante abierto I/D, pies) | R1. Entran así, sin trabajo aparte: línea interior de oreja y sus mechones, hebras del mechón, raya del puño del guante, separaciones de dedos, marcas de los pies, arco completo de la panza, puntas de pelo en vértice. | Vista frontal completa | Medidas de tinta de I2-3 |
+| 5 | Tonos | `TADEO_TONE` pasa a 6 tonos medidos en la madre (fracción de INK): `T_WHITE` 0 · `T_CREAM` 0,09 · `T_MEDIO` 0,25 · `T_FUR` 0,39 · `T_FUR_SOMBRA` 0,47 · `T_MASK` 0,64 · `T_INK` 1. Revisa A1 (el `T_FUR` 0,46 de A1 era en realidad el tono de sombra de la madre). Todos siguen en la recta INK→PAPER: el gate no cambia. | Mediana por zona de la vista frontal | Error tonal de I2-3 |
+| 6 | Sombreado | Se borran las manchas actuales. Las formas nuevas salen de la madre con la tinta rellenada y suavizada a σ = 10 px, cuantizada al tono más cercano de los 6, por pieza. Se conserva una forma solo si mide ≥ 1 500 px² de la rejilla ×4; se suaviza (ε 1,5 px + 2 pasadas de Chaikin) y se recorta al relleno de su pieza. Máximo 14 formas en todo el cuerpo: si salen más, se sube el área mínima hasta que queden 14. **Entran:** halo claro sobre el antifaz, banda de transición de las mejillas, interior de las orejas, sombra de la cabeza sobre pecho y hombros, sombra del cuerpo sobre muslos y entrepierna, borde inferior de la panza, lado interior de brazos y piernas. **Se quedan fuera:** el grano del papel, el brillo suave de los guantes (son `T_WHITE` plano: el guante blanco puro es identidad), el degradado dentro del antifaz (plano `T_MASK`), todo lo que esté dentro del ojo y cualquier forma menor del mínimo (parpadea con el boil). En piezas que se doblan, las formas siguen R3. La sombra de la cabeza pertenece al torso y no sigue a la cabeza. | Vista frontal | Error tonal de I2-3; ninguna forma bajo el mínimo (test sobre `traza.js`) |
+| 7 | Pupilas | La pupila es la pieza trazada de cada ojo de la madre con sus dos brillos como agujeros en `T_WHITE`. Se mueve entera con la mirada y escala con `pupila` sobre su centro, recortada al blanco del ojo como hoy. | Ojos de la vista frontal | Tinta en la zona de los ojos; en las 4 miradas el brillo no sale del blanco |
+| 8 | Brazos y piernas | R3 sobre la banda trazada (ya se traza su eje y su grosor). Sustituye al tubo de grosor constante: se conserva el estrechamiento y el borde dibujado a mano. `factorCurva`, `largo` y los límites 0,75–1,35 no cambian. | Brazos y piernas de la vista frontal | En neutro, tinta de brazos y piernas dentro de las medidas; sin autointersección en las 14 poses |
+| 9 | Cola | R3 sobre la cola trazada con sus anillos. Espina = eje medio de la pieza ajustado a una Bézier cúbica y prolongado recto hasta `RIG.cola.base`, muestreada en 24 tramos. Rumbo de cada tramo: `θ_traza(s) + alza + (rizo − rizoNeutro) · 40° · s²`, con s de 0 (base) a 1 (punta): la base casi no se mueve y la punta se enrosca. Si algún punto queda a menos de 6 u del suelo, se reduce el término de rizo por bisección (8 pasos) hasta que no ocurra. El tono de cada anillo sale de su mediana en la madre (`T_MASK` u oscuro, `T_FUR` claro). | Cola de la vista frontal | En neutro, tinta de la cola dentro de las medidas; test: en la pose de mayor rizo la punta gira ≥ 15° más que la base y ningún punto baja de 6 u |
+| 10 | Risa y grito | Fuera la elipse de mandíbula y el bloque bajo la barbilla. La barbilla **del propio cráneo** baja: todo punto del relleno y la tinta de la cabeza por debajo de la línea de comisuras se desplaza `y' = y_com − (y_com − y)·(1 + m/h)` (m = `mandibula`, h = comisuras→barbilla), con peso 1 entre las comisuras que cae a 0 en 40 u hacia fuera (las mejillas no se mueven). La boca se abre dentro de la cara: borde superior = sonrisa frontal trazada; borde inferior = `y_sonrisa(x) − 0,85·m·(1 − (x/x_com)²)`. Interior, lengua y dientes con los tonos de A1. | Cabeza «risa» (para qué se ve dentro) y sonrisa frontal (para la geometría) | En la hoja, risa y grito tienen un solo contorno de cabeza continuo |
+| 11 | Cejas | Se trazan como tinta (R1) las cejas de las tres cabezas frontales: sonrisa, triste y decidido. Aislamiento: tinta entre el borde alto del blanco del ojo y el mechón, tras quitar con una apertura de disco 5 px la tinta fina del contorno; se toma la componente mayor por lado. Cada ceja se remuestrea a 24 puntos empezando en el extremo exterior. La ceja dibujada es una mezcla: con τ = `interior − exterior`, peso `w = clamp(τ/τ_triste, 0, 1,3)` hacia la de triste si τ > 0 y `w = clamp(τ/τ_decidido, 0, 1,3)` hacia la de decidido si τ < 0; forma = base + w·(objetivo − base); desplazamiento vertical y `arco` se aplican como resto respecto al objetivo, de modo que los parámetros de sonrisa, triste y decidido reproducen **exactamente** su ceja trazada. Si una ceja trazada sale con área fuera de 0,5–1,8 veces la de la base, se corrige a mano en un `traza_manual.js` declarado en el reporte. Los parámetros de `EXPRESIONES` no cambian. | Cabezas 1, 3 y 4 de la fila inferior | Lado a lado de esas tres cabezas en la hoja |
+| 12 | Párpado y ojo cerrado | El ojo cerrado (guiño, risa, parpadeo) es la forma del blanco del ojo rellena de `T_FUR` con el arco trazado encima; el párpado parcial usa ese mismo tono. | Cabezas «guiño» y «risa» | En la hoja, el ojo cerrado no deja el lóbulo entero en negro |
+| 13 | «o» de asombro | Se centra en el eje (x = 0), 6 u por debajo del centro de la sonrisa frontal, y se hace simétrica promediando la forma trazada con su espejo. | Cabeza «asombro» | En la hoja no se lee como mancha lateral |
+| 14 | Guantes no trazados y demás primitivas (puño, señala, palma, agarra, lágrima) | Todos llevan el **puño enrollado trazado** del guante abierto. Sus líneas dejan de ser `stroke` uniforme: contorno 7,3 u, interior 5,0 u, detalle 3,6 u, y todo trazo abierto se dibuja como relleno que se afina al 70 % en sus extremos libres y acaba en punta. `RIG.linea` pasa a {7,3 · 5,0 · 3,6}. | Pesos medidos en la vista frontal | Test: ningún `stroke` de grosor inferior a 3,5 u ni línea interior a más de 5,5 u |
+| 15 | Medición y evidencia | `kx_parecido.py` añade las medidas de I2-3 (tinta, área de tinta, grosor, tono) a `parecido.json`; `tests/test_tadeo_parecido.py` las exige. La hoja de poses añade el mapa de tinta que falta/sobra y la tabla nueva. Se entrega además `prueba_640.mp4` (la composición de prueba del gate reducida a 640 px de ancho) y su hoja de contacto con 12 fotogramas, 6 de ellos a mitad de una transición. | — | Los propios tests |
+
+Fuera de alcance, para que no se cuele: nuevas vistas, pecas, cambios en poses,
+expresiones, miradas o reglas de acting, y cualquier color.
+
+### I2-3. La barra de «perfecta»
+
+**Medido (lo exige `tests/test_tadeo_parecido.py`, sobre el neutro)**
+
+| Medida | Umbral | Hoy |
+|---|---|---|
+| IoU de silueta | ≥ 0,98 | 0,9802 |
+| Las 7 marcas | dentro de ±3 % | máx. 1,21 % |
+| Tinta de la madre presente en el rig (≤ 6 px) | ≥ 97 % | 90,2 % |
+| Tinta del rig presente en la madre (≤ 6 px) | ≥ 97 % | 89,7 % |
+| Área de tinta rig / madre | 0,97 – 1,03 | 1,096 |
+| Grosor p50 de línea interior | 4,6 – 5,6 u | 7,1 u |
+| Error tonal medio | ≤ 0,030 | 0,048 |
+| Superficie con error tonal > 0,08 | ≤ 5 % | 15,4 % |
+
+Los umbrales de tinta y tono son estimaciones mías de lo que da el método, no
+resultados. Si alguno no se alcanza, Opus reporta el número y el mapa de residuo y
+**no** lo afloja: la decisión vuelve a Fable y a Fabian.
+
+**Visual (a) — hoja de poses nueva**
+1. Ninguna pose muestra raya en la cadera, la coronilla, la base de las orejas ni
+   bulto en el hombro.
+2. El contorno pesa más que las líneas interiores a simple vista.
+3. No hay ninguna mancha de borde dentado ni mota suelta.
+4. Las pupilas tienen el brillo de la madre en las 40 cabezas.
+5. Risa y grito: un solo contorno de cabeza; la boca está dentro de la cara.
+6. Triste y decidido: sus cejas son las de la madre, no la de sonrisa girada.
+7. La cola se curva distinto en al menos 3 poses y sus anillos siguen la curva.
+8. Las siluetas en negro siguen siendo distinguibles (vigilancia 3 intacta).
+
+**Visual (b) — lado a lado y solape**
+9. Con la hoja a tamaño completo, tapando los rótulos, no se distingue a la
+   primera cuál es la madre salvo por el degradado.
+10. El mapa de tinta que falta/sobra no tiene ningún tramo continuo de más de 40 u.
+
+**Visual (c) — clip en movimiento a 640 px**
+11. En los 12 fotogramas de la hoja de contacto no se abre ninguna costura.
+12. Ningún detalle parpadea por su cuenta (motas, líneas finas rotas por el boil).
+13. El brillo de la pupila no se sale del ojo en ningún cambio de mirada.
+14. La cola acompaña con retraso y se curva; no gira como una pieza.
+15. Un fotograma cualquiera, puesto junto a la madre a la misma altura, es el
+    mismo personaje. Lo juzga una sesión de crítica separada y, al final, Fabian.
+
+**Sin cambios**
+16. Gate de la Fase 1 verde (paleta, zona segura, nunca congelado) y `verify` verde.
+17. `biblioteca.json` idéntico en poses, expresiones, miradas y guantes; en `rig`
+    solo cambian `linea` y la constante de rizo de la cola. Contrato de acting sin
+    tocar; los tests de biblioteca y acting pasan sin modificarse.
+
+⏸ **Puerta:** Fabian aprueba la hoja y el clip. Sin su OK no hay merge ni Fase 3.
