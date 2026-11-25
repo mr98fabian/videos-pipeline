@@ -9,9 +9,16 @@ import { Tadeo } from "./tadeo/Tadeo.jsx";
 import { CabezaPartes, TadeoPartes } from "./tadeo/partes.jsx";
 import { estado } from "./tadeo/acting.js";
 
-export const KxTadeo = ({ linea }) => {
+export const KxTadeo = ({ linea, silueta = false }) => {
   const frame = useCurrentFrame();
   const cur = [...linea].reverse().find((c) => frame >= c.t0) || linea[0];
+  if (silueta) {
+    return (
+      <AbsoluteFill style={{ background: PAPER }}>
+        <Tadeo linea={linea} semilla={3} uid="kxt" silueta />
+      </AbsoluteFill>
+    );
+  }
   return (
     <AbsoluteFill style={{ background: PAPER }}>
       <div style={{ position: "absolute", left: SAFE.left, top: SAFE.top + 16, width: SAFE.width, textAlign: "center",

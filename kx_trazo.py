@@ -310,9 +310,11 @@ def poly_ccomp(cal, m, eps=0.6, suav=1.0, dens=False, min_area=12):
 
 
 ISO_TINTA = 66.0
+HALO_NIVEL = 170.0
+BORDE_AA = 0.6       # u: la silueta de la madre (luminancia 220) va ~1 px por fuera de su tinta   # iteración 3: el borde suave de la madre (segunda tinta, T_FUR_SOMBRA)
 
 
-def poly_iso(cal, cb, zona, dens=False, eps=0.5, min_area=6, excluir=None):
+def poly_iso(cal, cb, zona, dens=False, eps=0.5, min_area=6, excluir=None, nivel=None):
     """Tinta R1: isolínea subpíxel de luminancia = 60 dentro de `zona` (con
     agujeros, para evenodd). Así el área de tinta es la de la madre, no la de
     un contorno de píxeles que pierde medio píxel por lado."""
@@ -332,7 +334,7 @@ def poly_iso(cal, cb, zona, dens=False, eps=0.5, min_area=6, excluir=None):
     # nivel de la isolínea: 60 es la tinta medida; el polígono se dibuja un poco
     # más ancho (ISO_TINTA) para que, con el antialias del render, el umbral 60
     # vuelva a caer donde cae en la madre (calibrado con el área de tinta)
-    for c in find_contours(f, ISO_TINTA):
+    for c in find_contours(f, ISO_TINTA if nivel is None else nivel):
         p = np.stack([c[:, 1] + x0 - 1, c[:, 0] + y0 - 1], 1)
         if len(p) < 4 or abs(cv2.contourArea(p.astype(np.float32))) < min_area:
             continue
@@ -470,6 +472,30 @@ def camino_esqueleto(m, inicio):
         out.append((fin[1], fin[0]))
         fin = par[fin]
     return np.array(out[::-1], float)
+
+
+def catmull(P, n=24, alpha=0.5):
+    """Catmull-Rom CENTRÍPETA (alpha 0,5) por los puntos P, n muestras por tramo
+    (Barry-Goldman; poses.js hace exactamente lo mismo)."""
+    P = np.asarray(P, float)
+    Q = np.vstack([2 * P[0] - P[1], P, 2 * P[-1] - P[-2]])
+    out = []
+    for i in range(1, len(Q) - 2):
+        p0, p1, p2, p3 = Q[i - 1], Q[i], Q[i + 1], Q[i + 2]
+        t0 = 0.0
+        t1 = t0 + max(np.linalg.norm(p1 - p0), 1e-6) ** alpha
+        t2 = t1 + max(np.linalg.norm(p2 - p1), 1e-6) ** alpha
+        t3 = t2 + max(np.linalg.norm(p3 - p2), 1e-6) ** alpha
+        for k in range(n):
+            t = t1 + (t2 - t1) * k / n
+            a1 = (t1 - t) / (t1 - t0) * p0 + (t - t0) / (t1 - t0) * p1
+            a2 = (t2 - t) / (t2 - t1) * p1 + (t - t1) / (t2 - t1) * p2
+            a3 = (t3 - t) / (t3 - t2) * p2 + (t - t2) / (t3 - t2) * p3
+            b1 = (t2 - t) / (t2 - t0) * a1 + (t - t0) / (t2 - t0) * a2
+            b2 = (t3 - t) / (t3 - t1) * a2 + (t - t1) / (t3 - t1) * a3
+            out.append((t2 - t) / (t2 - t1) * b1 + (t - t1) / (t2 - t1) * b2)
+    out.append(P[-1])
+    return np.array(out)
 
 
 def ajustar_cubica(P):
@@ -615,6 +641,8 @@ def piezas_r1(cb, sil, cal, ink_t, comps, guantes, pies, cola_c, cola_full, cabe
         val = np.zeros(near.max() + 1, np.int16)
         val[near[ys0, xs0]] = lab[ys0, xs0]
         lab_t[resto] = val[near[resto]]
+    # el zigzag del mechón es SUYO (gira con él): si no, al girar asoma su relleno sin línea
+    lab_t[(lab_t == ID["craneo"]) & dil(mech, 14) & ink & (yy < np.where(mech.any(1))[0].max() + 10)] = ID["mechon"]
     # un miembro solo lleva la tinta de su banda: lo que quede lejos de su espina
     # (y saldría volando al doblarlo) es del torso
     for nombre, esp, hw in [("brazo" + l, esp_b[l], (T["brazos"][l]["grosor"] / 2 + 7) * s) for l in "ID"] +                            [("pierna" + l, esp_p[l], (T["pierna"]["grosor"] / 2 + 7) * s) for l in "ID"]:
@@ -705,6 +733,11 @@ def piezas_r1(cb, sil, cal, ink_t, comps, guantes, pies, cola_c, cola_full, cabe
     out["sombras_meta"] = {"area_min_px": int(area_min), "n": sum(len(v) for v in sombras.values()), "max": SOMBRAS_MAX,
                            "candidatas": len(cand), "px_por_u": s}
 
+    def halo(zona, cbx=None, excluir=None, dens=False):
+        """Iteración 3, punto 5: el borde suave de la madre como segunda tinta
+        (isolínea ~150, se pinta en T_FUR_SOMBRA bajo la tinta)."""
+        return poly_iso(cal, cb if cbx is None else cbx, zona, dens=dens, excluir=excluir, nivel=HALO_NIVEL)
+
     def relleno(k, extra=None):
         m = dil(region[k], 3) & ero(sil, 2)   # el borde del relleno queda bajo la tinta del contorno
         if extra is not None:
@@ -731,26 +764,31 @@ def piezas_r1(cb, sil, cal, ink_t, comps, guantes, pies, cola_c, cola_full, cabe
     cara_t = antifaz_t | anillo_all | pup_all | dil(cejas_m, 1) | dil(nariz, 3) | dil(boca_m, 1)
     out["craneo"] = {"forma": poly_ext(cal, relleno("craneo"), dens=True),
                      "tinta": poly_iso(cal, cb, tinta["craneo"] & ~cara_t, dens=True, excluir=cara_t),
+                     "halo": halo(tinta["craneo"] & ~cara_t, excluir=cara_t, dens=True),
                      "sombras": sombras["craneo"]}
     out["crema_cara"] = [p for m in crema_c for p in poly_ext(cal, m, dens=True)]
     for lado in "ID":
         r = relleno("oreja" + lado, orejas_ext[lado])
         out.setdefault("orejas", {})[lado] = {
             "forma": poly_ext(cal, r), "tinta": poly_iso(cal, cb, tinta["oreja" + lado] & ~cara_t),
+            "halo": halo(tinta["oreja" + lado] & ~cara_t),
             "sombras": sombras["oreja" + lado], "pivote": T["orejas"][lado]["pivote"]}
-    out["mechon"] = {"forma": poly_ext(cal, relleno("mechon", mech_ext)), "tinta": poly_iso(cal, cb, tinta["mechon"]),
+    out["mechon"] = {"forma": poly_ext(cal, relleno("mechon", mech_ext)), "tinta": poly_iso(cal, cb, tinta["mechon"]), "halo": halo(tinta["mechon"]),
                      "sombras": sombras["mechon"], "pivote": T["mechon"]["pivote"]}
     out["antifaz_tinta"] = {l: poly_iso(cal, cb, antifaz_t & (xx < cal["xc"] if l == "I" else xx >= cal["xc"])) for l in "ID"}
+    out["antifaz_halo"] = {l: halo(antifaz_t & (xx < cal["xc"] if l == "I" else xx >= cal["xc"])) for l in "ID"}
     ojos = {}
     for l in "ID":
         o = dict(T["ojos"][l])
         ys_, xs_ = np.where(pupilas[l])
         o["tinta"] = poly_iso(cal, cb, anillo[l])
-        o["pupila"] = dict(o["pupila"], tinta=poly_iso(cal, cb, pupilas[l]),
+        o["halo"] = halo(anillo[l])
+        o["pupila"] = dict(o["pupila"], tinta=poly_iso(cal, cb, pupilas[l]), halo=halo(pupilas[l]),
                            centro=r1(to_u(cal, [(xs_.mean(), ys_.mean())]))[0])
         ojos[l] = o
     out["ojos"] = ojos
     out["boca_sonrisa"] = poly_iso(cal, cb, boca_m)
+    out["boca_halo"] = halo(boca_m)
     # la línea de la sonrisa frontal (para abrir la boca dentro de la cara, punto 10)
     cols = np.where(sonr.any(0))[0]
     xs_s = np.linspace(cols.min() + 2, cols.max() - 2, 41)
@@ -765,7 +803,10 @@ def piezas_r1(cb, sil, cal, ink_t, comps, guantes, pies, cola_c, cola_full, cabe
     # también el borde del torso: se copia en los dos, así al apartar el brazo el
     # torso no queda sin contorno (en el neutro el brazo la tapa: no cambia nada)
     compartida = (tinta["brazoI"] | tinta["brazoD"]) & dil(lab == ID["torso"], 14)
-    out["torso"] = {"forma": poly_ext(cal, relleno("torso")), "tinta": poly_iso(cal, cb, tinta["torso"] | compartida),
+    # el torso tapa su borde compartido entero: el contorno interior del tubo del
+    # brazo (que va detrás) queda debajo y no dobla la línea
+    out["torso"] = {"forma": poly_ext(cal, relleno("torso") | (dil(compartida, 5) & sil)), "tinta": poly_iso(cal, cb, tinta["torso"] | compartida),
+                    "halo": halo(tinta["torso"] | compartida),
                     "sombras": sombras["torso"]}
     out["panza"] = {"forma": poly_ext(cal, panza)}
 
@@ -792,12 +833,40 @@ def piezas_r1(cb, sil, cal, ink_t, comps, guantes, pies, cola_c, cola_full, cabe
             "forma": poly_ext(cal, relleno(k, f_ext), dens=True), "tinta": poly_iso(cal, np.where(t_ext, 0, cb), tinta[k] | t_ext, dens=True),
             "sombras": sombras[k]}
 
+    # ---- iteración 3: perfil de cada tubo (brazos y piernas) por fracción de su espina
+    def perfil(esp, mask, n=33, dmax=None):
+        """Distancia del eje al borde EXTERIOR de la tinta a cada lado, en u, en n
+        fracciones de la espina. izq = el lado +v de poses.js (y hacia arriba)."""
+        ys_, xs_ = np.where(mask)
+        sg, d = esp.sd(np.stack([xs_, ys_], 1))
+        if dmax is not None:
+            sg, d = sg[np.abs(d) < dmax * s], d[np.abs(d) < dmax * s]
+        L = esp.cum[-1]
+        f = np.linspace(0, 1, n)
+        izq, der = np.full(n, np.nan), np.full(n, np.nan)
+        for i, fi in enumerate(f):
+            sel = np.abs(sg - fi * L) < 0.6 * L / (n - 1) + 2
+            if sel.sum() > 30:
+                a_, b_ = np.percentile(-d[sel], 99) / s + BORDE_AA, np.percentile(d[sel], 99) / s + BORDE_AA   # en px la y va hacia abajo: v = -d
+                if a_ > 4 and b_ > 4:      # una estación con el tubo a un solo lado está tapada: se interpola
+                    izq[i], der[i] = a_, b_
+        for a in (izq, der):
+            ok = np.where(~np.isnan(a))[0]
+            a[:] = np.interp(np.arange(n), ok, a[ok])          # bajo cabeza o guante: el valor vecino
+            a[:ok[0]] *= 0.85        # antes del primer tramo visible (bajo el torso) el tubo no asoma por el costado
+            a[:] = np.convolve(np.pad(a, 2, mode="edge"), np.ones(5) / 5, "valid")
+        return {"izq": [round(float(v), 1) for v in izq], "der": [round(float(v), 1) for v in der]}
+    for lado in "ID":
+        out["brazo_piel"][lado]["perfil"] = perfil(esp_b[lado], region["brazo" + lado])
+        out["pierna_piel"][lado]["perfil"] = perfil(esp_p[lado], region["pierna" + lado])
+
     # ---- pies y guantes (rígidos, en sus coordenadas locales)
     out["pies"] = {}
     for lado in "ID":
         tob = np.array(T["pierna"]["P2"]) * ([1, 1] if lado == "I" else [-1, 1])
         loc = lambda polys, tob=tob: [r1(np.array(p) - tob) for p in polys]  # noqa: E731
-        out["pies"][lado] = {"forma": loc(poly_ext(cal, relleno("pie" + lado))), "tinta": loc(poly_iso(cal, cb, tinta["pie" + lado]))}
+        out["pies"][lado] = {"forma": loc(poly_ext(cal, relleno("pie" + lado))), "tinta": loc(poly_iso(cal, cb, tinta["pie" + lado])),
+                             "halo": loc(halo(tinta["pie" + lado]))}
     out["guantes"] = {}
     for lado in "ID":
         br = T["brazos"][lado]
@@ -807,9 +876,13 @@ def piezas_r1(cb, sil, cal, ink_t, comps, guantes, pies, cola_c, cola_full, cabe
         loc = lambda polys: [r1((np.array(p) - P2) @ rot.T) for p in polys]  # noqa: E731
         k = "guante" + lado
         pz = dil(puno[lado], 12) & region[k]
-        out["guantes"][lado] = {"forma": loc(poly_ext(cal, relleno(k))), "tinta": loc(poly_iso(cal, cb, tinta[k])),
+        # el relleno del guante cierra la punta de sus uves (pulgar contra palma): sin
+        # rendija de fondo cuando el guante pasa por delante del papel
+        gl = cv2.morphologyEx(relleno(k).astype(np.uint8), cv2.MORPH_CLOSE, D(9)).astype(bool)
+        out["guantes"][lado] = {"forma": loc(poly_ext(cal, gl)), "tinta": loc(poly_iso(cal, cb, tinta[k])),
+                                "halo": loc(halo(tinta[k])),
                                 "puno": {"forma": loc(poly_ext(cal, dil(pz, 2) & dil(region[k], 2))),
-                                         "tinta": loc(poly_iso(cal, cb, tinta[k] & pz))},
+                                         "tinta": loc(poly_iso(cal, cb, tinta[k] & pz)), "halo": loc(halo(tinta[k] & pz))},
                                 "angulo_neutro": round(float(np.degrees(ang)), 2)}
 
     # ---- cola: anillos con su tono, tinta copiada y una espina para curvarla (punto 9)
@@ -843,9 +916,100 @@ def piezas_r1(cb, sil, cal, ink_t, comps, guantes, pies, cola_c, cola_full, cabe
     borde_casco = (dil(casco.astype(bool), 0) & ~ero(casco.astype(bool), 11)) & tras_mano & sil
     tubo |= cv2.morphologyEx(cola_full.astype(np.uint8), cv2.MORPH_CLOSE, D(40)).astype(bool) & tras_mano & dil(region["cola"], 60)
     out["cola"] = {"base": T["cola"]["base"], "forma": poly_ext(cal, relleno("cola", tubo), dens=True),
-                   "tinta": poly_iso(cal, np.where(borde_casco, 0, cb), tinta["cola"] | borde_casco, dens=True),
+                   "tinta": poly_iso(cal, cb, tinta["cola"], dens=True), "halo": halo(tinta["cola"], dens=True),
                    "anillos": [{"tono": t, "forma": poly_ext(cal, dil(m, 3) & dil(region["cola"], 2), dens=True)} for m, t in anillos],
                    "espina": r1(to_u(cal, [b0, b1, b2, b3]))}
+    # iteración 3: la cola como TUBO. Perfil sobre la misma espina compuesta que
+    # arma poses.js (base -> Bézier) y anillos como intervalos de esa espina.
+    # La cola es ancha (~180 u): su eje pasa por el centro de cada anillo (centro de
+    # su caja), de la base a la punta; entre ellos, Catmull-Rom (poses.js hace igual).
+    centros = []
+    for m, t in anillos:
+        ys_, xs_ = np.where(m)
+        if min(xs_.max() - xs_.min(), ys_.max() - ys_.min()) > 120 * s:   # no es un anillo: es el borde
+            continue
+        centros.append(((xs_.min() + xs_.max()) / 2, (ys_.min() + ys_.max()) / 2, m))
+    centros.sort(key=lambda c: c[0])
+    ys_, xs_ = np.where(region["cola"] & (xx > centros[-1][0] - 20))
+    punta = (float(np.median(xs_[ys_ < ys_.min() + 12])), float(ys_.min()) + 0.12 * (centros[-1][1] - ys_.min()))
+    eje_px = np.array([base_px, *[c[:2] for c in centros], punta], float)
+    # los centros de anillo son ruidosos: el eje es la Bézier cúbica que mejor los
+    # sigue (extremos fijos en la base y la punta), muestreada en 12 puntos
+    q0, q1, q2, q3 = ajustar_cubica(eje_px)
+    tq = np.linspace(0, 1, 12)[:, None]
+    eje_px = (1 - tq) ** 3 * q0 + 3 * (1 - tq) ** 2 * tq * q1 + 3 * (1 - tq) * tq ** 2 * q2 + tq ** 3 * q3
+    eje_u = to_u(cal, eje_px)
+    esp_c = Espina(to_px(cal, catmull(eje_u)))
+    # radio del tubo en cada punto del eje: lo que mide el anillo de través (normal a la espina)
+    radios = []
+    for cx_, cy_, m in centros:
+        ys_, xs_ = np.where(m | (dil(m, 8) & ink))
+        _, d = esp_c.sd(np.stack([xs_, ys_], 1))
+        radios.append(float((np.percentile(d, 98) - np.percentile(d, 2)) / 2 / s))
+    radios = [radios[0]] + radios + [0.55 * radios[-1]]
+    out["cola"]["radios"] = [round(r, 1) for r in radios]
+    out["cola"]["eje"] = r1(eje_u)
+    # iteración 3, punto 3a: tapón de pelaje en la cadera (es del cuerpo). Cubre,
+    # dentro de la silueta de la madre, lo que tapan mano y brazo bajo los 380 u y la
+    # base de la cola: en el neutro queda debajo de todo; al apartarse la mano, no hay fondo.
+    cuerpo = region["torso"] | region["piernaD"] | cola_full
+    ys_q, xs_q = np.where(cuerpo)
+    casco_c = np.zeros((H, W), np.uint8)
+    cv2.fillConvexPoly(casco_c, cv2.convexHull(np.stack([xs_q, ys_q], 1).astype(np.int32)), 1)
+    bajo_mano = (region["guanteD"] | region["brazoD"]) & (yy > cal["suelo"] - 380 * s) & casco_c.astype(bool)         & dil(region["torso"] | region["piernaD"], int(35 * s))     # solo pegado a la cadera, no sobre la cola
+    base_cola = np.zeros((H, W), np.uint8)
+    cv2.circle(base_cola, tuple(int(v) for v in base_px), int(130 * s), 1, -1)
+    tapon = (bajo_mano & ero(sil, 6) & ~dil(huecos, 6) & (cb < 215))         | (base_cola.astype(bool) & sil & ~huecos & ~ero(fill_holes(region["cola"]), 4))   # nunca donde se ve la cola
+    out["tapon"] = poly_ext(cal, cv2.morphologyEx(tapon.astype(np.uint8), cv2.MORPH_CLOSE, D(8)).astype(bool))
+    out["cola"]["perfil"] = perfil(esp_c, fill_holes(region["cola"]), n=41, dmax=140)
+    for k_ in ("izq", "der"):   # la cola entra un poco más bajo torso y piernas: sin rendija en la junta
+        out["cola"]["perfil"][k_] = [round(v + 2.0, 1) for v in out["cola"]["perfil"][k_]]
+    Lc = esp_c.cum[-1]
+    tramos = []
+    for m, t in anillos:
+        ys_, xs_ = np.where(m)
+        if min(xs_.max() - xs_.min(), ys_.max() - ys_.min()) > 120 * s:
+            continue
+        sg, d = esp_c.sd(np.stack([xs_, ys_], 1))
+        sg = sg[np.abs(d) < 25]
+        if len(sg) > 50:
+            tramos.append([float(np.percentile(sg, 5) / Lc), float(np.percentile(sg, 95) / Lc), t])
+    tramos.sort()
+    largo = float(np.median([b - a for a, b, _ in tramos]))
+
+    def contrario(t):
+        return "T_FUR" if TONOS[t] >= TONOS["T_FUR_SOMBRA"] else "T_MASK"
+    seq = []
+    # antes del primer anillo visible y en los huecos tapados se sigue alternando
+    pre = []
+    a0 = tramos[0][0]
+    while a0 - largo > -0.02:
+        a0 -= largo
+        pre.append(a0)
+    t_ = tramos[0][2]
+    for a in pre:
+        t_ = contrario(t_)
+        seq.insert(0, [max(a, 0.0), a + largo, t_, 1])
+    for a, b, t in tramos:
+        if seq and a - seq[-1][1] > 1.5 * largo:
+            k = seq[-1][1]
+            while a - k > 1.2 * largo:
+                seq.append([k, k + largo, contrario(seq[-1][2]), 1])
+                k += largo
+        seq.append([a, b, t, 0])
+    for i in range(len(seq) - 1):          # fronteras en el punto medio entre anillos
+        m_ = (seq[i][1] + seq[i + 1][0]) / 2
+        seq[i][1], seq[i + 1][0] = m_, m_
+    seq[0][0], seq[-1][1] = 0.0, 1.0
+    junto = [seq[0]]
+    for a_, b_, t_, sint in seq[1:]:          # dos anillos seguidos del mismo tono son uno
+        if t_ == junto[-1][2]:
+            junto[-1][1] = b_
+            junto[-1][3] = junto[-1][3] and sint
+        else:
+            junto.append([a_, b_, t_, sint])
+    seq = junto
+    out["cola"]["anillos_tubo"] = [[round(a, 4), round(b, 4), t, int(si)] for a, b, t, si in seq]
 
     if debug:
         EVID.mkdir(parents=True, exist_ok=True)
@@ -994,7 +1158,7 @@ def trazar(debug=False) -> dict:
         lado_pos = (cabeza & sup & (s > 0)).sum() < (cabeza & sup & (s < 0)).sum()
         oreja = cabeza & sup & ((s > 0) if lado_pos else (s < 0))
         # se mete 30 px bajo el cráneo (capa de atrás) para no dejar costura al girar
-        oreja_ext = cabeza & cv2.dilate(oreja.astype(np.uint8), disk(30)).astype(bool)
+        oreja_ext = cabeza & cv2.dilate(oreja.astype(np.uint8), disk(60)).astype(bool)   # iteración 3: al girar no se abre rendija
         craneo &= ~oreja
         orejas_px[lado], orejas_ext_px[lado] = oreja, oreja_ext
         corte =cv2.dilate(oreja.astype(np.uint8), disk(5)).astype(bool) & craneo
@@ -1006,7 +1170,7 @@ def trazar(debug=False) -> dict:
                              "interior": poly_u(cal, interior), "pivote": r1([piv])[0]}
     # mechón de la coronilla
     mech = craneo & (yy < 120) & (np.abs(xx - xc) < 115)
-    mech_ext = craneo & (yy < 150) & (np.abs(xx - xc) < 115)
+    mech_ext = craneo & (yy < 200) & (np.abs(xx - xc) < 115)   # iteración 3: hondo bajo el cráneo, al girar no abre rendija
     craneo &= ~mech
     cortes |= cv2.dilate(mech.astype(np.uint8), disk(5)).astype(bool) & craneo
     T["mechon"] = {"forma": poly_u(cal, cv2.erode(mech_ext.astype(np.uint8), disk(HALF_INK)).astype(bool)),

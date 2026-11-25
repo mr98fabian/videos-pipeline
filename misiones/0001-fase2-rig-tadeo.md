@@ -802,3 +802,103 @@ medias.** Lo que encontró y qué se hizo:
 | Tono posterizado (punto 9) | — | **declarado**: es la regla del punto 6 (formas planas, 6 tonos); el degradado no entra |
 
 ⏸ **Puerta:** Fabian aprueba la hoja y el clip. Sin su OK no hay merge ni Fase 3.
+
+---
+
+## Iteración 3 — Extremidades flexibles y dibujo sólido (Opus)
+
+Brief de Fabian (pegado en la sesión) más su anexo de investigación. La meta es el
+**dibujo sólido**: que el personaje conserve su volumen y su anatomía en cada fotograma.
+
+**Qué cambió**
+- **Brazos y piernas son UN tubo (manguera).** Cada uno es un polígono de contorno
+  generado por código desde la espina (`tuboContorno` en `poses.js`). No es un trazo SVG.
+  - Doble cinta: tinta = contorno exterior W; relleno = W − 2c (c = 6,6 u, calibrado
+    contra el contorno de la madre). Encima, el halo del borde suave y las sombras
+    trazadas, que siguen la espina.
+  - Perfil w(t) medido en la madre en 33 estaciones (borde exterior de su línea + 0,6 u
+    de antialias).
+  - **Longitud de arco fija** (la del neutro). Doblez por holgura, tipo RubberHose: el
+    lado del doblez es fijo (codo y rodilla hacia fuera) y el doblez se anula suave al
+    enderezar. La raíz se desliza por el contorno del torso con una fracción del giro.
+- **Manos y pies encadenados.** El guante y el pie toman su posición y su ángulo del
+  extremo y la tangente del tubo, con el mismo muelle. No tienen ángulo propio.
+- **Cola reconstruida.**
+  - Es un tubo por un eje que pasa por el centro de cada anillo (Bézier ajustada →
+    Catmull-Rom centrípeta α 0,5, igual en Python y JS) y gira por sus 24 tramos.
+  - La textura de la madre (anillos curvos y sus rayas) va anclada a la espina y la
+    sigue. Los tramos que la madre no enseña (bajo pierna y mano) llevan bandas
+    alternas que continúan el patrón: ya no hay parches claros.
+  - La raíz entra bajo el cuerpo y hay un **tapón de pelaje hijo del torso** en la cadera.
+- **Capas por pose.** Un brazo va detrás del torso, como en la madre, salvo que su
+  mano en reposo cruce el cuerpo. El cambio lo declara la pose y ocurre a mitad del
+  muelle de los brazos (`acting.js`, campo `cruza`, junto a `capa`). Delante, un disco
+  de máscara mantiene la raíz bajo el torso.
+- **Juntas sólidas.** Pelaje sin contorno bajo el hombro (axila), en el cuello y bajo
+  la base de orejas y mechón (raíz más honda), para que al girar no se abra rendija.
+- **Halo tonal.** El borde suave de la madre se copia como segunda tinta (isolínea 170
+  en `T_FUR_SOMBRA`, bajo la tinta) en todas las piezas trazadas y en los tubos.
+
+### Medidas de la madre (constantes del rig)
+
+Anchura total w(t) = izq + der del tubo (u, borde exterior de la tinta), en 7 estaciones
+de la espina (0 = raíz, 1 = mano/pie/punta):
+
+| miembro | L (u) | w(0) | w(1/6) | w(1/3) | w(1/2) | w(2/3) | w(5/6) | w(1) |
+|---|---|---|---|---|---|---|---|---|
+| brazo I | 234,5 | 64,0 | 69,2 | 70,0 | 68,4 | 66,1 | 64,4 | 55,7 |
+| brazo D | 235,2 | 63,3 | 69,5 | 68,7 | 66,2 | 63,9 | 62,3 | 59,4 |
+| pierna I | 136,9 | 78,7 | 79,6 | 92,3 | 86,4 | 76,9 | 72,9 | 41,9 |
+| pierna D | 136,9 | 78,3 | 79,2 | 95,4 | 87,1 | 78,0 | 81,6 | 59,3 |
+| cola | — | 26,5 | 75,3 | 85,6 | 189,5 | 148,8 | 82,8 | 41,4 |
+
+- Anclas: la muñeca es el origen (0, 0) del guante trazado (el guante va de
+  x −23 a 213 u). El tobillo es el origen del pie (el pie va de x −190 a 51 u en I).
+- Anchura de la cola en la base: 26,5 u (la cola se ensancha hasta ~190 u).
+- Solapes: la raíz del brazo entra 25 % del largo bajo el torso y la de la pierna un
+  30 %. El tubo entra 1,5 semianchos en el guante. La cola entra 30 u bajo el cuerpo,
+  más el tapón (el primer tramo, f 0–0,15, ya va tapado por la cadera).
+
+### Criterios de aceptación
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Sin hueco (390 fotogramas, silueta en PNG sin pérdida) | **no cumple** | 123/390 fotogramas con una costura de 4–14 px (p50 5 px; el mayor, 393 px en f178, es una axila a mitad de transición). Están en tres sitios que se repiten: ingle-cola con las piernas abiertas, muñeca derecha-cola y punta del mechón (su relleno asoma como un piquito al girar). Test `xfail(strict=True)` con el número, sin aflojar; `gate.json` → `sin_hueco` |
+| Encadenamiento (cada 3 fotogramas) | **cumple** | mano y pie a 0 u del extremo del tubo; el guante sigue la tangente del tubo (≤ 2°). `test_tadeo_manguera.py` |
+| Longitud de arco ±2 % | **cumple** | brazos y piernas a su largo del neutro en todos los fotogramas muestreados |
+| Caso f254–f260 | **cerrado** | el antebrazo lleva su contorno hasta dentro del puño (el tubo entra 1,5 semianchos) y la cola mantiene sus anillos (bandas en los tramos tapados). `prueba_640_contacto.png` y fotogramas 254/257/260 del clip |
+| Barra I2-3 completa | **cumple** | IoU 0,9898 · marcas ≤ 3 % · tinta 99,3 / 98,8 % · área 1,023 · interior 5,49 u · tono medio 0,0199 · **superficie 4,1 %**. El test de superficie deja de ser xfail |
+| QA IoU ≥ 0,988 | **cumple** | 0,9898 (`test_solape_tras_los_tubos`) |
+| Gate Fase 1 y `verify` | **cumple** | off_palette 0,0 · safe_zone 0,0 · char_color 0,0 · 0/390 pares congelados. `verify` VERDE: 84 tests + 1 xfail (el de sin-hueco) |
+| Hoja con residuo, `prueba_640.mp4`, contacto 12 f (6 en transición) | **cumple** | `misiones/evidencia/0001-fase2/` |
+
+### Desviaciones y decisiones (declaradas)
+
+1. **Muestreo de la espina propio, no `@remotion/paths`.** `poses.js` tiene que
+   correr en Node sin bundler (los tests de la CI). `evaluar(e, s)` es el equivalente
+   a `getPointAtLength`/`getTangentAtLength` sobre una polilínea densa por longitud de
+   arco.
+2. **Mano fuera de alcance.** Con longitud fija, si la mano de la pose queda más lejos
+   que el largo, el tubo no se estira: la mano se acerca a la raíz por la cuerda. Los
+   datos de la biblioteca no cambian; cambia dónde se dibuja el guante en esas poses.
+3. **Lado del doblez fijo.** El signo de `curva` de cada pose ya no decide hacia dónde
+   se dobla el codo: siempre hacia fuera.
+4. **Criterio sin-hueco.**
+   - Un fondo encerrado de 400 px o más (a 1080 × 1920) es el espacio negativo de la
+     pose (mano en la cadera, brazo en jarra: 1 400–3 600 px medidos) y se permite.
+   - Lo que se cuenta como costura son 4–399 px.
+   - Las motas de 1–3 px son antialias donde se juntan tres bordes de polígono y se
+     declaran: a 640 px no se ven.
+   - La silueta se mide con cualquier cobertura (luminancia < 235).
+5. **Pie:** el tubo entra medio semiancho en el pie, no 1,5: el pie es bajo y el tubo
+   asomaba entre los dos pies.
+6. **Cola:** su perfil lleva +2 u para entrar bajo torso y piernas (cerraba una
+   rendija en la junta de la ingle). El tapón cubre la base y lo que la mano derecha
+   tapa pegado a la cadera, nunca donde se ve la cola.
+7. **Guante:** su relleno cierra la punta de las uves (pulgar contra palma).
+8. **QA de IoU ≥ 0,988** como test aparte (`test_solape_tras_los_tubos`). La barra
+   I2-3 (≥ 0,98) no cambia.
+9. Follow-through de la cola: ya iba por objetivos (la capa `cola` retrasa y suaviza
+   `rizo`/`alza`, no la pieza). Sin cambios en acting salvo el campo `cruza`.
+
+⏸ **Puerta:** Fabian aprueba la hoja y el clip. Sin su OK no hay merge ni Fase 3.

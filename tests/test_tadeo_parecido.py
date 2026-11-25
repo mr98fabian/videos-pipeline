@@ -4,9 +4,9 @@ Iteración 2 (I2-3, «la barra de perfecta»): sobre el neutro, solape de
 silueta ≥ 0,98, las 7 marcas dentro de ±3 %, tinta de la madre presente en el
 rig y viceversa ≥ 97 % (a ≤ 6 px, luminancia < 60), área de tinta 0,97–1,03,
 grosor p50 de las líneas interiores 4,6–5,6 u, error tonal medio ≤ 0,030 y
-superficie con error > 0,08 ≤ 5 %. Ninguno se afloja: el que no se alcanza va
-marcado xfail ESTRICTO con su número (si un día pasa, el test falla y obliga a
-quitar la marca) y la decisión es de Fable y Fabian.
+superficie con error > 0,08 ≤ 5 %. Ninguno se afloja. Desde la iteración 3
+(halo = el borde suave de la madre como segunda tinta) la barra entera pasa, y
+además la silueta de los tubos mantiene IoU ≥ 0,988.
 
 Además: parecido.json tiene que corresponder al código actual (huella), los
 tonos de kx_trazo son los de tokens.js, las sombras respetan el mínimo y el
@@ -42,6 +42,11 @@ def test_solape_de_silueta():
     assert RES["iou"] >= 0.98, f"IoU {RES['iou']} < 0,98"
 
 
+def test_solape_tras_los_tubos():
+    """QA de la iteración 3: la silueta generada por los tubos mantiene IoU ≥ 0,988."""
+    assert RES["iou"] >= 0.988, f"IoU {RES['iou']} < 0,988"
+
+
 @pytest.mark.parametrize("marca", MARCAS)
 def test_marca_dentro_de_3_por_ciento(marca):
     m = RES["marcas"][marca]
@@ -69,8 +74,6 @@ def test_error_tonal_medio():
     assert RES["tono"]["error_medio"] <= 0.030, RES["tono"]
 
 
-@pytest.mark.xfail(strict=True, reason="I2-3 no alcanzado (7,1 % > 5 %): 4,6 pts son el borde suave de las "
-                                       "líneas de la madre a ≤ 6 px de la tinta; decisión de Fable/Fabian")
 def test_superficie_con_error_tonal():
     assert RES["tono"]["superficie_mayor_008"] <= 0.05, RES["tono"]
 

@@ -343,22 +343,183 @@ export const deformar = (anclados, e1) => anclados.map((poly) => poly.map(([f, v
   if (Math.abs(k) > k0 && v * k > CODO) w = CODO / k;
   return [c[0] + d[0] * rt - d[1] * (w + rn), c[1] + d[1] * rt + d[0] * (w + rn)];
 }));
+// ------------------------------------------------------------- iteración 3: tubos
+// Contorno de un tubo por la espina `e`: a cada lado, el borde a izq(f) / der(f)
+// (f = fracción de longitud), con `ext` u de prolongación recta antes de la raíz
+// y casquetes redondos en los dos extremos. `encoge` (u) estrecha los dos lados
+// (para el relleno dentro de la tinta). Por el lado cóncavo la anchura se limita a
+// CODO/κ: el tubo se dobla como una manguera, sin plegarse sobre sí mismo.
+const CODO_TUBO = 0.85;
+export const muestraPerfil = (arr, f) => {
+  const x = Math.max(0, Math.min(1, f)) * (arr.length - 1);
+  const i = Math.min(arr.length - 2, Math.floor(x));
+  return arr[i] + (arr[i + 1] - arr[i]) * (x - i);
+};
+export const tuboContorno = (e, izq, der, { ext = 0, extFin = 0, encoge = 0, n = 64 } = {}) => {
+  const L = e.L;
+  const izqs = [];
+  const ders = [];
+  for (let i = 0; i <= n; i++) {
+    const s = -ext + ((L + ext + extFin) * i) / n;
+    const f = s / L;
+    const { c, d, k } = evaluar(e, s);
+    let a = Math.max(0.5, izq(f) - encoge);
+    let b = Math.max(0.5, der(f) - encoge);
+    if (k > 0) a = Math.min(a, CODO_TUBO / k); else if (k < 0) b = Math.min(b, -CODO_TUBO / k);
+    izqs.push([c[0] - d[1] * a, c[1] + d[0] * a]);
+    ders.push([c[0] + d[1] * b, c[1] - d[0] * b]);
+  }
+  const casquete = (p, q, dir, m = 10) => {
+    const cx = (p[0] + q[0]) / 2;
+    const cy = (p[1] + q[1]) / 2;
+    const r = Math.hypot(p[0] - q[0], p[1] - q[1]) / 2;
+    const a0 = Math.atan2(p[1] - cy, p[0] - cx);
+    const giro = Math.sign((p[0] - cx) * dir[1] - (p[1] - cy) * dir[0]) || 1;
+    return Array.from({ length: m - 1 }, (_, j) => {
+      const a = a0 - giro * Math.PI * ((j + 1) / m);
+      return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    });
+  };
+  const fin = evaluar(e, L + extFin).d;
+  const ini = evaluar(e, -ext).d;
+  return [...izqs, ...casquete(izqs[n], ders[n], fin), ...ders.reverse(), ...casquete(ders[n], izqs[0], [-ini[0], -ini[1]])];
+};
+export const espinaPuntos = (pts) => _espina(pts);
+
 export const nodosCurva = (pts, m = 160) => _espina(Array.from({ length: m + 1 }, (_, i) => bezierQ(pts, i / m)));
 export const inicioEspina = (e) => ({ a: e.p[0], d: e.t[0], L: e.L });
+
+// ------------------------------------------------------------- iteración 3: manguera
+// Brazos y piernas tienen LONGITUD DE ARCO FIJA (la del neutro trazado). Como en
+// RubberHose, el tubo se dobla por la holgura que deja la cuerda raíz→mano: el
+// punto de control va sobre la perpendicular (más un corrimiento a lo largo de
+// la cuerda medido en el neutro) a la distancia que da exactamente esa longitud.
+// El lado del doblez es FIJO (codo y rodilla hacia fuera) y al enderezarse el
+// doblez se anula suave. Si la mano queda más lejos que el largo, se acerca a la
+// raíz por la cuerda: el tubo nunca se estira. Solo afecta al dibujo: la
+// biblioteca (curva, largos) no cambia.
+const _qlen = (p0, p1, p2) => largoCurva([p0, p1, p2], 48);
+const _ladoFuera = { I: [-1, 0.3], D: [1, 0.3] };
+const _manguera = (raiz, mano, L, a0, lado) => {
+  let dx = mano[0] - raiz[0];
+  let dy = mano[1] - raiz[1];
+  let d = Math.hypot(dx, dy) || 1e-9;
+  let fin = mano;
+  if (d > L) { // fuera de alcance: la mano se acerca a la raíz
+    fin = [raiz[0] + (dx / d) * L, raiz[1] + (dy / d) * L];
+    dx = fin[0] - raiz[0];
+    dy = fin[1] - raiz[1];
+    d = L;
+  }
+  const u = [dx / d, dy / d];
+  let n = [-u[1], u[0]];
+  const f = _ladoFuera[lado];
+  if (n[0] * f[0] + n[1] * f[1] < 0) n = [-n[0], -n[1]];
+  const mid = [(raiz[0] + fin[0]) / 2 + u[0] * a0 * d, (raiz[1] + fin[1]) / 2 + u[1] * a0 * d];
+  const ctrl = (k) => [mid[0] + n[0] * k, mid[1] + n[1] * k];
+  let lo = 0;
+  let hi = 2 * L;
+  if (_qlen(raiz, ctrl(0), fin) >= L) return [raiz, ctrl(0), fin];
+  for (let i = 0; i < 30; i++) {
+    const m = (lo + hi) / 2;
+    if (_qlen(raiz, ctrl(m), fin) < L) lo = m; else hi = m;
+  }
+  return [raiz, ctrl((lo + hi) / 2), fin];
+};
+// Constantes medidas en el neutro: largo y corrimiento del control a lo largo de la cuerda.
+const _constMiembro = (pts) => {
+  const [p0, p1, p2] = pts;
+  const d = Math.hypot(p2[0] - p0[0], p2[1] - p0[1]);
+  const u = [(p2[0] - p0[0]) / d, (p2[1] - p0[1]) / d];
+  const mid = [(p0[0] + p2[0]) / 2, (p0[1] + p2[1]) / 2];
+  return { L: largoCurva(pts, 48), a0: ((p1[0] - mid[0]) * u[0] + (p1[1] - mid[1]) * u[1]) / d };
+};
+const _T0 = { inclina: 0, sy: 1 };
+export const MIEMBRO = {
+  brazo: Object.fromEntries(["I", "D"].map((l) => {
+    const b = POSES.neutro[`brazo${l}`];
+    const pts = brazoCurva(hombros(_T0)[l], manoMundo(b.mano, _T0), b.curva);
+    return [l, { ..._constMiembro(pts), ang0: Math.atan2(pts[2][1] - pts[0][1], pts[2][0] - pts[0][0]), pts }];
+  })),
+  pierna: Object.fromEntries(["I", "D"].map((l) => {
+    const pts = piernaPuntos(l, POSES.neutro.piernas);
+    return [l, { ..._constMiembro(pts), ang0: Math.atan2(pts[2][1] - pts[0][1], pts[2][0] - pts[0][0]), pts }];
+  })),
+};
+
+// Raíz deslizante (punto 1): una fracción del giro del miembro respecto al neutro
+// desplaza su raíz por el contorno del torso (arriba si el miembro sube).
+// Solapes del brief: la raíz se prolonga ~25 % del largo bajo el torso y el tubo
+// entra 1,5 semianchos en el guante / pie.
+export const RAIZ = { brazo: { k: 16, min: -10, max: 18, ext: 0.25 }, pierna: { k: 8, min: -6, max: 8, ext: 0.3 } };
+export const DENTRO_MANO = 1.5;
+const _envolver = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+export const raizDeslizada = (base, extremo, ang0, lado, cfg, inclina = 0) => {
+  const giro = _envolver(Math.atan2(extremo[1] - base[1], extremo[0] - base[0]) - ang0) * (lado === "D" ? 1 : -1);
+  const sl = Math.max(cfg.min, Math.min(cfg.max, cfg.k * giro));
+  const arriba = rotar([0, 1], inclina);
+  return [base[0] + arriba[0] * sl, base[1] + arriba[1] * sl];
+};
+
+// Geometría dibujada de un brazo: la mano y su ángulo SALEN del extremo y la
+// tangente del tubo (punto 2): mano y tubo no pueden separarse.
+export const brazoGeo = (lado, brazo, torso, salto = 0) => {
+  const M = MIEMBRO.brazo[lado];
+  const h0 = hombros(torso, salto)[lado];
+  const objetivo = manoMundo(brazo.mano, torso, salto);
+  const h = raizDeslizada(h0, objetivo, M.ang0, lado, RAIZ.brazo, torso.inclina);
+  const pts = _manguera(h, objetivo, M.L, M.a0, lado);
+  return { h, h0, mano: pts[2], objetivo, pts, e: nodosCurva(pts) };
+};
+export const piernaGeo = (lado, piernas) => {
+  const M = MIEMBRO.pierna[lado];
+  const p0 = piernaPuntos(lado, piernas);
+  const otro = lado === "I" ? "D" : "I"; // la pierna I gira «hacia fuera» como el brazo D
+  const cadera = raizDeslizada(p0[0], p0[2], M.ang0, otro, RAIZ.pierna);
+  const pts = _manguera(cadera, p0[2], M.L, M.a0, lado);
+  return { pts, e: nodosCurva(pts), tobillo: pts[2] };
+};
+
+// Punto 4: capa por pose. Un brazo cruza el cuerpo si su mano en reposo cae sobre
+// el torso; acting.js cambia la capa a mitad del muelle de los brazos (cuando el
+// brazo va más rápido), igual que el guante.
+export const cruzaCuerpo = (mano) => Math.abs(mano[0]) < 150 && mano[1] > 140 && mano[1] < 640;
+
 
 // Cola (punto 9): espina = eje medio trazado (Bézier cúbica) prolongado recto
 // hasta la base, en 24 tramos de igual largo. El rumbo de cada tramo es el
 // trazado + alza + (rizo − rizoNeutro) · gradosPorRizo · s² (s = 0 base, 1 punta):
 // la base casi no se mueve y la punta se enrosca. Se integra a paso fino.
-const _bc = (B, t) => [0, 1].map((i) => (1 - t) ** 3 * B[0][i] + 3 * (1 - t) ** 2 * t * B[1][i] + 3 * (1 - t) * t * t * B[2][i] + t ** 3 * B[3][i]);
+// Catmull-Rom CENTRÍPETA (alpha 0,5) por los puntos del eje: no hace bucles ni
+// picos entre puntos desiguales (kx_trazo.catmull hace exactamente lo mismo).
+export const catmull = (P, n = 24, alpha = 0.5) => {
+  const Q = [[2 * P[0][0] - P[1][0], 2 * P[0][1] - P[1][1]], ...P,
+    [2 * P[P.length - 1][0] - P[P.length - 2][0], 2 * P[P.length - 1][1] - P[P.length - 2][1]]];
+  const lerp = (a, b, ta, tb, t) => [0, 1].map((j) => ((tb - t) / (tb - ta)) * a[j] + ((t - ta) / (tb - ta)) * b[j]);
+  const out = [];
+  for (let i = 1; i < Q.length - 2; i++) {
+    const [p0, p1, p2, p3] = [Q[i - 1], Q[i], Q[i + 1], Q[i + 2]];
+    const t0 = 0;
+    const t1 = t0 + Math.max(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), 1e-6) ** alpha;
+    const t2 = t1 + Math.max(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]), 1e-6) ** alpha;
+    const t3 = t2 + Math.max(Math.hypot(p3[0] - p2[0], p3[1] - p2[1]), 1e-6) ** alpha;
+    for (let k = 0; k < n; k++) {
+      const t = t1 + ((t2 - t1) * k) / n;
+      const a1 = lerp(p0, p1, t0, t1, t);
+      const a2 = lerp(p1, p2, t1, t2, t);
+      const a3 = lerp(p2, p3, t2, t3, t);
+      const b1 = lerp(a1, a2, t0, t2, t);
+      const b2 = lerp(a2, a3, t1, t3, t);
+      out.push(lerp(b1, b2, t1, t2, t));
+    }
+  }
+  out.push(P[P.length - 1]);
+  return out;
+};
+// Iteración 3: la cola es un tubo por el eje que pasa por el centro de cada anillo.
 const _colaTramos = (() => {
-  const B = TRAZA.cola.espina;
   const base = TRAZA.cola.base;
-  const l0 = Math.hypot(B[0][0] - base[0], B[0][1] - base[1]);
-  const lb = largoCurva([B[0], B[1], B[3]]); // solo reparte el parámetro: luego se remuestrea por arco
-  const fr = l0 / (l0 + lb);
-  const f = (t) => (t <= fr ? [base[0] + (B[0][0] - base[0]) * (t / fr), base[1] + (B[0][1] - base[1]) * (t / fr)] : _bc(B, (t - fr) / (1 - fr)));
-  const e = _espina(Array.from({ length: 801 }, (_, i) => f(i / 800)));
+  const e = _espina(catmull(TRAZA.cola.eje));
   const L = e.L;
   const rumbos = Array.from({ length: TRAMOS }, (_, j) => {
     const a = evaluar(e, (L * j) / TRAMOS).c;
@@ -390,11 +551,16 @@ export const colaNodos = (cola, f = 1) => {
   return _espina(pts);
 };
 export const COLA_NODOS = colaNodos({ rizo: RIG.cola.rizoNeutro, alza: 0 });
-const _colaForma = anclar(TRAZA.cola.forma, COLA_NODOS);
+// perfil trazado de la cola (borde exterior de su línea a cada lado), por fracción
+export const COLA_IZQ = (f) => muestraPerfil(TRAZA.cola.perfil.izq, f);
+export const COLA_DER = (f) => muestraPerfil(TRAZA.cola.perfil.der, f);
+export const COLA_RADIO = (f) => Math.max(COLA_IZQ(f), COLA_DER(f));
+export const COLA_EXT = 30; // u de raíz bajo el torso: más que el desplazamiento máximo de la base
+export const colaContorno = (e, encoge = 0) => tuboContorno(e, COLA_IZQ, COLA_DER, { ext: COLA_EXT, encoge, n: 96 });
 export const COLA_SUELO = 6;
 // Si algún punto baja de 6 u del suelo, el término de rizo se reduce por bisección (8 pasos).
 export const colaRizoEfectivo = (cola) => {
-  const minY = (f) => Math.min(...deformar(_colaForma, colaNodos(cola, f)).flat().map((q) => q[1]));
+  const minY = (f) => Math.min(...colaContorno(colaNodos(cola, f)).map((q) => q[1]));
   if (minY(1) >= COLA_SUELO) return 1;
   let lo = 0;
   let hi = 1;
@@ -409,7 +575,7 @@ export const colaRizoEfectivo = (cola) => {
 const _colaAjustada = (cola) => {
   const f = colaRizoEfectivo(cola);
   if (f > 0 || cola.alza >= 0) return { cola, f };
-  const minY = (c) => Math.min(...deformar(_colaForma, colaNodos(c, 0)).flat().map((q) => q[1]));
+  const minY = (c) => Math.min(...colaContorno(colaNodos(c, 0)).map((q) => q[1]));
   if (minY(cola) >= COLA_SUELO) return { cola, f };
   let lo = 0;
   let hi = 1;
@@ -420,7 +586,7 @@ const _colaAjustada = (cola) => {
   return { cola: { ...cola, alza: cola.alza * lo }, f };
 };
 export const colaPose = (cola) => { const a = _colaAjustada(cola); return colaNodos(a.cola, a.f); };
-export const colaForma = (cola) => deformar(_colaForma, colaPose(cola)).flat();
+export const colaForma = (cola) => colaContorno(colaPose(cola));
 
 const _ext = (polys) => {
   const pts = polys.flat();

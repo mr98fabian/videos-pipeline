@@ -26,9 +26,9 @@
   },
   "duracion_s": 13.0,
   "palette_still": {
-    "off_palette": 1.5e-05,
+    "off_palette": 1.4e-05,
     "debt": 0.0,
-    "char_color_fraction": 9.6e-05
+    "char_color_fraction": 8e-05
   },
   "palette": {
     "frames": 78,
@@ -42,7 +42,39 @@
   "nunca_congelado": {
     "frames": 390,
     "pares_identicos": 0,
-    "dif_media_minima": 0.2266
+    "dif_media_minima": 0.177
   },
-  "fails": []
+  "sin_hueco": {
+    "frames": 390,
+    "frames_con_hueco": 123,
+    "peor_px": 393,
+    "peor_frame": 178,
+    "primeros": [
+      7,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      37,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65
+    ],
+    "hueco_legitimo_px": 400,
+    "mota_aa_px": 3
+  },
+  "fails": [
+    "fondo encerrado (costura) en 123 fotogramas"
+  ]
 }

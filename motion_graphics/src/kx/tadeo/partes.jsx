@@ -11,8 +11,8 @@
 import React from "react";
 import { INK, PAPER, TADEO_TONE, tone } from "../tokens.js";
 import {
-  COLA_NODOS, EXPRESIONES, RIG, anclar, brazoCurva, colaPose, deformar, hombros, manoMundo, nodosCurva, piernaPuntos, POSES,
-  tangenteFinal, torsoPunto,
+  COLA_DER, COLA_EXT, COLA_IZQ, COLA_NODOS, COLA_RADIO, DENTRO_MANO, EXPRESIONES, MIEMBRO, RAIZ, RIG, anclar, brazoGeo, piernaGeo, brazoCurva, colaPose, deformar, evaluar, hombros, manoMundo, muestraPerfil,
+  nodosCurva, piernaPuntos, POSES, rotar, tangenteFinal, torsoPunto, tuboContorno,
 } from "./poses.js";
 import { TRAZA } from "./traza.js";
 
@@ -37,6 +37,7 @@ const Pieza = ({ p, tono = C.fur, children = null }) => (
     <path d={cerrado(p.forma)} fill={tono} />
     {children}
     {(p.sombras || []).map((s, i) => <path key={i} d={cerrado(s.forma)} fill={TONO[s.tono]} />)}
+    <Tinta polys={p.halo} color={TONO.T_FUR_SOMBRA} />
     <Tinta polys={p.tinta} />
   </g>
 );
@@ -70,31 +71,6 @@ const curvaQ = ([a, c, b], n = 14) => Array.from({ length: n + 1 }, (_, i) => {
   return [0, 1].map((k) => (1 - t) ** 2 * a[k] + 2 * (1 - t) * t * c[k] + t * t * b[k]);
 });
 const Linea = ({ q, w }) => <path d={cerrado([trazoRelleno(curvaQ(q), w)])} fill={C.ink} />;
-
-// R3: piezas que se doblan, ancladas una vez a su espina neutra.
-const anclarPieza = (p, nodos) => ({
-  forma: anclar(p.forma, nodos),
-  tinta: anclar(p.tinta, nodos),
-  sombras: (p.sombras || []).map((s) => ({ tono: s.tono, forma: anclar(s.forma, nodos) })),
-  anillos: (p.anillos || []).map((s) => ({ tono: s.tono, forma: anclar(s.forma, nodos) })),
-});
-const deformarPieza = (a, n0, n1) => ({
-  forma: deformar(a.forma, n1),
-  tinta: deformar(a.tinta, n1),
-  sombras: a.sombras.map((s) => ({ tono: s.tono, forma: deformar(s.forma, n1) })),
-  anillos: a.anillos.map((s) => ({ tono: s.tono, forma: deformar(s.forma, n1) })),
-});
-const TORSO0 = { inclina: 0, sy: 1 };
-const BRAZO0 = Object.fromEntries(["I", "D"].map((l) => {
-  const b = POSES.neutro[`brazo${l}`];
-  const n0 = nodosCurva(brazoCurva(hombros(TORSO0)[l], manoMundo(b.mano, TORSO0), b.curva));
-  return [l, { n0, a: anclarPieza(TRAZA.brazo_piel[l], n0), r: anclarPieza(TRAZA.brazo_piel[l].raiz, n0) }];
-}));
-const PIERNA0 = Object.fromEntries(["I", "D"].map((l) => {
-  const n0 = nodosCurva(piernaPuntos(l, POSES.neutro.piernas));
-  return [l, { n0, a: anclarPieza(TRAZA.pierna_piel[l], n0) }];
-}));
-const COLA0 = anclarPieza({ ...TRAZA.cola, sombras: [] }, COLA_NODOS);
 
 // ------------------------------------------------------------ guantes
 // Local: muñeca en el origen, dedos hacia +x. `abierta` es el guante TRAZADO
@@ -152,40 +128,101 @@ export const Guante = ({ tipo = "abierta", angulo = 0, espejo = 1, x = 0, y = 0,
 };
 
 // ------------------------------------------------------------ miembros
-// El guante trazado se midió con la tangente del brazo trazado: el ángulo de
-// reposo es la tangente final; `giro` lo desvía (en espejo I/D).
-// Punto 3: el brazo no tiene remate; su relleno y su tinta siguen 40 u más allá
-// del hombro. Esa prolongación («raiz») se pinta DETRÁS del torso y el brazo
-// visible delante: con el brazo alzado la prolongación no asoma sobre el pecho.
-export const Brazo = ({ lado, brazo, torso, salto, parte = "todo" }) => {
-  const h = hombros(torso, salto)[lado];
-  const mano = manoMundo(brazo.mano, torso, salto);
-  const pts = brazoCurva(h, mano, brazo.curva);
-  const espejo = lado === "D" ? -1 : 1;
-  const giro = lado === "D" ? brazo.giro : -brazo.giro;
-  const b0 = BRAZO0[lado];
-  const nodos = parte !== "guante" ? nodosCurva(pts) : null;
-  const raiz = parte === "raiz" || parte === "todo" ? <Pieza p={deformarPieza(b0.r, b0.n0, nodos)} /> : null;
-  if (parte === "raiz") return raiz;
+// R3: las sombras de los miembros, ancladas una vez a su espina neutra.
+const anclarSombras = (p, nodos) => (p.sombras || []).map((s) => ({ tono: s.tono, forma: anclar(s.forma, nodos) }));
+const deformarSombras = (a, e) => a.map((s) => ({ tono: s.tono, forma: deformar(s.forma, e) }));
+const BRAZO0 = Object.fromEntries(["I", "D"].map((l) => {
+  const n0 = nodosCurva(MIEMBRO.brazo[l].pts);
+  return [l, { n0, s: anclarSombras(TRAZA.brazo_piel[l], n0) }];
+}));
+const PIERNA0 = Object.fromEntries(["I", "D"].map((l) => {
+  const n0 = nodosCurva(MIEMBRO.pierna[l].pts);
+  return [l, { n0, s: anclarSombras(TRAZA.pierna_piel[l], n0), tan0: tangenteFinal(MIEMBRO.pierna[l].pts) }];
+}));
+
+// ------------------------------------------------------------ iteración 3: tubos
+// Un brazo, una pierna o la cola son UN tubo continuo por su espina, como una
+// manguera: tinta = el contorno del tubo (el perfil trazado de la madre llega al
+// borde exterior de su línea), relleno = el mismo tubo encogido el grueso de la
+// línea, y el borde suave de la madre como halo en T_FUR_SOMBRA a los dos lados.
+const HALO = 1.2; // u
+// grueso de la línea de los tubos, calibrado contra el contorno de la madre en la
+// rejilla ×4 (p50 6,95 u medido; el antialias del render engorda ~0,4 u)
+const LINEA_TUBO = 6.6;
+const Tubo = ({ e, izq, der, ext, extFin = 0, tono = C.fur, sombras = [], children = null, uid }) => {
+  const contorno = (encoge) => cerrado([tuboContorno(e, izq, der, { ext, extFin, encoge })]);
+  const relleno = contorno(LINEA_TUBO + HALO);
   return (
     <g>
-      {raiz}
-      {parte !== "guante" ? <Pieza p={deformarPieza(b0.a, b0.n0, nodos)} /> : null}
-    {parte !== "tubo" ? <Guante tipo={brazo.guante} lado={lado} x={mano[0]} y={mano[1]} angulo={tangenteFinal(pts) + giro} espejo={espejo} /> : null}
+      <path d={contorno(0)} fill={C.ink} />
+      <path d={contorno(LINEA_TUBO)} fill={TONO.T_FUR_SOMBRA} />
+      <path d={relleno} fill={tono} />
+      {sombras.length || children ? (
+        <g>
+          <clipPath id={uid}><path d={relleno} /></clipPath>
+          <g clipPath={`url(#${uid})`}>
+            {sombras.map((s, i) => <path key={i} d={cerrado(s.forma)} fill={TONO[s.tono]} />)}
+            {children}
+          </g>
+        </g>
+      ) : null}
     </g>
   );
 };
 
-const Pierna = ({ lado, piernas }) => {
-  const pts = piernaPuntos(lado, piernas);
+// en el pie el tubo entra medio semiancho: más, asomaría entre los pies (el pie es bajo)
+const DENTRO_PIE = 0.5;
+const perfilFn = (arr) => (f) => muestraPerfil(arr, f);
+
+export const Brazo = ({ lado, brazo, torso, salto, parte = "todo", uid = "t" }) => {
+  const g = brazoGeo(lado, brazo, torso, salto);
+  const espejo = lado === "D" ? -1 : 1;
+  const giro = lado === "D" ? brazo.giro : -brazo.giro;
+  const P = TRAZA.brazo_piel[lado].perfil;
+  const fin = DENTRO_MANO * Math.max(P.izq[P.izq.length - 1], P.der[P.der.length - 1]);
+  const tubo = (key, extra = null) => (
+    <Tubo key={key} uid={`${uid}-b${lado}${key}`} e={g.e} izq={perfilFn(P.izq)} der={perfilFn(P.der)}
+      ext={RAIZ.brazo.ext * MIEMBRO.brazo[lado].L} extFin={fin}
+      sombras={deformarSombras(BRAZO0[lado].s, g.e)}>{extra}</Tubo>
+  );
+  const guante = <Guante tipo={brazo.guante} lado={lado} x={g.mano[0]} y={g.mano[1]} angulo={tangenteFinal(g.pts) + giro} espejo={espejo} />;
+  if (parte === "detras") {
+    // encaje del hombro: pelaje bajo la raíz (sin contorno) que llena la axila al
+    // alzar el brazo; queda tapado por torso y cabeza
+    const r = 1.4 * Math.max(P.izq[0], P.der[0]);
+    return <g><circle cx={g.h[0] - (lado === "D" ? 1 : -1) * r * 0.45} cy={g.h[1] - r * 0.35} r={r} fill={C.fur} />{tubo("d")}</g>;
+  }
+  if (parte === "guante") return guante;
+  if (parte === "delante") {
+    const r = Math.max(P.izq[0], P.der[0]) + 8;
+    const id = `${uid}-sinraiz${lado}`;
+    return (
+      <g>
+        <mask id={id} maskUnits="userSpaceOnUse" x={-4000} y={-4000} width={8000} height={8000}>
+          <rect x={-4000} y={-4000} width={8000} height={8000} fill="white" />
+          <circle cx={g.h0[0]} cy={g.h0[1]} r={r} fill="black" />
+        </mask>
+        <g mask={`url(#${id})`}>{tubo("f")}</g>
+      </g>
+    );
+  }
+  return <g>{tubo("t")}{guante}</g>;
+};
+
+const Pierna = ({ lado, piernas, uid = "t" }) => {
+  const { pts, e } = piernaGeo(lado, piernas);
+  const P = TRAZA.pierna_piel[lado].perfil;
   const s = lado === "I" ? -1 : 1;
   const t = pts[2];
-  const ang = s * ((piernas[lado === "I" ? "pieI" : "pieD"] ?? 12) - 12); // 12° = el pie del dibujo
-  const p0 = PIERNA0[lado];
+  const extra = s * ((piernas[lado === "I" ? "pieI" : "pieD"] ?? 12) - 12); // 12° = el pie del dibujo
+  // el pie hereda el giro de la tangente final de la pierna (punto 2)
+  const giro = tangenteFinal(pts) - PIERNA0[lado].tan0 - extra;
   return (
     <g>
-      <Pieza p={deformarPieza(p0.a, p0.n0, nodosCurva(pts))} />
-      <g transform={`translate(${t[0]} ${t[1]}) rotate(${-ang})`}>
+      <Tubo uid={`${uid}-p${lado}`} e={e} izq={perfilFn(P.izq)} der={perfilFn(P.der)} ext={RAIZ.pierna.ext * MIEMBRO.pierna[lado].L}
+        extFin={DENTRO_PIE * Math.max(P.izq[P.izq.length - 1], P.der[P.der.length - 1])}
+        sombras={deformarSombras(PIERNA0[lado].s, e)} />
+      <g transform={`translate(${t[0]} ${t[1]}) rotate(${giro})`}>
         <Pieza p={TRAZA.pies[lado]} tono={C.mask} />
       </g>
     </g>
@@ -193,12 +230,48 @@ const Pierna = ({ lado, piernas }) => {
 };
 
 // ------------------------------------------------------------ cola
-export const Cola = ({ cola }) => {
-  const c = deformarPieza(COLA0, COLA_NODOS, colaPose(cola));
+// Punto 3: la cola es un tubo afilado por su espina de 24 tramos; los anillos
+// son bandas de esa espina (textura que la sigue), con su raya de tinta entre
+// tonos distintos. La raíz entra COLA_EXT u bajo el cuerpo.
+// Textura trazada de la madre (anillos curvos y sus rayas), anclada a la espina
+// neutra de la cola: sigue la curva como una piel. Las bandas de la espina solo
+// rellenan los tramos que la madre no enseña (tapados por pierna y mano).
+const COLA_TEX = {
+  anillos: TRAZA.cola.anillos.map((a) => ({ tono: a.tono, forma: anclar(a.forma, COLA_NODOS) })),
+  tinta: anclar(TRAZA.cola.tinta, COLA_NODOS),
+  halo: anclar(TRAZA.cola.halo || [], COLA_NODOS),
+};
+export const Cola = ({ cola, uid = "t" }) => {
+  const e = colaPose(cola);
+  const L0 = e.L;
+  const ancho = (f) => COLA_RADIO(f) + 40;
+  const banda = (f0, f1) => {
+    const n = Math.max(4, Math.ceil((f1 - f0) * 60));
+    const a = [];
+    const b = [];
+    for (let i = 0; i <= n; i++) {
+      const f = f0 + ((f1 - f0) * i) / n;
+      const { c, d } = evaluar(e, f * L0);
+      const w = ancho(f);
+      a.push([c[0] - d[1] * w, c[1] + d[0] * w]);
+      b.push([c[0] + d[1] * w, c[1] - d[0] * w]);
+    }
+    return [...a, ...b.reverse()];
+  };
+  const AT = TRAZA.cola.anillos_tubo;
+  // raya entre dos tonos solo si uno de los dos anillos es de un tramo tapado
+  const rayas = AT.slice(1).filter((a, i) => a[3] || AT[i][3]).map(([f0]) => banda(f0 - L.interior / 2 / L0, f0 + L.interior / 2 / L0));
+  const anillos = TRAZA.cola.anillos_tubo.map(([f0, f1, tono], i) => (
+    <path key={`a${i}`} d={cerrado([banda(i === 0 ? -0.3 : f0, i === TRAZA.cola.anillos_tubo.length - 1 ? 1.3 : f1)])} fill={TONO[tono]} />
+  ));
   return (
-    <Pieza p={{ forma: c.forma, tinta: c.tinta }}>
-      {c.anillos.map((a, i) => <path key={i} d={cerrado(a.forma)} fill={TONO[a.tono]} />)}
-    </Pieza>
+    <Tubo uid={`${uid}-cola`} e={e} izq={COLA_IZQ} der={COLA_DER} ext={COLA_EXT}>
+      {anillos}
+      {rayas.map((r, i) => <path key={`r${i}`} d={cerrado([r])} fill={C.ink} />)}
+      {COLA_TEX.anillos.map((a, i) => <path key={`t${i}`} d={cerrado(deformar(a.forma, e))} fill={TONO[a.tono]} />)}
+      <Tinta polys={deformar(COLA_TEX.halo, e)} color={TONO.T_FUR_SOMBRA} />
+      <Tinta polys={deformar(COLA_TEX.tinta, e)} />
+    </Tubo>
   );
 };
 
@@ -312,6 +385,7 @@ const Boca = ({ tipo, x }) => {
   return (
     <g transform={tr}>
       {src.boca_relleno.map((r, i) => <Tinta key={i} polys={r.forma} color={TONO[r.tono]} />)}
+      {def.de === "frente" ? <Tinta polys={TRAZA.boca_halo} color={TONO.T_FUR_SOMBRA} /> : null}
       <Tinta polys={src.boca} />
     </g>
   );
@@ -388,6 +462,7 @@ const Ojo = ({ lado, uid, ancho, escala, pupila, mirada, parpado, cerrado: estaC
         <g clipPath={`url(#${id})`}>
           {/* punto 7: la pupila trazada con sus brillos (agujeros), entera con la mirada */}
           <g transform={`translate(${px} ${py}) translate(${pcx} ${pcy}) scale(${pupila}) translate(${-pcx} ${-pcy})`}>
+            <Tinta polys={p.halo} color={TONO.T_FUR_SOMBRA} />
             <Tinta polys={p.tinta} />
           </g>
           {parpado > 0.01 ? (
@@ -397,6 +472,7 @@ const Ojo = ({ lado, uid, ancho, escala, pupila, mirada, parpado, cerrado: estaC
             </g>
           ) : null}
         </g>
+        <Tinta polys={o.halo} color={TONO.T_FUR_SOMBRA} />
         <Tinta polys={o.tinta} />
       </g>
       {lagrima ? (
@@ -456,6 +532,8 @@ export const CabezaPartes = ({ cabeza, cara, mirada, orejas, mechon = 0, uid = "
         <Ojo lado="D" uid={uid} dx={ex} ancho={anchoD} escala={cara.ojo} pupila={cara.pupila} mirada={mirada}
           parpado={cara.parpadoD} cerrado={cara.cerradoD} lagrima={cara.lagrima} cerradoTrazado={fc && fc.cerrado.D} />
         <g transform={`translate(${ex} 0)`}>
+          <Tinta polys={TRAZA.antifaz_halo.I} color={TONO.T_FUR_SOMBRA} />
+          <Tinta polys={TRAZA.antifaz_halo.D} color={TONO.T_FUR_SOMBRA} />
           <Tinta polys={TRAZA.antifaz_tinta.I} />
           <Tinta polys={TRAZA.antifaz_tinta.D} />
         </g>
@@ -482,31 +560,42 @@ export const cabezaTransform = (est) => {
 };
 
 // Tadeo entero a partir de un estado de acting.estado(). Coordenadas del rig.
+// Orden (punto 4): tapón de la cadera · cola · brazos detrás · piernas · torso ·
+// brazos que cruzan el cuerpo (delante, con la raíz aún bajo el torso) · cabeza
+// · guantes. Un brazo marcado «detras» en la pose lleva también su guante detrás.
 export const TadeoPartes = ({ est, uid = "t" }) => {
   const salto = est.piernas.salto || 0;
-  const brazo = (lado, parte = "todo") => <Brazo key={lado + parte} lado={lado} parte={parte} brazo={est[`brazo${lado}`]} torso={est.torso} salto={salto} />;
-  const detras = ["I", "D"].filter((l) => est[`brazo${l}`].capa === "detras");
-  const delante = ["I", "D"].filter((l) => est[`brazo${l}`].capa !== "detras");
+  const brazo = (lado, parte) => <Brazo key={lado + parte} lado={lado} parte={parte} brazo={est[`brazo${lado}`]} torso={est.torso} salto={salto} uid={uid} />;
+  const forzado = ["I", "D"].filter((l) => est[`brazo${l}`].capa === "detras");
+  const libres = ["I", "D"].filter((l) => est[`brazo${l}`].capa !== "detras");
+  const cruzan = libres.filter((l) => est[`brazo${l}`].cruza);
   return (
     <g>
-      <Cola cola={est.cola} />
-      {detras.map((l) => brazo(l))}
-      <Pierna lado="I" piernas={est.piernas} />
-      <Pierna lado="D" piernas={est.piernas} />
-      {/* la raíz del brazo solo existe donde la tapan torso o cabeza: con el brazo
-          alzado no asoma como una losa sin contorno */}
-      <clipPath id={`${uid}-raiz`}>
-        <path d={cerrado(TRAZA.torso.forma)} transform={torsoTr(est.torso, salto)} />
-        <path d={cerrado(TRAZA.craneo.forma)} transform={cabezaTransform(est)} />
-      </clipPath>
-      <g clipPath={`url(#${uid}-raiz)`}>{delante.map((l) => brazo(l, "raiz"))}</g>
+      <Tapon est={est} salto={salto} />
+      <Cola cola={est.cola} uid={uid} />
+      {/* cuello: pelaje bajo cabeza y torso; al inclinar la cabeza no se abre rendija */}
+      <g transform={torsoTr(est.torso, salto)}>
+        <ellipse cx={RIG.cuelloLocal[0]} cy={RIG.cuelloLocal[1] + 10} rx={140} ry={75} fill={C.fur} />
+      </g>
+      {forzado.map((l) => brazo(l, "todo"))}
+      {libres.map((l) => brazo(l, "detras"))}
+      <Pierna lado="I" piernas={est.piernas} uid={uid} />
+      <Pierna lado="D" piernas={est.piernas} uid={uid} />
       <Torso torso={est.torso} salto={salto} extra={est.extra} />
-      {/* como en la hoja madre: la cabeza tapa los hombros; los guantes van delante de todo */}
-      {delante.map((l) => brazo(l, "tubo"))}
+      {cruzan.map((l) => brazo(l, "delante"))}
       <g transform={cabezaTransform(est)}>
         <CabezaPartes cabeza={est.cabeza} cara={est.cara} mirada={est.mirada} orejas={est.orejas} mechon={est.mechon} uid={uid} />
       </g>
-      {delante.map((l) => brazo(l, "guante"))}
+      {libres.map((l) => brazo(l, "guante"))}
     </g>
   );
 };
+
+// Punto 3a: tapón de pelaje en la cadera. Pertenece al cuerpo (va con el torso,
+// nunca con la cola) y se pinta detrás de todo: solo se ve donde, al moverse la
+// cola o la mano, quedaría fondo en la base de la cola.
+const Tapon = ({ est, salto }) => (
+  <g transform={torsoTr(est.torso, salto)}>
+    <path d={cerrado(TRAZA.tapon)} fill={C.fur} />
+  </g>
+);

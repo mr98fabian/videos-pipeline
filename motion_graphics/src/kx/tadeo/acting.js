@@ -2,7 +2,7 @@
 // de `frame`: el render (Tadeo.jsx) y los tests (tests/test_tadeo_acting.py)
 // llaman exactamente a estas mismas funciones. Sin React, sin Remotion.
 import { SPRING } from "../tokens.js";
-import { EXPRESIONES, MIRADAS, POSES } from "./poses.js";
+import { EXPRESIONES, MIRADAS, POSES, cruzaCuerpo } from "./poses.js";
 
 export const FPS = 30;
 
@@ -173,6 +173,8 @@ const brazoEstado = (a, b, p, frame, t0) => {
     giro: lerp(a.giro, b.giro, p),
     guante: p < 0.5 ? a.guante : b.guante,
     capa: p < 0.5 ? a.capa : b.capa,
+    // iteración 3: delante/detrás del torso según la pose de reposo, cambia a la vez que la capa
+    cruza: p < 0.5 ? cruzaCuerpo(a.mano) : cruzaCuerpo(b.mano),
   };
 };
 

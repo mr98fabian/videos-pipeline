@@ -215,6 +215,44 @@ def check_nunca_congelado(video: Path, caja: dict) -> tuple[list[str], dict]:
     return fails, {"frames": n, "pares_identicos": iguales, "dif_media_minima": round(minimo, 4)}
 
 
+# Iteración 3: «sin hueco». En la silueta (el personaje entero en INK macizo)
+# ningún fondo puede quedar encerrado salvo un hueco grande y legítimo entre
+# brazo y cuerpo (jarras). Un hueco pequeño es una costura: una junta abierta.
+# px a 1080×1920. Las costuras medidas van de 1 a ~80 px; el espacio negativo de
+# las poses (mano en la cadera, brazo en jarra) mide de 1 700 a 3 600 px.
+HUECO_LEGITIMO_PX = 400      # ≈ 1 000 u² (32 × 32 u): por debajo, es una costura
+# ≤ 3 px: mota de antialias donde se juntan tres bordes de polígono (no es fondo
+# visible: a 640 px desaparece). Declarado en el reporte de la iteración 3.
+HUECO_AA_PX = 3
+
+
+def check_sin_hueco(carpeta: Path, caja: dict) -> tuple[list[str], dict]:
+    """Sobre los PNG sin pérdida de la silueta (el vídeo comprimido engorda las
+    motas de antialias y las convierte en falsos huecos)."""
+    import cv2
+    import numpy as np
+
+    x0, y0, x1, y1 = caja["x"], caja["y"], caja["x"] + caja["w"], caja["y"] + caja["h"]
+    n, malos, peor = 0, [], (0, -1)
+    for png in sorted(carpeta.glob("*.png")):
+        f = cv2.imread(str(png), cv2.IMREAD_GRAYSCALE)[y0:y1, x0:x1]
+        m = (f < 235).astype(np.uint8)   # cualquier cobertura: fondo es solo lo que no tapa nada
+        cs, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        lleno = np.zeros_like(m)
+        cv2.drawContours(lleno, cs, -1, 1, -1)
+        hueco = (lleno > 0) & (m == 0)
+        k, lab, st, _ = cv2.connectedComponentsWithStats(hueco.astype(np.uint8), 8)
+        px = int(sum(st[i, 4] for i in range(1, k) if HUECO_AA_PX < st[i, 4] < HUECO_LEGITIMO_PX))
+        if px:
+            malos.append(n)
+            if px > peor[0]:
+                peor = (px, n)
+        n += 1
+    fails = [f"fondo encerrado (costura) en {len(malos)} fotogramas"] if malos else []
+    return fails, {"frames": n, "frames_con_hueco": len(malos), "peor_px": peor[0], "peor_frame": peor[1],
+                   "primeros": malos[:20], "hueco_legitimo_px": HUECO_LEGITIMO_PX, "mota_aa_px": HUECO_AA_PX}
+
+
 def render_prueba(lib: dict) -> dict:
     import kx_gate
 
@@ -228,6 +266,12 @@ def render_prueba(lib: dict) -> dict:
     subprocess.run(["npx", "remotion", "render", "src/index.jsx", "KxTadeo", str(video),
                     f"--props={out / 'props.json'}", "--crf=18", "--log=error"],
                    cwd=MG, check=True, shell=True, timeout=1200)
+    (out / "props_silueta.json").write_text(json.dumps({**props, "silueta": True}), encoding="utf-8")
+    silueta = out / "silueta"
+    shutil.rmtree(silueta, ignore_errors=True)
+    subprocess.run(["npx", "remotion", "render", "src/index.jsx", "KxTadeo", str(silueta),
+                    f"--props={out / 'props_silueta.json'}", "--sequence", "--image-format=png", "--log=error"],
+                   cwd=MG, check=True, shell=True, timeout=1800)
     still_frame = LINEA[-1]["t0"] + 60  # el beat asentado: la pose más grande
     still = EVID / "still.png"
     subprocess.run(["npx", "remotion", "still", "src/index.jsx", "KxTadeo", str(still),
@@ -241,7 +285,8 @@ def render_prueba(lib: dict) -> dict:
     for name, fn in (("palette_still", lambda: kx_gate.check_palette_image(still, [caja])),
                      ("palette", lambda: kx_gate.check_palette(video, [caja])),
                      ("safe_zone", lambda: kx_gate.check_safe_zone(video)),
-                     ("nunca_congelado", lambda: check_nunca_congelado(video, caja))):
+                     ("nunca_congelado", lambda: check_nunca_congelado(video, caja)),
+                     ("sin_hueco", lambda: check_sin_hueco(silueta, caja))):
         f, info = fn()
         fails += f
         report[name] = info

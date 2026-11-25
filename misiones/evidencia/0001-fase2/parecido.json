@@ -1,13 +1,13 @@
 {
- "huella": "e3d9de755690e7fc",
- "iou": 0.9882,
+ "huella": "cab4de62fd7d0c35",
+ "iou": 0.9898,
  "iou_min": 0.98,
  "tolerancia_marcas": 0.03,
  "marcas": {
   "cabeza_ancho_alto": {
    "madre": 1.4334,
-   "rig": 1.4274,
-   "desviacion": -0.0043
+   "rig": 1.4325,
+   "desviacion": -0.0007
   },
   "oreja_alto": {
    "madre": 79.0,
@@ -21,8 +21,8 @@
   },
   "ojos_distancia": {
    "madre": 267.1388,
-   "rig": 267.1537,
-   "desviacion": 0.0001
+   "rig": 267.2048,
+   "desviacion": 0.0002
   },
   "antifaz_ancho": {
    "madre": 622.0,
@@ -41,9 +41,9 @@
   }
  },
  "tinta": {
-  "madre_en_rig": 0.9999,
-  "rig_en_madre": 1.0,
-  "area": 1.0069
+  "madre_en_rig": 0.9933,
+  "rig_en_madre": 0.9879,
+  "area": 1.0226
  },
  "grosor": {
   "madre": {
@@ -62,18 +62,18 @@
    "interior": [
     3.29,
     5.49,
-    8.41
+    7.68
    ],
    "contorno": [
-    5.73,
-    7.19,
-    8.41
+    5.49,
+    6.71,
+    8.17
    ]
   }
  },
  "tono": {
-  "error_medio": 0.023,
-  "superficie_mayor_008": 0.0707
+  "error_medio": 0.0199,
+  "superficie_mayor_008": 0.0409
  },
  "barra": {
   "tinta_madre_en_rig_min": 0.97,
@@ -97,6 +97,6 @@
   "área tinta rig/madre": true,
   "grosor interior p50": true,
   "error tonal medio": true,
-  "superficie error > 0,08": false
+  "superficie error > 0,08": true
  }
 }

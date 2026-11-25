@@ -7,13 +7,14 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { BoilDefs } from "../texture";
+import { INK } from "../tokens";
 import { RIG } from "./poses.js";
 import { agendaLinea, estado, estadoLinea, progresoCapa, validarLinea } from "./acting.js";
 import { TadeoPartes } from "./partes.jsx";
 
 export const Tadeo = ({
   pose, expr, mirada, desde, hacia, t0 = 0, linea = null,
-  escala = 1, x = RIG.pantalla.x, y = RIG.pantalla.y, semilla = 0, beat = false, conIdle = true, uid = "tadeo",
+  escala = 1, x = RIG.pantalla.x, y = RIG.pantalla.y, semilla = 0, beat = false, conIdle = true, uid = "tadeo", silueta = false,
 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
@@ -46,10 +47,19 @@ export const Tadeo = ({
     <AbsoluteFill style={{ pointerEvents: "none" }}>
       <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible" }}>
         <BoilDefs id={fid} offset={semilla} />
+        {/* silueta: el personaje entero en INK macizo (test sin-hueco de la iteración 3) */}
+        {silueta ? (
+          <filter id={`${fid}-sil`}>
+            <feFlood floodColor={INK} />
+            <feComposite in2="SourceAlpha" operator="in" />
+          </filter>
+        ) : null}
+        <g filter={silueta ? `url(#${fid}-sil)` : undefined}>
         <g filter={`url(#${fid})`}>
           <g transform={`translate(${x} ${y}) scale(${s} ${-s})`}>
             <TadeoPartes est={est} uid={uid} />
           </g>
+        </g>
         </g>
       </svg>
     </AbsoluteFill>
