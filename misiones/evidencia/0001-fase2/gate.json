@@ -46,9 +46,9 @@
   },
   "sin_hueco": {
     "frames": 390,
-    "frames_con_hueco": 123,
-    "peor_px": 393,
-    "peor_frame": 178,
+    "frames_con_hueco": 178,
+    "peor_px": 796,
+    "peor_frame": 190,
     "primeros": [
       7,
       15,
@@ -75,6 +75,6 @@
     "mota_aa_px": 3
   },
   "fails": [
-    "fondo encerrado (costura) en 123 fotogramas"
+    "fondo encerrado (costura) en 178 fotogramas"
   ]
 }

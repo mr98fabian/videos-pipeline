@@ -20,8 +20,8 @@ import kx_tadeo  # noqa: E402
 GATE = json.loads((kx_tadeo.EVID / "gate.json").read_text(encoding="utf-8"))
 
 
-@pytest.mark.xfail(strict=True, reason="iteración 3 no alcanzada: costuras de 4-14 px (p50 5 px) en 123/390 "
-                                       "fotogramas en ingle-cola, muñeca D-cola y punta del mechón; decide Fable/Fabian")
+@pytest.mark.xfail(strict=True, reason="iteración 3 no alcanzada: costuras pequeñas en 178/390 fotogramas "
+                                       "(ver gate.json sin_hueco); decide Fable/Fabian")
 def test_sin_hueco_en_los_390_fotogramas():
     r = GATE["sin_hueco"]
     assert r["frames"] == kx_tadeo.DURACION, r

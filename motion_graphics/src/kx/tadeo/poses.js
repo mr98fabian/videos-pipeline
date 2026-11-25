@@ -394,37 +394,52 @@ export const inicioEspina = (e) => ({ a: e.p[0], d: e.t[0], L: e.L });
 // RubberHose, el tubo se dobla por la holgura que deja la cuerda raíz→mano: el
 // punto de control va sobre la perpendicular (más un corrimiento a lo largo de
 // la cuerda medido en el neutro) a la distancia que da exactamente esa longitud.
-// El lado del doblez es FIJO (codo y rodilla hacia fuera) y al enderezarse el
-// doblez se anula suave. Si la mano queda más lejos que el largo, se acerca a la
+// El lado del doblez lo marca la pose (signo de `curva`) en los brazos y es fijo
+// hacia fuera en las piernas; al enderezarse el doblez se anula suave. Si la mano queda más lejos que el largo, se acerca a la
 // raíz por la cuerda: el tubo nunca se estira. Solo afecta al dibujo: la
 // biblioteca (curva, largos) no cambia.
 const _qlen = (p0, p1, p2) => largoCurva([p0, p1, p2], 48);
 const _ladoFuera = { I: [-1, 0.3], D: [1, 0.3] };
-const _manguera = (raiz, mano, L, a0, lado) => {
-  let dx = mano[0] - raiz[0];
-  let dy = mano[1] - raiz[1];
-  let d = Math.hypot(dx, dy) || 1e-9;
-  let fin = mano;
-  if (d > L) { // fuera de alcance: la mano se acerca a la raíz
-    fin = [raiz[0] + (dx / d) * L, raiz[1] + (dy / d) * L];
-    dx = fin[0] - raiz[0];
-    dy = fin[1] - raiz[1];
-    d = L;
-  }
-  const u = [dx / d, dy / d];
+// `signo` (−1…1): lado y fracción del doblez. null = lado fijo hacia fuera (piernas).
+// En los brazos lo da la `curva` de la pose (su signo es el lado que diseñó la
+// pose). Cuando la curva cruza el cero en una transición, |signo| baja de 1: el
+// doblez se reduce y la mano se aleja por la cuerda lo justo para conservar el
+// largo — el brazo pasa por la extensión, como un brazo de verdad, sin saltar.
+const _manguera = (raiz, mano, L, a0, lado, signo = null) => {
+  const dx = mano[0] - raiz[0];
+  const dy = mano[1] - raiz[1];
+  const d0 = Math.min(Math.hypot(dx, dy) || 1e-9, L); // fuera de alcance: la mano se acerca
+  const u = [dx / (Math.hypot(dx, dy) || 1e-9), dy / (Math.hypot(dx, dy) || 1e-9)];
   let n = [-u[1], u[0]];
-  const f = _ladoFuera[lado];
-  if (n[0] * f[0] + n[1] * f[1] < 0) n = [-n[0], -n[1]];
-  const mid = [(raiz[0] + fin[0]) / 2 + u[0] * a0 * d, (raiz[1] + fin[1]) / 2 + u[1] * a0 * d];
-  const ctrl = (k) => [mid[0] + n[0] * k, mid[1] + n[1] * k];
+  let frac = 1;
+  if (signo === null) {
+    const f = _ladoFuera[lado];
+    if (n[0] * f[0] + n[1] * f[1] < 0) n = [-n[0], -n[1]];
+  } else {
+    if (signo < 0) n = [-n[0], -n[1]];
+    frac = Math.min(1, Math.abs(signo));
+  }
+  const pts = (d, k) => {
+    const fin = [raiz[0] + u[0] * d, raiz[1] + u[1] * d];
+    return [raiz, [raiz[0] + u[0] * d * (0.5 + a0) + n[0] * k, raiz[1] + u[1] * d * (0.5 + a0) + n[1] * k], fin];
+  };
+  const len = (d, k) => _qlen(...pts(d, k));
+  if (len(d0, 0) >= L) return pts(d0, 0);
   let lo = 0;
   let hi = 2 * L;
-  if (_qlen(raiz, ctrl(0), fin) >= L) return [raiz, ctrl(0), fin];
   for (let i = 0; i < 30; i++) {
     const m = (lo + hi) / 2;
-    if (_qlen(raiz, ctrl(m), fin) < L) lo = m; else hi = m;
+    if (len(d0, m) < L) lo = m; else hi = m;
   }
-  return [raiz, ctrl((lo + hi) / 2), fin];
+  const k = ((lo + hi) / 2) * frac;
+  if (frac >= 1) return pts(d0, k);
+  lo = d0;
+  hi = L;
+  for (let i = 0; i < 30; i++) {
+    const m = (lo + hi) / 2;
+    if (len(m, k) < L) lo = m; else hi = m;
+  }
+  return pts((lo + hi) / 2, k);
 };
 // Constantes medidas en el neutro: largo y corrimiento del control a lo largo de la cuerda.
 const _constMiembro = (pts) => {
@@ -453,6 +468,8 @@ export const MIEMBRO = {
 // entra 1,5 semianchos en el guante / pie.
 export const RAIZ = { brazo: { k: 16, min: -10, max: 18, ext: 0.25 }, pierna: { k: 8, min: -6, max: 8, ext: 0.3 } };
 export const DENTRO_MANO = 1.5;
+// |curva| a partir de la cual el doblez es completo (el neutro trazado tiene ±0,146)
+export const CURVA_PLENA = 0.12;
 const _envolver = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 export const raizDeslizada = (base, extremo, ang0, lado, cfg, inclina = 0) => {
   const giro = _envolver(Math.atan2(extremo[1] - base[1], extremo[0] - base[0]) - ang0) * (lado === "D" ? 1 : -1);
@@ -468,7 +485,7 @@ export const brazoGeo = (lado, brazo, torso, salto = 0) => {
   const h0 = hombros(torso, salto)[lado];
   const objetivo = manoMundo(brazo.mano, torso, salto);
   const h = raizDeslizada(h0, objetivo, M.ang0, lado, RAIZ.brazo, torso.inclina);
-  const pts = _manguera(h, objetivo, M.L, M.a0, lado);
+  const pts = _manguera(h, objetivo, M.L, M.a0, lado, Math.max(-1, Math.min(1, brazo.curva / CURVA_PLENA)));
   return { h, h0, mano: pts[2], objetivo, pts, e: nodosCurva(pts) };
 };
 export const piernaGeo = (lado, piernas) => {

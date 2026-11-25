@@ -863,13 +863,14 @@ de la espina (0 = raíz, 1 = mano/pie/punta):
 
 | Criterio | Resultado | Evidencia |
 |---|---|---|
-| Sin hueco (390 fotogramas, silueta en PNG sin pérdida) | **no cumple** | 123/390 fotogramas con una costura de 4–14 px (p50 5 px; el mayor, 393 px en f178, es una axila a mitad de transición). Están en tres sitios que se repiten: ingle-cola con las piernas abiertas, muñeca derecha-cola y punta del mechón (su relleno asoma como un piquito al girar). Test `xfail(strict=True)` con el número, sin aflojar; `gate.json` → `sin_hueco` |
+| Sin hueco (390 fotogramas, silueta en PNG sin pérdida) | **no cumple** | 178/390 fotogramas con costuras pequeñas (4–399 px; el peor suma 796 px en f190, a mitad de transición). Con el doblez fijo hacia fuera eran 123/390; al devolver el lado a cada pose (decisión de Fabian) los brazos alzados abren más axilas. Están en tres sitios que se repiten: ingle-cola con las piernas abiertas, muñeca derecha-cola y punta del mechón (su relleno asoma como un piquito al girar). Test `xfail(strict=True)` con el número, sin aflojar; `gate.json` → `sin_hueco` |
 | Encadenamiento (cada 3 fotogramas) | **cumple** | mano y pie a 0 u del extremo del tubo; el guante sigue la tangente del tubo (≤ 2°). `test_tadeo_manguera.py` |
 | Longitud de arco ±2 % | **cumple** | brazos y piernas a su largo del neutro en todos los fotogramas muestreados |
 | Caso f254–f260 | **cerrado** | el antebrazo lleva su contorno hasta dentro del puño (el tubo entra 1,5 semianchos) y la cola mantiene sus anillos (bandas en los tramos tapados). `prueba_640_contacto.png` y fotogramas 254/257/260 del clip |
 | Barra I2-3 completa | **cumple** | IoU 0,9898 · marcas ≤ 3 % · tinta 99,3 / 98,8 % · área 1,023 · interior 5,49 u · tono medio 0,0199 · **superficie 4,1 %**. El test de superficie deja de ser xfail |
 | QA IoU ≥ 0,988 | **cumple** | 0,9898 (`test_solape_tras_los_tubos`) |
 | Gate Fase 1 y `verify` | **cumple** | off_palette 0,0 · safe_zone 0,0 · char_color 0,0 · 0/390 pares congelados. `verify` VERDE: 84 tests + 1 xfail (el de sin-hueco) |
+| Lectura de las poses en el clip | **cumple** | revisado a 640 px en f130, f178, f220, f257 y f300: palmas en alto en «confundido» y puño arriba en «decidido» |
 | Hoja con residuo, `prueba_640.mp4`, contacto 12 f (6 en transición) | **cumple** | `misiones/evidencia/0001-fase2/` |
 
 ### Desviaciones y decisiones (declaradas)
@@ -881,8 +882,12 @@ de la espina (0 = raíz, 1 = mano/pie/punta):
 2. **Mano fuera de alcance.** Con longitud fija, si la mano de la pose queda más lejos
    que el largo, el tubo no se estira: la mano se acerca a la raíz por la cuerda. Los
    datos de la biblioteca no cambian; cambia dónde se dibuja el guante en esas poses.
-3. **Lado del doblez fijo.** El signo de `curva` de cada pose ya no decide hacia dónde
-   se dobla el codo: siempre hacia fuera.
+3. **Lado del doblez por pose** (decisión de Fabian tras ver el clip; el anexo pedía
+   lado fijo). En los brazos lo marca el signo de `curva`; en las piernas es fijo hacia
+   fuera. Con el lado fijo, «confundido» perdía las palmas en alto y «decidido» el puño
+   arriba. Cuando la curva cruza el cero en una transición, el doblez se reduce y la
+   mano se aleja por la cuerda lo justo para conservar el largo: el brazo pasa por la
+   extensión sin saltar (`CURVA_PLENA` = 0,12).
 4. **Criterio sin-hueco.**
    - Un fondo encerrado de 400 px o más (a 1080 × 1920) es el espacio negativo de la
      pose (mano en la cadera, brazo en jarra: 1 400–3 600 px medidos) y se permite.
