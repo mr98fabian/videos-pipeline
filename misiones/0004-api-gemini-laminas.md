@@ -1,6 +1,6 @@
 # MISIÓN 0004 — API de Gemini para láminas de pose (Nano Banana)
 
-Rama `feat/api-gemini-laminas` · PR contra master · estado: **en-auditoria** (prueba de humo hecha; falta el OK de Fabian al estilo).
+Rama `feat/api-gemini-laminas` · PR contra master · estado: **en-auditoria** (prueba de humo hecha; estilo aprobado por Fabian el 25 nov 2026).
 
 Contexto, alcance y criterios: los de la misión pegada por Fabian (herramienta `scripts/generar_lamina.py`
 + 1 prueba «pointing»; las 9 láminas de producción NO se generan aquí; ni Flow ni Wan; el rig no se toca).
@@ -37,7 +37,7 @@ aplicarse). Costo total de la misión: **0,0356 USD**, una imagen.
   expresiones trazadas de la madre): de cada lámina solo se traza el cuerpo y los guantes.
 - **Veredicto:** el método funciona para el cuerpo. Para las láminas de producción, el prompt tendría que
   pedir vientre crema y contorno de peso de la madre, y cada lámina pasar el gate de marcas (ancho y alto de
-  cabeza, antifaz) antes de trazarla. Pendiente del OK de Fabian al estilo.
+  cabeza, antifaz) antes de trazarla. **Aprobado por Fabian** (25 nov 2026).
 
 ### Modelo (verificado el 25 nov 2026)
 
@@ -66,5 +66,5 @@ aplicarse). Costo total de la misión: **0,0356 USD**, una imagen.
 
 ### Para cerrar
 
-Fabian aprueba el estilo de `pointing_api.png`. Las 9 láminas de producción vienen en otra misión, con la
+Estilo de `pointing_api.png` aprobado por Fabian. Las 9 láminas de producción vienen en otra misión, con la
 especificación por pose de Fable.
