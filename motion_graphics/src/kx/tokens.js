@@ -56,7 +56,10 @@ export const BOIL = { step: 3, variants: 3, scale: 2.6, baseFrequency: 0.018 };
 // Tonos de Tadeo (Misión 0001, Fase 2, A1): fracción de INK sobre PAPER.
 // No son colores nuevos: son puntos de la recta INK→PAPER, que el gate
 // cuenta como neutros. tone() los convierte en el rgb() que pinta el SVG.
-export const TADEO_TONE = { T_WHITE: 0, T_CREAM: 0.07, T_FUR: 0.46, T_MASK: 0.72, T_INK: 1 };
+// Iteración 2 (I2-2 punto 5): 6 tonos medidos por zona en la vista frontal de
+// la hoja madre (el T_FUR 0,46 de A1 era el tono de sombra de la madre).
+// kx_trazo.TONOS repite estos valores (lo vigila tests/test_tadeo_parecido.py).
+export const TADEO_TONE = { T_WHITE: 0, T_CREAM: 0.09, T_MEDIO: 0.25, T_FUR: 0.39, T_FUR_SOMBRA: 0.47, T_MASK: 0.64, T_INK: 1 };
 
 const _rgb = (hex) => {
   const n = parseInt(hex.slice(1), 16);

@@ -37,12 +37,14 @@ export const RIG = {
   // `orgulloso` o la bocina de `grito` son imposibles. Desviación declarada en el Reporte.
   brazo: { largo: _largoBrazo, grosor: (_B.I.grosor + _B.D.grosor) / 2, factorCurva: 0.38, min: 0.75, max: 1.35, curvaMax: 2 },
   pierna: { largo: _len(_Pi.P0, _Pi.P1, _Pi.P2), grosor: _Pi.grosor, curvaMax: 0.35 },
-  cola: { base: TRAZA.cola.base, rizoNeutro: 0.3, gradosPorRizo: 12 },
+  // gradosPorRizo: giro de la PUNTA por unidad de rizo; cada tramo gira
+  // (rizo − rizoNeutro) · gradosPorRizo · s² (s = 0 base, 1 punta), iteración 2 punto 9.
+  cola: { base: TRAZA.cola.base, rizoNeutro: 0.3, gradosPorRizo: 40 },
   guante: { radio: 110 }, // radio envolvente del guante abierto desde la muñeca
   pantalla: { x: 468, y: 1180, alto: 640 }, // pies en y = 1180, 1 u = 0,64 px
   beatEscala: 1.12,
   acentoRebase: 1.25,
-  linea: { exterior: 7, interior: 4.5, fina: 3.5 },
+  linea: { exterior: 7.3, interior: 5.0, fina: 3.6 }, // pesos medidos en la madre (iteración 2, punto 14)
 };
 
 // Las poses se escribieron para el brazo de diseño (hombro ±128/585, 330 u).
@@ -264,13 +266,161 @@ export const piernaPuntos = (lado, piernas) => {
   return [cadera, rodilla, tobillo];
 };
 
-// Cola trazada: pieza rígida que gira sobre su base (alza + rizo).
-export const colaAngulo = (cola) => cola.alza + (cola.rizo - RIG.cola.rizoNeutro) * RIG.cola.gradosPorRizo;
-export const colaForma = (cola) => {
-  const a = colaAngulo(cola);
-  const b = RIG.cola.base;
-  return TRAZA.cola.forma.flat().map((q) => rotar(q, -a, b));
+// ------------------------------------------------------------- R3: deformar por la espina
+// Una espina es una polilínea densa (longitud de arco, tangente y curvatura en
+// cada vértice). Cada punto trazado se ancla a la espina NEUTRA como
+// (σ / L, v): fracción de longitud y distancia con signo a ella, más el resto
+// exacto que deja la proyección. En la pose se coloca en espina'(σ') + v·normal'(σ')
+// (+ el resto, girado con el marco): en el neutro es la identidad exacta.
+// Por el lado cóncavo, si la pose curva más que el neutro, v se comprime para
+// que la carne del codo no se pliegue sobre sí misma.
+export const TRAMOS = 24;
+const _espina = (pts) => {
+  const n = pts.length;
+  const cum = [0];
+  for (let i = 1; i < n; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const t = pts.map((_, i) => {
+    const a = pts[Math.max(0, i - 1)];
+    const b = pts[Math.min(n - 1, i + 1)];
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    return [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+  });
+  const h = [];
+  t.forEach((d, i) => {
+    let a = Math.atan2(d[1], d[0]);
+    if (i) while (a - h[i - 1] > Math.PI) a -= 2 * Math.PI;
+    if (i) while (a - h[i - 1] < -Math.PI) a += 2 * Math.PI;
+    h.push(a);
+  });
+  const k = h.map((_, i) => {
+    const a = Math.max(0, i - 1);
+    const b = Math.min(n - 1, i + 1);
+    return (h[b] - h[a]) / Math.max(1e-9, cum[b] - cum[a]);
+  });
+  return { p: pts, cum, L: cum[n - 1], t, h, k };
 };
+export const evaluar = (e, s) => {
+  const n = e.p.length;
+  if (s <= 0) return { c: [e.p[0][0] + e.t[0][0] * s, e.p[0][1] + e.t[0][1] * s], d: e.t[0], k: 0 };
+  if (s >= e.L) return { c: [e.p[n - 1][0] + e.t[n - 1][0] * (s - e.L), e.p[n - 1][1] + e.t[n - 1][1] * (s - e.L)], d: e.t[n - 1], k: 0 };
+  let lo = 0;
+  let hi = n - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (e.cum[m] <= s) lo = m; else hi = m; }
+  const a = (s - e.cum[lo]) / Math.max(1e-9, e.cum[hi] - e.cum[lo]);
+  const P = e.p;
+  const dx = e.t[lo][0] + (e.t[hi][0] - e.t[lo][0]) * a;
+  const dy = e.t[lo][1] + (e.t[hi][1] - e.t[lo][1]) * a;
+  const l = Math.hypot(dx, dy) || 1;
+  return { c: [P[lo][0] + (P[hi][0] - P[lo][0]) * a, P[lo][1] + (P[hi][1] - P[lo][1]) * a], d: [dx / l, dy / l], k: e.k[lo] + (e.k[hi] - e.k[lo]) * a };
+};
+export const anclar = (polys, e) => polys.map((poly) => poly.map((q) => {
+  const n = e.p.length;
+  let bs = 0;
+  let bd = Infinity;
+  for (let i = 0; i < n - 1; i++) {
+    const a = e.p[i];
+    const b = e.p[i + 1];
+    const lx = b[0] - a[0];
+    const ly = b[1] - a[1];
+    const ll = lx * lx + ly * ly || 1e-9;
+    let tau = ((q[0] - a[0]) * lx + (q[1] - a[1]) * ly) / ll;
+    if (!(i === 0 && tau < 0) && !(i === n - 2 && tau > 1)) tau = Math.max(0, Math.min(1, tau));
+    const fx = a[0] + lx * tau;
+    const fy = a[1] + ly * tau;
+    const dd = (q[0] - fx) ** 2 + (q[1] - fy) ** 2;
+    if (dd < bd) { bd = dd; bs = e.cum[i] + tau * Math.sqrt(ll); }
+  }
+  const { c, d, k } = evaluar(e, bs);
+  const v = -(q[0] - c[0]) * d[1] + (q[1] - c[1]) * d[0];
+  const rx = q[0] - (c[0] - d[1] * v);
+  const ry = q[1] - (c[1] + d[0] * v);
+  return [bs / e.L, v, rx * d[0] + ry * d[1], -rx * d[1] + ry * d[0], Math.abs(k)];
+}));
+const CODO = 0.6; // |v|·κ máximo por el lado cóncavo (1 = la carne llega al centro de curvatura)
+export const deformar = (anclados, e1) => anclados.map((poly) => poly.map(([f, v, rt, rn, k0]) => {
+  const { c, d, k } = evaluar(e1, f * e1.L);
+  let w = v;
+  if (Math.abs(k) > k0 && v * k > CODO) w = CODO / k;
+  return [c[0] + d[0] * rt - d[1] * (w + rn), c[1] + d[1] * rt + d[0] * (w + rn)];
+}));
+export const nodosCurva = (pts, m = 160) => _espina(Array.from({ length: m + 1 }, (_, i) => bezierQ(pts, i / m)));
+export const inicioEspina = (e) => ({ a: e.p[0], d: e.t[0], L: e.L });
+
+// Cola (punto 9): espina = eje medio trazado (Bézier cúbica) prolongado recto
+// hasta la base, en 24 tramos de igual largo. El rumbo de cada tramo es el
+// trazado + alza + (rizo − rizoNeutro) · gradosPorRizo · s² (s = 0 base, 1 punta):
+// la base casi no se mueve y la punta se enrosca. Se integra a paso fino.
+const _bc = (B, t) => [0, 1].map((i) => (1 - t) ** 3 * B[0][i] + 3 * (1 - t) ** 2 * t * B[1][i] + 3 * (1 - t) * t * t * B[2][i] + t ** 3 * B[3][i]);
+const _colaTramos = (() => {
+  const B = TRAZA.cola.espina;
+  const base = TRAZA.cola.base;
+  const l0 = Math.hypot(B[0][0] - base[0], B[0][1] - base[1]);
+  const lb = largoCurva([B[0], B[1], B[3]]); // solo reparte el parámetro: luego se remuestrea por arco
+  const fr = l0 / (l0 + lb);
+  const f = (t) => (t <= fr ? [base[0] + (B[0][0] - base[0]) * (t / fr), base[1] + (B[0][1] - base[1]) * (t / fr)] : _bc(B, (t - fr) / (1 - fr)));
+  const e = _espina(Array.from({ length: 801 }, (_, i) => f(i / 800)));
+  const L = e.L;
+  const rumbos = Array.from({ length: TRAMOS }, (_, j) => {
+    const a = evaluar(e, (L * j) / TRAMOS).c;
+    const b = evaluar(e, (L * (j + 1)) / TRAMOS).c;
+    return Math.atan2(b[1] - a[1], b[0] - a[0]);
+  });
+  return { base, L, rumbos };
+})();
+const COLA_PASOS = 8; // sub-pasos por tramo: el rumbo se interpola entre centros de tramo
+export const colaGiros = (cola, f = 1) => _colaTramos.rumbos.map((_, j) => {
+  const s = (j + 0.5) / TRAMOS;
+  return cola.alza + f * (cola.rizo - RIG.cola.rizoNeutro) * RIG.cola.gradosPorRizo * s * s;
+});
+export const colaNodos = (cola, f = 1) => {
+  const { base, L, rumbos } = _colaTramos;
+  const g = colaGiros(cola, f);
+  const th = rumbos.map((r, j) => r + rad(g[j]));
+  const n = TRAMOS * COLA_PASOS;
+  const ds = L / n;
+  const pts = [base];
+  for (let i = 0; i < n; i++) {
+    const s = (i + 0.5) / COLA_PASOS - 0.5; // posición en «tramos» respecto al centro del primero
+    const j = Math.max(0, Math.min(TRAMOS - 2, Math.floor(s)));
+    const a = Math.max(0, Math.min(1, s - j));
+    const r = th[j] + (th[j + 1] - th[j]) * a;
+    const p = pts[i];
+    pts.push([p[0] + Math.cos(r) * ds, p[1] + Math.sin(r) * ds]);
+  }
+  return _espina(pts);
+};
+export const COLA_NODOS = colaNodos({ rizo: RIG.cola.rizoNeutro, alza: 0 });
+const _colaForma = anclar(TRAZA.cola.forma, COLA_NODOS);
+export const COLA_SUELO = 6;
+// Si algún punto baja de 6 u del suelo, el término de rizo se reduce por bisección (8 pasos).
+export const colaRizoEfectivo = (cola) => {
+  const minY = (f) => Math.min(...deformar(_colaForma, colaNodos(cola, f)).flat().map((q) => q[1]));
+  if (minY(1) >= COLA_SUELO) return 1;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 8; i++) {
+    const m = (lo + hi) / 2;
+    if (minY(m) >= COLA_SUELO) lo = m; else hi = m;
+  }
+  return lo;
+};
+// Desviación declarada (Reporte iteración 2): si ni sin rizo cabe (alza negativa,
+// `estafado`), se reduce también el alza negativa, por bisección igual.
+const _colaAjustada = (cola) => {
+  const f = colaRizoEfectivo(cola);
+  if (f > 0 || cola.alza >= 0) return { cola, f };
+  const minY = (c) => Math.min(...deformar(_colaForma, colaNodos(c, 0)).flat().map((q) => q[1]));
+  if (minY(cola) >= COLA_SUELO) return { cola, f };
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 8; i++) {
+    const m = (lo + hi) / 2;
+    if (minY({ ...cola, alza: cola.alza * m }) >= COLA_SUELO) lo = m; else hi = m;
+  }
+  return { cola: { ...cola, alza: cola.alza * lo }, f };
+};
+export const colaPose = (cola) => { const a = _colaAjustada(cola); return colaNodos(a.cola, a.f); };
+export const colaForma = (cola) => deformar(_colaForma, colaPose(cola)).flat();
 
 const _ext = (polys) => {
   const pts = polys.flat();

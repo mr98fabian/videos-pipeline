@@ -1,28 +1,28 @@
 // Tadeo vectorial por partes (Misión 0001, Fase 2). Las piezas NO son
 // primitivas: son los contornos TRAZADOS de la hoja madre (traza.js, generado
 // por kx_trazo.py). El rig solo las separa en capas y las mueve.
+// Iteración 2 (I2-2): la tinta se COPIA, no se reconstruye.
+//   R1  cada pieza trae su `tinta` (polígonos con agujeros de la máscara de
+//       tinta de la madre en su zona) y se pinta en INK sin stroke;
+//   R2  en los cortes entre piezas no se dibuja nada;
+//   R3  brazos, piernas y cola se deforman por su espina (poses.js: deformar).
 // Todo en el espacio del rig (u, y hacia arriba): el grupo exterior voltea y.
 // Colores: solo INK, PAPER y mezclas TADEO_TONE de la recta INK→PAPER.
 import React from "react";
 import { INK, PAPER, TADEO_TONE, tone } from "../tokens.js";
-import { RIG, brazoCurva, colaAngulo, hombros, manoMundo, piernaPuntos, tangenteFinal, torsoPunto } from "./poses.js";
+import {
+  COLA_NODOS, EXPRESIONES, RIG, anclar, brazoCurva, colaPose, deformar, hombros, manoMundo, nodosCurva, piernaPuntos, POSES,
+  tangenteFinal, torsoPunto,
+} from "./poses.js";
 import { TRAZA } from "./traza.js";
 
-const C = {
-  white: PAPER,
-  cream: tone(TADEO_TONE.T_CREAM),
-  fur: tone(TADEO_TONE.T_FUR),
-  mask: tone(TADEO_TONE.T_MASK),
-  ink: INK,
-};
-const TONO = { T_WHITE: C.white, T_CREAM: C.cream, T_FUR: C.fur, T_MASK: C.mask, T_INK: C.ink };
+const TONO = Object.fromEntries(Object.entries(TADEO_TONE).map(([k, v]) => [k, v === 0 ? PAPER : v === 1 ? INK : tone(v)]));
+const C = { white: TONO.T_WHITE, cream: TONO.T_CREAM, fur: TONO.T_FUR, mask: TONO.T_MASK, ink: INK };
 const L = RIG.linea;
 const pt = (p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`;
-const lineProps = { stroke: C.ink, strokeLinejoin: "round", strokeLinecap: "round" };
 
 // polígonos trazados → atributo d
 const cerrado = (polys) => polys.map((p) => `M ${p.map(pt).join(" L ")} Z`).join(" ");
-const abierto = (polys) => polys.map((p) => `M ${p.map(pt).join(" L ")}`).join(" ");
 const caja = (polys) => {
   const q = polys.flat();
   const xs = q.map((v) => v[0]);
@@ -30,18 +30,76 @@ const caja = (polys) => {
   return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
 };
 
-// Pieza trazada: relleno + contorno (o contorno parcial si la pieza continúa en otra capa).
-const Pieza = ({ polys, fill, ancho = L.exterior, trazo = null }) => (
+// R1: relleno del tono base, sombras planas medidas y la tinta de la madre.
+const Tinta = ({ polys, color = C.ink }) => (polys && polys.length ? <path d={cerrado(polys)} fill={color} fillRule="evenodd" /> : null);
+const Pieza = ({ p, tono = C.fur, children = null }) => (
   <g>
-    <path d={cerrado(polys)} fill={fill} stroke={trazo ? "none" : C.ink} strokeWidth={ancho} strokeLinejoin="round" />
-    {trazo ? <path d={abierto(trazo)} fill="none" strokeWidth={ancho} {...lineProps} /> : null}
+    <path d={cerrado(p.forma)} fill={tono} />
+    {children}
+    {(p.sombras || []).map((s, i) => <path key={i} d={cerrado(s.forma)} fill={TONO[s.tono]} />)}
+    <Tinta polys={p.tinta} />
   </g>
 );
-const Tinta = ({ polys, color = C.ink }) => <path d={cerrado(polys)} fill={color} />;
+
+// Trazo abierto como RELLENO (punto 14): se afina al 70 % en los extremos libres y acaba en punta.
+const trazoRelleno = (pts, w) => {
+  const n = pts.length;
+  const izq = [];
+  const der = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[Math.max(0, i - 1)];
+    const b = pts[Math.min(n - 1, i + 1)];
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const l = Math.hypot(dx, dy) || 1;
+    const t = i / (n - 1);
+    const h = (w / 2) * Math.min(1, 0.7 + 0.3 * Math.min(t, 1 - t) / 0.2);
+    izq.push([pts[i][0] - (dy / l) * h, pts[i][1] + (dx / l) * h]);
+    der.push([pts[i][0] + (dy / l) * h, pts[i][1] - (dx / l) * h]);
+  }
+  const punta = (p, q) => {
+    const dx = p[0] - q[0];
+    const dy = p[1] - q[1];
+    const l = Math.hypot(dx, dy) || 1;
+    return [p[0] + (dx / l) * w * 0.6, p[1] + (dy / l) * w * 0.6];
+  };
+  return [...izq, punta(pts[n - 1], pts[n - 2]), ...der.reverse(), punta(pts[0], pts[1])];
+};
+const curvaQ = ([a, c, b], n = 14) => Array.from({ length: n + 1 }, (_, i) => {
+  const t = i / n;
+  return [0, 1].map((k) => (1 - t) ** 2 * a[k] + 2 * (1 - t) * t * c[k] + t * t * b[k]);
+});
+const Linea = ({ q, w }) => <path d={cerrado([trazoRelleno(curvaQ(q), w)])} fill={C.ink} />;
+
+// R3: piezas que se doblan, ancladas una vez a su espina neutra.
+const anclarPieza = (p, nodos) => ({
+  forma: anclar(p.forma, nodos),
+  tinta: anclar(p.tinta, nodos),
+  sombras: (p.sombras || []).map((s) => ({ tono: s.tono, forma: anclar(s.forma, nodos) })),
+  anillos: (p.anillos || []).map((s) => ({ tono: s.tono, forma: anclar(s.forma, nodos) })),
+});
+const deformarPieza = (a, n0, n1) => ({
+  forma: deformar(a.forma, n1),
+  tinta: deformar(a.tinta, n1),
+  sombras: a.sombras.map((s) => ({ tono: s.tono, forma: deformar(s.forma, n1) })),
+  anillos: a.anillos.map((s) => ({ tono: s.tono, forma: deformar(s.forma, n1) })),
+});
+const TORSO0 = { inclina: 0, sy: 1 };
+const BRAZO0 = Object.fromEntries(["I", "D"].map((l) => {
+  const b = POSES.neutro[`brazo${l}`];
+  const n0 = nodosCurva(brazoCurva(hombros(TORSO0)[l], manoMundo(b.mano, TORSO0), b.curva));
+  return [l, { n0, a: anclarPieza(TRAZA.brazo_piel[l], n0), r: anclarPieza(TRAZA.brazo_piel[l].raiz, n0) }];
+}));
+const PIERNA0 = Object.fromEntries(["I", "D"].map((l) => {
+  const n0 = nodosCurva(piernaPuntos(l, POSES.neutro.piernas));
+  return [l, { n0, a: anclarPieza(TRAZA.pierna_piel[l], n0) }];
+}));
+const COLA0 = anclarPieza({ ...TRAZA.cola, sombras: [] }, COLA_NODOS);
 
 // ------------------------------------------------------------ guantes
 // Local: muñeca en el origen, dedos hacia +x. `abierta` es el guante TRAZADO
-// de cada lado; los demás tipos se construyen a su misma escala.
+// de cada lado; los demás tipos se construyen a su misma escala y llevan el
+// puño enrollado trazado del abierto (punto 14).
 const cap = (a, b, w) => ({ t: "cap", a, b, w });
 const ell = (cx, cy, rx, ry) => ({ t: "ell", cx, cy, rx, ry });
 const cir = (cx, cy, r) => ({ t: "ell", cx, cy, rx: r, ry: r });
@@ -51,11 +109,12 @@ const FORMAS = {
   senala: [ell(70, 0, 54, 58), cap([96, -28], [196, -30], 32), cir(112, 12, 22), cir(106, 42, 20), cap([60, 46], [100, 30], 30)],
   agarra: [ell(70, 0, 54, 58), cap([92, -30], [152, -18], 30), cap([62, 46], [146, 4], 30), cir(104, -50, 18)],
 };
+// líneas interiores: curvas cuadráticas [inicio, control, fin]
 const INTERIOR = {
-  palma: ["M 52 -20 Q 76 -6 96 -22", "M 50 18 Q 70 30 84 12"],
-  puno: ["M 100 18 L 130 16", "M 100 -18 L 130 -16"],
-  senala: ["M 98 28 L 124 26"],
-  agarra: ["M 96 -6 Q 120 0 140 -8"],
+  palma: [[[52, -20], [76, -6], [96, -22]], [[50, 18], [70, 30], [84, 12]]],
+  puno: [[[100, 18], [115, 17], [130, 16]], [[100, -18], [115, -17], [130, -16]]],
+  senala: [[[98, 28], [111, 27], [124, 26]]],
+  agarra: [[[96, -6], [120, 0], [140, -8]]],
 };
 // escala de los guantes construidos = largo del guante trazado / largo del construido (≈ 193 u)
 const _gl = (lado) => caja(TRAZA.guantes[lado].forma)[2];
@@ -68,13 +127,12 @@ const formaSVG = (f, grow, fill, key) => {
 };
 
 export const Guante = ({ tipo = "abierta", angulo = 0, espejo = 1, x = 0, y = 0, lado = "D" }) => {
+  const g = TRAZA.guantes[lado];
   if (tipo === "abierta" || !FORMAS[tipo]) {
     // trazado: cada lado trae su propio dibujo, ya orientado (sin espejo)
-    const g = TRAZA.guantes[lado];
     return (
       <g transform={`translate(${x} ${y}) rotate(${angulo})`}>
-        <Pieza polys={g.forma} fill={C.white} />
-        <Tinta polys={g.lineas} />
+        <Pieza p={g} tono={C.white} />
       </g>
     );
   }
@@ -82,39 +140,38 @@ export const Guante = ({ tipo = "abierta", angulo = 0, espejo = 1, x = 0, y = 0,
   const k = ESCALA_GUANTE;
   const e = L.exterior / k;
   return (
-    <g transform={`translate(${x} ${y}) rotate(${angulo}) scale(${k} ${k * espejo})`}>
-      <rect x={-6} y={-60 - e} width={38 + 2 * e} height={120 + 2 * e} rx={19 + e} fill={C.ink} />
-      {fs.map((f, i) => formaSVG(f, e, C.ink, `o${i}`))}
-      {fs.map((f, i) => formaSVG(f, 0, C.white, `f${i}`))}
-      <rect x={1} y={-60} width={38} height={120} rx={19} fill={C.white} stroke={C.ink} strokeWidth={L.interior / k} />
-      {(INTERIOR[tipo] || []).map((d, i) => <path key={i} d={d} fill="none" strokeWidth={L.fina / k} {...lineProps} />)}
+    <g transform={`translate(${x} ${y}) rotate(${angulo})`}>
+      <g transform={`scale(${k} ${k * espejo})`}>
+        {fs.map((f, i) => formaSVG(f, e, C.ink, `o${i}`))}
+        {fs.map((f, i) => formaSVG(f, 0, C.white, `f${i}`))}
+        {(INTERIOR[tipo] || []).map((q, i) => <Linea key={i} q={q} w={L.interior / k} />)}
+      </g>
+      <Pieza p={g.puno} tono={C.white} />
     </g>
   );
 };
 
 // ------------------------------------------------------------ miembros
-const Tubo = ({ pts, grosor, color = C.fur }) => {
-  const d = `M ${pt(pts[0])} Q ${pt(pts[1])} ${pt(pts[2])}`;
-  return (
-    <g>
-      <path d={d} fill="none" stroke={C.ink} strokeWidth={grosor + 2 * L.exterior} strokeLinecap="round" />
-      <path d={d} fill="none" stroke={color} strokeWidth={grosor} strokeLinecap="round" />
-    </g>
-  );
-};
-
 // El guante trazado se midió con la tangente del brazo trazado: el ángulo de
 // reposo es la tangente final; `giro` lo desvía (en espejo I/D).
+// Punto 3: el brazo no tiene remate; su relleno y su tinta siguen 40 u más allá
+// del hombro. Esa prolongación («raiz») se pinta DETRÁS del torso y el brazo
+// visible delante: con el brazo alzado la prolongación no asoma sobre el pecho.
 export const Brazo = ({ lado, brazo, torso, salto, parte = "todo" }) => {
   const h = hombros(torso, salto)[lado];
   const mano = manoMundo(brazo.mano, torso, salto);
   const pts = brazoCurva(h, mano, brazo.curva);
   const espejo = lado === "D" ? -1 : 1;
   const giro = lado === "D" ? brazo.giro : -brazo.giro;
+  const b0 = BRAZO0[lado];
+  const nodos = parte !== "guante" ? nodosCurva(pts) : null;
+  const raiz = parte === "raiz" || parte === "todo" ? <Pieza p={deformarPieza(b0.r, b0.n0, nodos)} /> : null;
+  if (parte === "raiz") return raiz;
   return (
     <g>
-      {parte !== "guante" ? <Tubo pts={pts} grosor={RIG.brazo.grosor} /> : null}
-      {parte !== "tubo" ? <Guante tipo={brazo.guante} lado={lado} x={mano[0]} y={mano[1]} angulo={tangenteFinal(pts) + giro} espejo={espejo} /> : null}
+      {raiz}
+      {parte !== "guante" ? <Pieza p={deformarPieza(b0.a, b0.n0, nodos)} /> : null}
+    {parte !== "tubo" ? <Guante tipo={brazo.guante} lado={lado} x={mano[0]} y={mano[1]} angulo={tangenteFinal(pts) + giro} espejo={espejo} /> : null}
     </g>
   );
 };
@@ -124,13 +181,12 @@ const Pierna = ({ lado, piernas }) => {
   const s = lado === "I" ? -1 : 1;
   const t = pts[2];
   const ang = s * ((piernas[lado === "I" ? "pieI" : "pieD"] ?? 12) - 12); // 12° = el pie del dibujo
-  const pie = TRAZA.pies[lado];
+  const p0 = PIERNA0[lado];
   return (
     <g>
-      <Tubo pts={pts} grosor={RIG.pierna.grosor} />
+      <Pieza p={deformarPieza(p0.a, p0.n0, nodosCurva(pts))} />
       <g transform={`translate(${t[0]} ${t[1]}) rotate(${-ang})`}>
-        <Pieza polys={pie.forma} fill={C.mask} />
-        <Tinta polys={pie.lineas} />
+        <Pieza p={TRAZA.pies[lado]} tono={C.mask} />
       </g>
     </g>
   );
@@ -138,24 +194,26 @@ const Pierna = ({ lado, piernas }) => {
 
 // ------------------------------------------------------------ cola
 export const Cola = ({ cola }) => {
-  const [bx, by] = RIG.cola.base;
+  const c = deformarPieza(COLA0, COLA_NODOS, colaPose(cola));
   return (
-    <g transform={`rotate(${colaAngulo(cola)} ${bx} ${by})`}>
-      <Pieza polys={TRAZA.cola.forma} fill={C.fur} />
-      <Pieza polys={TRAZA.cola.bandas} fill={C.mask} ancho={L.interior} />
-    </g>
+    <Pieza p={{ forma: c.forma, tinta: c.tinta }}>
+      {c.anillos.map((a, i) => <path key={i} d={cerrado(a.forma)} fill={TONO[a.tono]} />)}
+    </Pieza>
   );
 };
 
 // ------------------------------------------------------------ torso
-export const Torso = ({ torso, salto, extra }) => {
+const torsoTr = (torso, salto) => {
   const [px, py] = RIG.torsoPivote;
-  const tr = `translate(0 ${salto}) translate(${px} ${py}) rotate(${-torso.inclina}) scale(${torso.sx} ${torso.sy}) translate(${-px} ${-py})`;
+  return `translate(0 ${salto}) translate(${px} ${py}) rotate(${-torso.inclina}) scale(${torso.sx} ${torso.sy}) translate(${-px} ${-py})`;
+};
+export const Torso = ({ torso, salto, extra }) => {
+  const tr = torsoTr(torso, salto);
   return (
     <g transform={tr}>
-      <Pieza polys={TRAZA.torso.forma} fill={C.fur} />
-      <Pieza polys={TRAZA.panza.forma} trazo={TRAZA.panza.trazo} fill={C.cream} ancho={L.interior} />
-      <Tinta polys={TRAZA.detalles_torso} />
+      <Pieza p={TRAZA.torso}>
+        <path d={cerrado(TRAZA.panza.forma)} fill={C.cream} />
+      </Pieza>
       {extra === "bolsillos"
         ? [-1, 1].map((s) => (
           <rect key={s} x={s * 172 - 35} y={160} width={70} height={90} rx={14} fill={C.white} stroke={C.ink} strokeWidth={L.interior}
@@ -170,82 +228,86 @@ export const Torso = ({ torso, salto, extra }) => {
 // La sonrisa del neutro es la de la vista frontal (la misma cabeza que se
 // calca); el resto de bocas sale de la fila de expresiones de la hoja madre.
 const EXPR = { ...TRAZA.expresiones, frente: { boca: TRAZA.boca_sonrisa, boca_relleno: [], cerrado: {} } };
-// Boca de cada expresión: las 6 de la hoja madre se trazan; las otras 4 se
+// Boca de cada expresión: las 6 de la hoja madre se trazan; las otras se
 // derivan transformando una trazada (mismo trazo, otra forma).
 const BOCAS = {
   sonrisa: { de: "frente" },
-  o: { de: "asombro" },
   triste: { de: "triste" },
   apretada: { de: "decidido" },
   ladeada: { de: "guino" },
-  risa: { de: "risa" },
-  grito: { de: "risa", sx: 0.82, sy: 1.55 },
   ondulada: { de: "decidido", sx: 0.7, sy: 1.0, rot: -7 },
   ancha: { de: "frente", sx: 1.12, sy: 1.3 },
   temblorosa: { de: "triste", sx: 0.92, sy: 1.25, rot: 4 },
 };
 
-// Risa y grito: en la hoja madre la risa está dibujada en 3/4 y no encaja en
-// la cara frontal. Se derivan de la sonrisa TRAZADA del frente: mismas
-// comisuras y misma curva de arriba; debajo, la boca abierta.
-const bocaAbiertaGeo = (tipo, m) => {
-  const [fx0, , fx1] = caja(EXPR.frente.boca);
-  const cx = (fx0 + fx1) / 2;
-  const hw = ((fx1 - fx0) / 2) * (tipo === "grito" ? 0.62 : 0.86);
-  const nariz = caja(TRAZA.nariz.forma)[1];
-  const top = nariz - 26; // las comisuras de la sonrisa trazada, bajo la nariz
-  const mid = top - 22;
-  const H = 35 + 1.5 * m; // la mandíbula baja con la boca
-  return { cx, hw, top, mid, H };
+// Risa y grito (punto 10): la barbilla DEL PROPIO CRÁNEO baja y la boca se
+// abre dentro de la cara. Comisuras y curva de arriba = sonrisa frontal trazada.
+const SONR = TRAZA.sonrisa_linea;
+const X_COM = (SONR[SONR.length - 1][0] - SONR[0][0]) / 2;
+const X_CEN = (SONR[SONR.length - 1][0] + SONR[0][0]) / 2;
+const Y_COM = (SONR[0][1] + SONR[SONR.length - 1][1]) / 2;
+const H_MAND = Y_COM - TRAZA.menton[1];
+const ySonrisa = (x) => {
+  for (let i = 1; i < SONR.length; i++) {
+    if (x <= SONR[i][0]) {
+      const a = (x - SONR[i - 1][0]) / (SONR[i][0] - SONR[i - 1][0]);
+      return SONR[i - 1][1] + (SONR[i][1] - SONR[i - 1][1]) * Math.max(0, Math.min(1, a));
+    }
+  }
+  return SONR[SONR.length - 1][1];
 };
+const mandibula = (polys, m) => polys.map((p) => p.map(([x, y]) => {
+  if (y >= Y_COM) return [x, y];
+  const fuera = Math.abs(x - X_CEN) - X_COM;
+  const w = fuera <= 0 ? 1 : Math.max(0, 1 - fuera / 40);
+  return [x, Y_COM - (Y_COM - y) * (1 + (w * m) / H_MAND)];
+}));
+const bajarPieza = (p, m) => ({ ...p, forma: mandibula(p.forma, m), tinta: mandibula(p.tinta, m),
+  sombras: (p.sombras || []).map((s) => ({ ...s, forma: mandibula(s.forma, m) })) });
 
-// La quijada que asoma bajo la barbilla cuando la boca se abre (va DETRÁS del
-// cráneo: solo se ve lo que baja del mentón).
-const Mandibula = ({ tipo, m, x }) => {
-  const { cx, hw, top, H } = bocaAbiertaGeo(tipo, m);
-  const chin = RIG.cuelloLocal[1];
-  const fondo = top - H - 16;
-  const cy = (chin + 50 + fondo) / 2;
-  const ry = (chin + 50 - fondo) / 2;
-  return <ellipse cx={cx + x} cy={cy} rx={hw + 34} ry={ry} fill={C.cream} stroke={C.ink} strokeWidth={L.exterior} />;
-};
-
-const BocaAbierta = ({ tipo, x, uid, m }) => {
-  const { cx, hw, top, mid, H } = bocaAbiertaGeo(tipo, m);
-  const d = `M ${cx - hw} ${top} Q ${cx} ${mid - 8} ${cx + hw} ${top} C ${cx + hw} ${top - H * 0.8} ${cx + hw * 0.45} ${top - H} ${cx} ${top - H} C ${cx - hw * 0.45} ${top - H} ${cx - hw} ${top - H * 0.8} ${cx - hw} ${top} Z`;
+const BocaAbierta = ({ m, uid }) => {
+  const xs = Array.from({ length: 33 }, (_, i) => X_CEN - X_COM + (2 * X_COM * i) / 32);
+  const arriba = xs.map((x) => [x, ySonrisa(x)]);
+  const abajo = xs.map((x) => [x, ySonrisa(x) - 0.85 * m * (1 - ((x - X_CEN) / X_COM) ** 2)]).reverse();
+  const d = cerrado([[...arriba, ...abajo]]);
   const id = `${uid}-boca`;
+  const fondo = ySonrisa(X_CEN) - 0.85 * m;
   return (
-    <g transform={`translate(${x} 0)`}>
+    <g>
       <clipPath id={id}><path d={d} /></clipPath>
       <path d={d} fill={C.ink} />
       <g clipPath={`url(#${id})`}>
-        <rect x={cx - hw} y={mid - 30} width={2 * hw} height={34} fill={C.white} />
-        <ellipse cx={cx} cy={top - H} rx={hw * 0.55} ry={H * 0.33} fill={C.mask} />
+        <path d={cerrado([[...arriba, ...arriba.map(([x, y]) => [x, y - 16]).reverse()]])} fill={C.white} />
+        <ellipse cx={X_CEN} cy={fondo + 4} rx={X_COM * 0.5} ry={Math.max(10, 0.28 * m)} fill={C.mask} />
       </g>
-      <path d={d} fill="none" strokeWidth={L.interior} {...lineProps} />
+      <Tinta polys={TRAZA.boca_sonrisa} />
     </g>
   );
 };
 
-const area = (p) => Math.abs(p.reduce((a, q, i) => { const r = p[(i + 1) % p.length]; return a + q[0] * r[1] - r[0] * q[1]; }, 0)) / 2;
-
 const ABIERTAS = new Set(["risa", "grito"]);
-const Boca = ({ tipo, x, uid }) => {
-  if (ABIERTAS.has(tipo)) return null; // se dibuja fuera del recorte del cráneo
+const Boca = ({ tipo, x }) => {
+  if (ABIERTAS.has(tipo)) return null; // se abre en la cara, aparte
+  if (tipo === "o") {
+    // punto 13: centrada en el eje, bajo la sonrisa frontal, simétrica
+    const o = TRAZA.boca_o;
+    return (
+      <g transform={`translate(${x} 0)`}>
+        <Tinta polys={o.tinta} />
+        <Tinta polys={o.lengua} color={TONO[o.lengua_tono]} />
+      </g>
+    );
+  }
   const def = BOCAS[tipo] || BOCAS.sonrisa;
-  const src0 = EXPR[def.de];
-  if (!src0 || !src0.boca.length) return null;
-  // la «o» de asombro: solo la pieza mayor (el resto es pelo de la mejilla en 3/4)
-  const src = tipo === "o" ? { ...src0, boca: [src0.boca.reduce((a, b) => (area(b) > area(a) ? b : a))], boca_relleno: [] } : src0;
+  const src = EXPR[def.de];
+  if (!src || !src.boca.length) return null;
   const [x0, y0, x1, y1] = caja(src.boca);
   const cx = (x0 + x1) / 2;
-  // las cabezas de la hoja no están todas de frente (guiño y risa vienen en
-  // 3/4): cada boca se recoloca sobre la sonrisa del frente. Las abiertas
-  // cuelgan de su borde de arriba; las de línea, de su centro.
+  // las cabezas de la hoja no están todas de frente (guiño viene en 3/4):
+  // cada boca se recoloca sobre la sonrisa del frente, centrada.
   const [fx0, fy0, fx1, fy1] = caja(EXPR.frente.boca);
-  const abierta = ["o", "risa", "grito"].includes(tipo);
-  const dx = (fx0 + fx1) / 2 - cx + (tipo === "o" ? 18 : 0);
-  const dy = abierta ? fy1 - y1 - 4 : (fy0 + fy1) / 2 - (y0 + y1) / 2;
+  const dx = (fx0 + fx1) / 2 - cx;
+  const dy = (fy0 + fy1) / 2 - (y0 + y1) / 2;
   const tr = `translate(${x + dx} ${dy}) translate(${cx} ${y1}) rotate(${def.rot || 0}) scale(${def.sx || 1} ${def.sy || 1}) translate(${-cx} ${-y1})`;
   return (
     <g transform={tr}>
@@ -255,18 +317,38 @@ const Boca = ({ tipo, x, uid }) => {
   );
 };
 
-// Ceja trazada (la neutra) movida por los parámetros de la expresión:
-// interior/exterior suben o bajan cada extremo (u); arco la curva un poco.
+// Cejas (punto 11): la forma es una mezcla entre la ceja de sonrisa (base) y
+// la trazada de triste (τ > 0) o de decidido (τ < 0); el resto de la
+// inclinación, el desplazamiento y el arco se aplican sobre esa mezcla, así
+// que los parámetros de las tres expresiones reproducen su ceja trazada.
+const CEJAS = TRAZA.cejas_mezcla;
 const Ceja = ({ lado, ceja, dx }) => {
-  const c = TRAZA.cejas[lado];
   const s = lado === "I" ? 1 : -1; // en I el extremo interior es el derecho
-  const ang = (Math.atan2((ceja.interior - ceja.exterior) * s, c.largo) * 180) / Math.PI;
-  const dy = (ceja.interior + ceja.exterior) / 2;
-  const sy = 1 + ((ceja.arco ?? 8) - 8) * 0.03;
-  const [cx, cy] = c.centro;
+  if (!CEJAS) {
+    const c = TRAZA.cejas[lado];
+    const ang = (Math.atan2((ceja.interior - ceja.exterior) * s, c.largo) * 180) / Math.PI;
+    return <g transform={`translate(${dx} ${(ceja.interior + ceja.exterior) / 2}) rotate(${ang} ${c.centro[0]} ${c.centro[1]})`}><Tinta polys={c.forma} /></g>;
+  }
+  const M = CEJAS[lado];
+  const tau = ceja.interior - ceja.exterior;
+  const obj = tau > 0 ? M.triste : M.decidido;
+  const ref = (tau > 0 ? EXPRESIONES.triste : EXPRESIONES.decidido)[`ceja${lado}`];
+  const w = Math.max(0, Math.min(1.3, tau / (ref.interior - ref.exterior))) || 0;
+  const forma = M.base.map((q, i) => [q[0] + w * (obj[i][0] - q[0]), q[1] + w * (obj[i][1] - q[1])]);
+  const resto = {
+    tau: tau - w * (ref.interior - ref.exterior),
+    dy: (ceja.interior + ceja.exterior) / 2 - w * (ref.interior + ref.exterior) / 2,
+    arco: (ceja.arco ?? 8) - (8 + w * ((ref.arco ?? 8) - 8)),
+  };
+  const xs = forma.map((q) => q[0]);
+  const ys = forma.map((q) => q[1]);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const ang = (Math.atan2(resto.tau * s, Math.max(...xs) - Math.min(...xs)) * 180) / Math.PI;
+  const sy = 1 + resto.arco * 0.03;
   return (
-    <g transform={`translate(${dx} ${dy}) rotate(${ang} ${cx} ${cy}) translate(${cx} ${cy}) scale(1 ${sy}) translate(${-cx} ${-cy})`}>
-      <Tinta polys={c.forma} />
+    <g transform={`translate(${dx} ${resto.dy}) rotate(${ang} ${cx} ${cy}) translate(${cx} ${cy}) scale(1 ${sy}) translate(${-cx} ${-cy})`}>
+      <Tinta polys={[forma]} />
     </g>
   );
 };
@@ -277,19 +359,24 @@ const Ojo = ({ lado, uid, ancho, escala, pupila, mirada, parpado, cerrado: estaC
   const s = lado === "I" ? -1 : 1;
   const tr = `translate(${dx} 0) translate(${cx} ${cy}) scale(${ancho * escala} ${escala}) translate(${-cx} ${-cy})`;
   if (estaCerrado) {
-    if (cerradoTrazado && cerradoTrazado.length) {
-      const [a0, b0, a1, b1] = caja(cerradoTrazado);
-      return (
-        <g transform={`translate(${dx + cx - (a0 + a1) / 2} ${cy - (b0 + b1) / 2})`}>
-          <Tinta polys={cerradoTrazado} />
-        </g>
-      );
-    }
-    return <path transform={`translate(${dx} 0)`} d={`M ${cx - 32} ${cy - 6} Q ${cx} ${cy + 30} ${cx + 32} ${cy - 6}`} fill="none" strokeWidth={10} {...lineProps} />;
+    // punto 12: el blanco del ojo relleno de pelaje y el arco trazado encima
+    const arco = cerradoTrazado && cerradoTrazado.length ? cerradoTrazado : null;
+    const [a0, b0, a1, b1] = arco ? caja(arco) : [0, 0, 0, 0];
+    return (
+      <g>
+        <g transform={tr}><path d={cerrado(o.forma)} fill={C.fur} /></g>
+        {arco ? (
+          <g transform={`translate(${dx + cx - (a0 + a1) / 2} ${cy - (b0 + b1) / 2})`}><Tinta polys={arco} /></g>
+        ) : (
+          <path d={cerrado([trazoRelleno(curvaQ([[cx - 32 + dx, cy - 6], [cx + dx, cy + 30], [cx + 32 + dx, cy - 6]]), L.interior)])} fill={C.ink} />
+        )}
+      </g>
+    );
   }
   const p = o.pupila;
-  const px = p.centro[0] + mirada.x * 16;
-  const py = p.centro[1] + mirada.y * 20;
+  const [pcx, pcy] = p.centro;
+  const px = mirada.x * 16;
+  const py = mirada.y * 20;
   const ry = o.ry;
   const lidY = cy + ry - parpado * 2 * ry;
   const id = `${uid}-ojo${lado}`;
@@ -299,16 +386,18 @@ const Ojo = ({ lado, uid, ancho, escala, pupila, mirada, parpado, cerrado: estaC
         <clipPath id={id}><path d={cerrado(o.forma)} /></clipPath>
         <path d={cerrado(o.forma)} fill={C.white} />
         <g clipPath={`url(#${id})`}>
-          <ellipse cx={px} cy={py} rx={p.rx * pupila} ry={p.ry * pupila} fill={C.ink} />
-          <circle cx={px - p.rx * 0.35} cy={py + p.ry * 0.45} r={p.rx * 0.32} fill={C.white} />
+          {/* punto 7: la pupila trazada con sus brillos (agujeros), entera con la mirada */}
+          <g transform={`translate(${px} ${py}) translate(${pcx} ${pcy}) scale(${pupila}) translate(${-pcx} ${-pcy})`}>
+            <Tinta polys={p.tinta} />
+          </g>
           {parpado > 0.01 ? (
             <g>
-              <rect x={cx - o.rx - 8} y={lidY} width={2 * o.rx + 16} height={2 * ry + 16} fill={C.mask} />
-              <path d={`M ${cx - o.rx - 8} ${lidY + 3} Q ${cx} ${lidY - 6} ${cx + o.rx + 8} ${lidY + 3}`} fill="none" strokeWidth={L.interior + 1} {...lineProps} />
+              <rect x={cx - o.rx - 8} y={lidY} width={2 * o.rx + 16} height={2 * ry + 16} fill={C.fur} />
+              <path d={`M ${cx - o.rx - 8} ${lidY + 3} Q ${cx} ${lidY - 6} ${cx + o.rx + 8} ${lidY + 3}`} fill="none" stroke={C.ink} strokeWidth={L.interior} strokeLinecap="round" />
             </g>
           ) : null}
         </g>
-        <path d={cerrado(o.forma)} fill="none" stroke={C.ink} strokeWidth={L.interior} />
+        <Tinta polys={o.tinta} />
       </g>
       {lagrima ? (
         <path transform={`translate(${dx} 0)`} d={`M ${cx + s * 26} ${cy - ry + 8} C ${cx + s * 14} ${cy - ry - 10} ${cx + s * 16} ${cy - ry - 24} ${cx + s * 28} ${cy - ry - 24} C ${cx + s * 40} ${cy - ry - 24} ${cx + s * 42} ${cy - ry - 10} ${cx + s * 26} ${cy - ry + 8} Z`}
@@ -329,48 +418,56 @@ export const CabezaPartes = ({ cabeza, cara, mirada, orejas, mechon = 0, uid = "
   const ex = 0.6 * G;
   const clip = `${uid}-craneo`;
   const fc = EXPR[FUENTE_CERRADO[cara.boca]];
+  const abierta = ABIERTAS.has(cara.boca);
+  const m = abierta ? Math.max(20, cara.mandibula) : 0;
+  const craneo = m ? bajarPieza(TRAZA.craneo, m) : TRAZA.craneo;
+  const crema = m ? mandibula(TRAZA.crema_cara, m) : TRAZA.crema_cara;
   const oreja = (lado) => {
     const o = TRAZA.orejas[lado];
     const ang = lado === "I" ? orejas.i : -orejas.d;
     const [px, py] = o.pivote;
     return (
       <g key={lado} transform={`translate(${-0.3 * G} 0) rotate(${ang} ${px} ${py})`}>
-        <Pieza polys={o.forma} fill={C.fur} />
-        <Tinta polys={o.interior} color={C.cream} />
+        <Pieza p={o} />
       </g>
     );
   };
   const [mx, my] = TRAZA.mechon.pivote;
   return (
     <g>
-      <clipPath id={clip}><path d={cerrado(TRAZA.craneo.forma)} /></clipPath>
+      <clipPath id={clip}><path d={cerrado(craneo.forma)} /></clipPath>
       {oreja("I")}
       {oreja("D")}
       <g transform={`rotate(${-mechon} ${mx} ${my})`}>
-        <Pieza polys={TRAZA.mechon.forma} fill={C.fur} />
+        <Pieza p={TRAZA.mechon} />
       </g>
-      {ABIERTAS.has(cara.boca) ? <Mandibula tipo={cara.boca} m={Math.max(20, cara.mandibula)} x={0.9 * G} /> : null}
-      <Pieza polys={TRAZA.craneo.forma} fill={C.fur} trazo={TRAZA.craneo.trazo} />
+      <Pieza p={craneo}>
+        <g clipPath={`url(#${clip})`}>
+          <g transform={`translate(${0.5 * G} 0)`}><path d={cerrado(crema)} fill={C.cream} /></g>
+        </g>
+      </Pieza>
       <g clipPath={`url(#${clip})`}>
-        <g transform={`translate(${0.5 * G} 0)`}><Tinta polys={TRAZA.crema_cara} color={C.cream} /></g>
-        <Tinta polys={TRAZA.detalles_cabeza} />
         <g transform={`translate(${ex} 0)`}>
-          <Pieza polys={TRAZA.antifaz.I} fill={C.mask} ancho={L.interior} />
-          <Pieza polys={TRAZA.antifaz.D} fill={C.mask} ancho={L.interior} />
+          <path d={cerrado(TRAZA.antifaz.I)} fill={C.mask} />
+          <path d={cerrado(TRAZA.antifaz.D)} fill={C.mask} />
         </g>
         <Ojo lado="I" uid={uid} dx={ex} ancho={anchoI} escala={cara.ojo} pupila={cara.pupila} mirada={mirada}
           parpado={cara.parpadoI} cerrado={cara.cerradoI} lagrima={cara.lagrima} cerradoTrazado={fc && fc.cerrado.I} />
         <Ojo lado="D" uid={uid} dx={ex} ancho={anchoD} escala={cara.ojo} pupila={cara.pupila} mirada={mirada}
           parpado={cara.parpadoD} cerrado={cara.cerradoD} lagrima={cara.lagrima} cerradoTrazado={fc && fc.cerrado.D} />
+        <g transform={`translate(${ex} 0)`}>
+          <Tinta polys={TRAZA.antifaz_tinta.I} />
+          <Tinta polys={TRAZA.antifaz_tinta.D} />
+        </g>
         <Ceja lado="I" ceja={cara.cejaI} dx={ex} />
         <Ceja lado="D" ceja={cara.cejaD} dx={ex} />
+        {abierta ? <g transform={`translate(${0.9 * G} 0)`}><BocaAbierta m={m} uid={uid} /></g> : null}
         <g transform={`translate(${G} 0)`}>
           <Tinta polys={TRAZA.nariz.forma} />
           <Tinta polys={TRAZA.nariz.brillo} color={C.white} />
         </g>
-        <Boca tipo={cara.boca} x={0.9 * G} uid={uid} />
+        <Boca tipo={cara.boca} x={0.9 * G} />
       </g>
-      {ABIERTAS.has(cara.boca) ? <BocaAbierta tipo={cara.boca} m={Math.max(20, cara.mandibula)} x={0.9 * G} uid={uid} /> : null}
     </g>
   );
 };
@@ -396,6 +493,13 @@ export const TadeoPartes = ({ est, uid = "t" }) => {
       {detras.map((l) => brazo(l))}
       <Pierna lado="I" piernas={est.piernas} />
       <Pierna lado="D" piernas={est.piernas} />
+      {/* la raíz del brazo solo existe donde la tapan torso o cabeza: con el brazo
+          alzado no asoma como una losa sin contorno */}
+      <clipPath id={`${uid}-raiz`}>
+        <path d={cerrado(TRAZA.torso.forma)} transform={torsoTr(est.torso, salto)} />
+        <path d={cerrado(TRAZA.craneo.forma)} transform={cabezaTransform(est)} />
+      </clipPath>
+      <g clipPath={`url(#${uid}-raiz)`}>{delante.map((l) => brazo(l, "raiz"))}</g>
       <Torso torso={est.torso} salto={salto} extra={est.extra} />
       {/* como en la hoja madre: la cabeza tapa los hombros; los guantes van delante de todo */}
       {delante.map((l) => brazo(l, "tubo"))}

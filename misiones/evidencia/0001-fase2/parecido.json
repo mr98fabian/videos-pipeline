@@ -1,43 +1,102 @@
 {
- "huella": "101459691b358fd0",
- "iou": 0.9802,
- "iou_min": 0.95,
+ "huella": "e3d9de755690e7fc",
+ "iou": 0.9882,
+ "iou_min": 0.98,
  "tolerancia_marcas": 0.03,
  "marcas": {
   "cabeza_ancho_alto": {
    "madre": 1.4334,
-   "rig": 1.4325,
-   "desviacion": -0.0007
+   "rig": 1.4274,
+   "desviacion": -0.0043
   },
   "oreja_alto": {
    "madre": 79.0,
-   "rig": 79.0,
-   "desviacion": 0.0
+   "rig": 78.0,
+   "desviacion": -0.0127
   },
   "oreja_ancho": {
    "madre": 129.0,
-   "rig": 128.0,
-   "desviacion": -0.0078
+   "rig": 127.0,
+   "desviacion": -0.0155
   },
   "ojos_distancia": {
    "madre": 267.1388,
-   "rig": 267.0709,
-   "desviacion": -0.0003
+   "rig": 267.1537,
+   "desviacion": 0.0001
   },
   "antifaz_ancho": {
    "madre": 622.0,
-   "rig": 622.0,
-   "desviacion": 0.0
+   "rig": 623.0,
+   "desviacion": 0.0016
   },
   "hocico_ancho": {
    "madre": 496.0,
-   "rig": 502.0,
-   "desviacion": 0.0121
+   "rig": 486.0,
+   "desviacion": -0.0202
   },
   "panza_ancho": {
    "madre": 398.0,
-   "rig": 401.0,
-   "desviacion": 0.0075
+   "rig": 397.0,
+   "desviacion": -0.0025
   }
+ },
+ "tinta": {
+  "madre_en_rig": 0.9999,
+  "rig_en_madre": 1.0,
+  "area": 1.0069
+ },
+ "grosor": {
+  "madre": {
+   "interior": [
+    3.29,
+    5.49,
+    8.17
+   ],
+   "contorno": [
+    5.74,
+    6.95,
+    8.17
+   ]
+  },
+  "rig": {
+   "interior": [
+    3.29,
+    5.49,
+    8.41
+   ],
+   "contorno": [
+    5.73,
+    7.19,
+    8.41
+   ]
+  }
+ },
+ "tono": {
+  "error_medio": 0.023,
+  "superficie_mayor_008": 0.0707
+ },
+ "barra": {
+  "tinta_madre_en_rig_min": 0.97,
+  "tinta_rig_en_madre_min": 0.97,
+  "area_tinta": [
+   0.97,
+   1.03
+  ],
+  "grosor_interior_p50": [
+   4.6,
+   5.6
+  ],
+  "tono_error_medio_max": 0.03,
+  "tono_superficie_max": 0.05
+ },
+ "cumple": {
+  "IoU de silueta": true,
+  "7 marcas (peor)": true,
+  "tinta madre en rig": true,
+  "tinta rig en madre": true,
+  "área tinta rig/madre": true,
+  "grosor interior p50": true,
+  "error tonal medio": true,
+  "superficie error > 0,08": false
  }
 }

@@ -68,6 +68,12 @@ mechones **3,5 u** (u = unidad del rig, ver A2), extremos y uniones redondos.
 El grupo entero pasa por el `Boil` de la Fase 1 (un solo filtro para todo el
 personaje: las partes hierven juntas, no cada una por su cuenta).
 
+> **Revisado en la iteración 2 (I2-2, puntos 5 y 14).** Los tonos son ahora 6,
+> medidos en la madre: `T_WHITE` 0 · `T_CREAM` 0,09 · `T_MEDIO` 0,25 · `T_FUR` 0,39 ·
+> `T_FUR_SOMBRA` 0,47 · `T_MASK` 0,64 · `T_INK` 1 (el `T_FUR` 0,46 de esta tabla era el
+> tono de sombra de la madre). Las piezas trazadas ya no llevan `stroke`: su tinta es
+> la de la madre copiada como relleno. Lo que queda construido usa 7,3 / 5,0 / 3,6 u.
+
 ### A2. Proporciones (espacio del rig: alto total = 1000 u, origen en el suelo, centro x = 0)
 Medidas sobre la vista frontal de la hoja madre (alto orejas→suelo = 406 px).
 
@@ -652,5 +658,147 @@ resultados. Si alguno no se alcanza, Opus reporta el número y el mapa de residu
 17. `biblioteca.json` idéntico en poses, expresiones, miradas y guantes; en `rig`
     solo cambian `linea` y la constante de rizo de la cola. Contrato de acting sin
     tocar; los tests de biblioteca y acting pasan sin modificarse.
+
+⏸ **Puerta:** Fabian aprueba la hoja y el clip. Sin su OK no hay merge ni Fase 3.
+
+---
+
+## Reporte iteración 2 (Opus)
+
+**Método.** `kx_trazo.py` ya no reconstruye la tinta. Reparte cada píxel de la vista
+frontal (×4) entre 14 piezas: cola, piernas, pies, torso, brazos, orejas, mechón,
+cráneo y guantes. Cada pieza lleva su relleno (tono base), sus sombras planas y **la
+tinta de la madre en su zona**, como isolínea subpíxel (R1). Entre piezas no se dibuja
+nada (R2). Brazos, piernas y cola se guardan en u del neutro, y `poses.js` los coloca
+sobre la espina de la pose (R3). En el neutro, la deformación es la identidad exacta.
+
+### Barra I2-3 (lo exige `tests/test_tadeo_parecido.py`)
+
+«Hoy» es el rig de la iteración 1 (commit dafe898), medido con el código nuevo.
+
+| Medida | Umbral | Hoy | Iteración 2 | |
+|---|---|---|---|---|
+| IoU de silueta | ≥ 0,98 | 0,9802 | **0,9882** | cumple |
+| 7 marcas (peor) | ±3 % | 1,21 % | **2,02 %** (hocico) | cumple |
+| Tinta madre en rig (≤ 6 px) | ≥ 97 % | 89,8 % | **100,0 %** | cumple |
+| Tinta rig en madre (≤ 6 px) | ≥ 97 % | 89,4 % | **100,0 %** | cumple |
+| Área de tinta rig/madre | 0,97–1,03 | 1,096 | **1,007** | cumple |
+| Grosor p50 línea interior | 4,6–5,6 u | 7,19 u | **5,49 u** (madre 5,49) | cumple |
+| Error tonal medio | ≤ 0,030 | 0,0522 | **0,0230** | cumple |
+| Superficie error tonal > 0,08 | ≤ 5 % | 16,4 % | **7,1 %** | **NO cumple** |
+
+- **No se afloja.** El test de superficie va `xfail(strict=True)` con el número: si algún
+  día pasa, falla y obliga a quitar la marca. El mapa es `parecido_residuo.png` (en ámbar).
+  - **4,6 pts están a ≤ 6 px de la tinta.** Son el borde suave, escaneado, de las líneas
+    de la madre: en los blancos de guantes y ojos, su gris arrastra el tono.
+  - **2,4 pts están lejos:** el halo sobre el antifaz y las mejillas.
+  - **Opción para Fable/Fabian, no hecha** porque queda fuera de la especificación: copiar
+    también ese borde suave como segunda tinta (isolínea ~150 en `T_FUR_SOMBRA`, bajo la
+    tinta). A 640 px ocupa menos de 1 px.
+- **Las definiciones se midieron, no se copiaron de I2-0.**
+  - Grosor: el grosor local (2·dt + 1) de cada píxel de tinta, ponderado por área.
+    «Interior» es a más de 10 u del papel.
+  - Con esa definición, la madre da 5,49 u en el interior y 6,95 u en el contorno. El rig
+    de la iteración 1 da 7,19 u en el interior (Fable midió 7,1).
+  - Las líneas base salen 89,8 / 89,4 % en tinta y 0,052 / 16,4 % en tono. Fable midió
+    90,2 / 89,7 % y 0,048 / 15,4 %.
+
+### Los 17 puntos visuales
+
+| # | Punto | | Evidencia |
+|---|---|---|---|
+| 1 | Sin raya en cadera, coronilla ni base de orejas, y sin bulto en el hombro | cumple | Neutro: residuo con 0,0 % de tinta inventada. Fila de 14 poses de la hoja. El brazo no tiene remate: su prolongación va en la capa «raiz», detrás del torso |
+| 2 | El contorno pesa más que el interior | cumple | Contorno p50 6,95 u frente a interior 5,49 u (`parecido.json`), igual que en la madre |
+| 3 | Ninguna mancha dentada ni mota | cumple | 14 sombras; la menor mide ≥ 3 247 px² (`sombras_meta`). Suavizadas con ε 1,5 y Chaikin ×2. Lo cubre el test de sombras |
+| 4 | Pupilas con el brillo de la madre en las 40 cabezas | cumple (ojos abiertos) | Rejilla 10×4: la pupila trazada lleva su brillo como hueco. Guiño y risa llevan el ojo cerrado |
+| 5 | Risa y grito: un solo contorno de cabeza y la boca dentro | cumple | Rejilla, columnas risa y grito: baja la barbilla del cráneo y la boca se abre bajo la sonrisa trazada |
+| 6 | Triste y decidido con las cejas de la madre | triste cumple · **decidido parcial** | Cejas trazadas de las cabezas 3 y 4 y mezcladas (área entre 0,54 y 0,83 de la base). En decidido, la ceja I sale corta y desplazada hacia fuera |
+| 7 | La cola es distinta en ≥ 3 poses y los anillos siguen la curva | cumple | Giro de la punta menos la base: triunfo 19,2°, asombro 15,3°, orgulloso 11,5°, codicia 7,7°, estafado −26,8°. Los anillos se deforman con la espina |
+| 8 | Las siluetas se distinguen | cumple | Fila «vigilancia 3» |
+| 9 | Lado a lado, la madre no se distingue salvo por el degradado | **no cumple** | Crítica separada: se distingue por el tono en escalones (posterizado) y un contorno algo más pesado; ver abajo |
+| 10 | El mapa de tinta no tiene ningún tramo > 40 u | cumple | Falta 0,0 % y sobra 0,0 % (`parecido_residuo.png`) |
+| 11 | No se abre ninguna costura en los 12 fotogramas | **no cumple** | f30/f60 limpios; en f254-f260 el antebrazo asoma sin contorno bajo el puño construido y la cola muestra parches claros. La losa del hombro se corrigió (ver abajo) |
+| 12 | Nada parpadea por su cuenta | cumple en la hoja de contacto | No hay formas de menos de 3 247 px² ni líneas construidas de menos de 3,5 u. **No se verificó fotograma a fotograma** en los 390 |
+| 13 | El brillo no sale del ojo | cumple | La pupila va recortada por el blanco en las 4 miradas (por construcción) |
+| 14 | La cola acompaña con retraso y se curva | cumple | Capa `cola` con 12 f de retraso más el rizo del idle sobre la espina; `prueba_640.mp4` |
+| 15 | Un fotograma junto a la madre es el mismo personaje | **a medias** | crítica separada: en hold es el mismo personaje; en transición se reconoce, pero lo delatan el antebrazo sin línea y la cola en parches |
+| 16 | Gate de la Fase 1 y `verify` en verde | cumple | `gate.json`: off_palette 0,0 · safe_zone 0,0 · char_color 0,0 · 0/390 pares congelados. `verify` VERDE: 80 tests más 1 xfail |
+| 17 | `biblioteca.json` igual salvo `rig.linea` y el rizo de la cola | **parcial** | Poses, expresiones, miradas y guantes idénticos. `rig.linea` pasa a 7,3/5,0/3,6 y `gradosPorRizo` de 12 a 40 (ahora en °·s² en la punta). Cambia también `medidas.*.caja_u`, que sale del contorno trazado. Los tests de biblioteca y acting no se tocaron y están en verde |
+
+### Desviaciones de la especificación (declaradas)
+
+1. **R3 en marco continuo, no por tramos.**
+   - Cada punto se ancla como (σ/L, v) a una espina densa y se guarda el resto exacto de
+     la proyección, así que en el neutro la identidad es exacta.
+   - Con el skinning por 24 tramos, los brazos muy doblados se plegaban.
+   - Por el lado cóncavo, si la pose curva más que el neutro, |v·κ| se limita a 0,6: la
+     carne del codo se comprime.
+   - La cola sí usa los 24 tramos de rumbo, integrados a paso fino.
+2. **La prolongación del brazo va detrás del torso** (capa «raiz»). Como el brazo se
+   dibuja delante del torso, que quede «oculta por el torso» exige otra capa. El brazo
+   visible no lleva remate.
+3. **La crema de la cara y la panza son formas, no sombras**, así que no cuentan entre
+   las 14. Su borde es el corte de la iteración 1 (luminancia 195) sobre la madre
+   suavizada a σ 10. Dentro de ellas solo entran sombras más oscuras.
+4. **Sombras.**
+   - Quedan fuera `T_WHITE` y el halo de 30 px de guantes y pies; si no, el torso
+     heredaba un «guante fantasma».
+   - Para quedarse en 14, el área mínima subió a 3 247 px².
+5. **Tinta.**
+   - Isolínea al nivel 66, calibrado con el área de tinta.
+   - La zona se ensancha 3 px, lo mismo que el relleno, para que no salgan rayas en los
+     cortes.
+   - La línea que el torso comparte con cada brazo se copia también en el torso: al
+     apartar el brazo, el torso conserva su borde.
+   - Cada píxel de tinta va a la pieza más cercana. Si hay empate (≤ 4 px), va a la de
+     encima.
+6. **Cola oculta.** Bajo piernas y torso solo hay un tubo del ancho de la cola, a lo largo
+   de su espina. Bajo los guantes, su casco convexo con un contorno sintético. Esto solo
+   se ve al apartar la mano o al curvar la cola; en el neutro está tapado.
+7. **Cola y suelo.** Si ni quitando todo el rizo la cola cabe (alza negativa), se reduce
+   también el alza negativa. Hoy no se activa: en `estafado` la cola queda a 12,5 u del
+   suelo.
+8. **Cejas.**
+   - La base (sonrisa) es la ceja de la vista frontal, que es la ley del neutro.
+   - En triste y decidido se quita además el anillo del ojo, y la ceja se busca solo
+     encima de cada ojo; si no, la «ceja» era el contorno de la cabeza.
+   - No hizo falta `traza_manual.js`.
+9. **La «o» de asombro** se aísla por el hueco interior de la tinta de la boca, porque la
+   pieza mayor de la cabeza en 3/4 incluía la línea de la mejilla. La lengua lleva su
+   propio tono.
+10. **Autointersección.** No hay ninguna en 13 poses. En `grito` hay 1 cruce por brazo: la
+    mano vuelve sobre el hombro (curva 1,9). Es la geometría de la pose, no un pliegue.
+11. `KxTadeoMolde` acepta `pose`, para inspeccionar poses en la rejilla de la madre.
+
+### Defectos que siguen a la vista
+
+- En `triunfo` aparecen bandas grises en la cadera con el salto.
+- La ceja I de `decidido` sale corta.
+- Quedan líneas finas sueltas en algunas poses, de 1-2 px a 640 px.
+
+**Evidencia:**
+- `hoja_de_poses.png`, con dos bandas nuevas abajo.
+- `parecido_residuo.png`, `parecido_barra.png`, `parecido.json` y `rig_neutro.png`.
+- `prueba_640.mp4` y `prueba_640_contacto.png` (f94, f100, f174, f180, f254 y f260, en
+  transición).
+- `gate.json`.
+
+### Crítica en sesión separada (puntos 9, 11 y 15)
+Un subagente sin el contexto de esta sesión miró la evidencia (lado a lado, hoja,
+contacto y fotogramas propios del vídeo). Veredicto: **9 no cumple, 11 no cumple, 15 a
+medias.** Lo que encontró y qué se hizo:
+
+| Hallazgo | Gravedad | Qué se hizo |
+|---|---|---|
+| Losas grises sin contorno en hombros con el brazo alzado (grito, triunfo, asombro, pícaro, bolsillos) | alta | **corregido**: la «raiz» del brazo se recorta a la silueta de torso + cabeza; ya no asoma |
+| Cejas con doble trazo (decidido, grito, triste) | media | **corregido**: la tinta del cráneo excluye píxel a píxel la de cejas, ojos, nariz y boca (antes el margen de 3 px se colaba) |
+| Antebrazo sin contorno bajo el puño construido (decidido f257) | alta | **declarado**: los guantes construidos son más pequeños que el trazado y no tapan el final del brazo |
+| Cola en parches claros fuera del neutro | media-alta | **declarado**: lo que la mano y las piernas tapan de la cola no existe en la madre; se rellena en `T_FUR` liso, sin anillos |
+| Risa/guiño: el ojo cerrado deja un óvalo gris | alta | **declarado**: es lo que pide el punto 12 (blanco del ojo en `T_FUR` con el arco encima); si no convence, la decisión es de Fable |
+| Bolsillos: rectángulos sobre los muslos | alta | **sin cambio**: son los bolsillos vueltos del `extra` de la pose, de la Parte B |
+| Líneas sueltas bajo pies / entre piernas (decidido, triunfo, asombro, estafado) | media | **declarado**: bordes de 1-2 px de piezas que en el neutro se tapan |
+| Grito: mentón deformado | media | **declarado**: es la barbilla del cráneo bajando m = 60 (punto 10) |
+| Guiño: raya en la mejilla | baja | **declarado**: viene de la boca de la cabeza «guiño», en 3/4 (iteración 1) |
+| Tono posterizado (punto 9) | — | **declarado**: es la regla del punto 6 (formas planas, 6 tonos); el degradado no entra |
 
 ⏸ **Puerta:** Fabian aprueba la hoja y el clip. Sin su OK no hay merge ni Fase 3.

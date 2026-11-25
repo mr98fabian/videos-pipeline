@@ -143,34 +143,44 @@ def render_hoja(lib: dict) -> Path:
 
 
 def anadir_paneles_parecido(hoja: Path) -> None:
-    """Banda inferior con madre vs rig, el solape al 50 % y la tabla de marcas
-    (los genera kx_parecido.py en la misma carpeta de evidencia)."""
+    """Bandas inferiores (las genera kx_parecido.py en la misma carpeta):
+    1) madre vs rig a la misma escala · solape al 50 % · marcas;
+    2) mapa de tinta que falta/sobra y de error tonal · tabla de la barra I2-3."""
     from PIL import Image, ImageDraw
 
-    nombres = ["parecido_lado_a_lado.png", "parecido_solape.png", "parecido_marcas.png"]
-    if not all((EVID / n).exists() for n in nombres):
-        return
-    base = Image.open(hoja).convert("RGB")
-    ims = [Image.open(EVID / n).convert("RGB") for n in nombres]
-    alto = 860
-    escal = [im.resize((round(im.width * alto / im.height), alto)) for im in ims[:2]]
-    libre = base.width - 40 * 4 - sum(im.width for im in escal)
-    tabla = ims[2].resize((libre, round(ims[2].height * libre / ims[2].width)))
-    banda = Image.new("RGB", (base.width, alto + 120), (244, 241, 234))
-    d = ImageDraw.Draw(banda)
+    filas = [("parecido medible · madre vs rig a la misma escala · solape 50 % · marcas",
+              ["parecido_lado_a_lado.png", "parecido_solape.png", "parecido_marcas.png"]),
+             ("iteración 2 · tinta que falta (azul) / sobra (rojo) · error tonal > 0,08 (ámbar) · barra I2-3",
+              ["parecido_residuo.png", "parecido_barra.png"])]
     try:
         from PIL import ImageFont
         f = ImageFont.truetype("arialbd.ttf", 34)
     except OSError:
         f = None
-    d.text((40, 20), "parecido medible · madre vs rig a la misma escala · solape 50 % · marcas", fill=(17, 17, 17), font=f)
-    x = 40
-    for im in [*escal, tabla]:
-        banda.paste(im, (x, 80))
-        x += im.width + 40
-    out = Image.new("RGB", (base.width, base.height + banda.height), (244, 241, 234))
+    base = Image.open(hoja).convert("RGB")
+    bandas = []
+    for titulo, nombres in filas:
+        if not all((EVID / n).exists() for n in nombres):
+            continue
+        ims = [Image.open(EVID / n).convert("RGB") for n in nombres]
+        alto = 860
+        escal = [im.resize((round(im.width * alto / im.height), alto)) for im in ims[:-1]]
+        libre = base.width - 40 * (len(ims) + 1) - sum(im.width for im in escal)
+        tabla = ims[-1].resize((libre, round(ims[-1].height * libre / ims[-1].width)))
+        banda = Image.new("RGB", (base.width, max(alto, tabla.height) + 120), (244, 241, 234))
+        d = ImageDraw.Draw(banda)
+        d.text((40, 20), titulo, fill=(17, 17, 17), font=f)
+        x = 40
+        for im in [*escal, tabla]:
+            banda.paste(im, (x, 80))
+            x += im.width + 40
+        bandas.append(banda)
+    out = Image.new("RGB", (base.width, base.height + sum(b.height for b in bandas)), (244, 241, 234))
     out.paste(base, (0, 0))
-    out.paste(banda, (0, base.height))
+    y = base.height
+    for b in bandas:
+        out.paste(b, (0, y))
+        y += b.height
     out.save(hoja)
 
 
@@ -242,6 +252,44 @@ def render_prueba(lib: dict) -> dict:
     return report
 
 
+# 12 fotogramas: 6 en mitad de una transición (los springs van a media carrera)
+# y 6 en hold. Ahí es donde se abren las costuras y donde parpadean los detalles.
+CONTACTO_TRANSICION = [c["t0"] + d for c in LINEA[1:] for d in (4, 10)]
+CONTACTO_HOLD = [30, 60, 140, 220, 320, 370]
+
+
+def prueba_640(video: Path) -> tuple[Path, Path]:
+    """La composición de prueba a 640 px de ancho y su hoja de contacto (I2-2 punto 15)."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    out = EVID / "prueba_640.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(video), "-vf", "scale=640:-2", "-c:v", "libx264",
+                    "-crf", "18", "-pix_fmt", "yuv420p", "-an", str(out)], check=True, timeout=600)
+    frames = sorted([(f, "transición") for f in CONTACTO_TRANSICION] + [(f, "hold") for f in CONTACTO_HOLD])
+    ims = []
+    with tempfile.TemporaryDirectory() as td:
+        for f, tipo in frames:
+            png = Path(td) / f"{f}.png"
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(out), "-vf", rf"select=eq(n\,{f})", "-vframes", "1",
+                            str(png)], check=True, timeout=120)
+            ims.append((f, tipo, Image.open(png).convert("RGB")))
+    w, h = ims[0][2].size
+    cw, ch = w // 2, h // 2      # media escala: 320 px de ancho por celda, 6 × 2
+    try:
+        fnt = ImageFont.truetype("arialbd.ttf", 22)
+    except OSError:
+        fnt = None
+    hoja = Image.new("RGB", (6 * cw, 2 * (ch + 34)), (244, 241, 234))
+    d = ImageDraw.Draw(hoja)
+    for i, (f, tipo, im) in enumerate(ims):
+        x, y = (i % 6) * cw, (i // 6) * (ch + 34)
+        hoja.paste(im.resize((cw, ch)), (x, y + 34))
+        d.text((x + 8, y + 6), f"f{f} · {tipo}", fill=(200, 16, 46) if tipo == "transición" else (17, 17, 17), font=fnt)
+    contacto = EVID / "prueba_640_contacto.png"
+    hoja.save(contacto)
+    return out, contacto
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--export", action="store_true")
@@ -255,6 +303,8 @@ def main() -> int:
     if a.solo_hoja:
         return 0
     report = render_prueba(lib)
+    video = ROOT / "output" / f"{dt.date.today():%Y-%m-%d}-kx-tadeo" / "video.mp4"
+    print("prueba 640:", *prueba_640(video))
     print(json.dumps({k: v for k, v in report.items() if k != "linea"}, ensure_ascii=False, indent=1))
     print("OK" if not report["fails"] else "FALLA")
     return 1 if report["fails"] else 0
