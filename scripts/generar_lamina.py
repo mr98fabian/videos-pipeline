@@ -57,23 +57,64 @@ PRECIOS = {
 TOPE_POR_EJECUCION = 10
 
 ESTILO = (
-    "The attached image is the MODEL SHEET of the character 'Tadeo', a cartoon raccoon. "
-    "Draw ONE new full-body pose of exactly this character on a plain white background. "
-    "Keep his design identical to the model sheet: same head shape and proportions, same mask, "
-    "same large round eyes with the white highlight, same small black nose, same chest tuft, "
-    "same white gloves, same dark feet, same striped tail. "
-    "Style: 1930s rubber-hose cartoon, clean black ink outline of uniform weight, flat grayscale "
-    "fills (no color, no gradients, no hatching, no shadows on the floor), pure white background. "
-    "Output a single character illustration only: no text, no labels, no panels, no other poses, "
-    "no expression sheets, no turnaround."
+    'The attached image is the MODEL SHEET of the character "Tadeo", a cartoon raccoon. '
+    'Draw ONE new full-body pose of exactly this character. '
+    ' '
+    'Identity (copy from the model sheet, do not redesign): same head shape and size relative to the body, '
+    'same dark eye mask, same large round eyes with a white highlight, same small black nose, same chest tuft, '
+    'same white four-finger gloves with rolled cuffs, same dark feet, same striped tail with alternating rings. '
+    'Body proportions as on the sheet: big head (about 40% of his standing height), short legs, long thin '
+    'rubber-hose arms of constant thickness with no elbows or muscles, pear-shaped body with a belly patch '
+    'clearly lighter than the fur. '
+    ' '
+    'View: his BODY FACES THE VIEWER (front view, not three-quarter, not profile). His HEAD FACES THE VIEWER, '
+    'fully visible, not covered by a hand or an arm. Both feet and the whole tail are visible; the tail comes out '
+    "on the viewer's right side, as on the sheet. "
+    ' '
+    'Style: 1930s rubber-hose cartoon. Bold black ink outline with the same line weight as the model sheet. '
+    'Flat grayscale fills only: strictly black, white and gray. No color, no gradients, no hatching, no texture, '
+    'no cast shadow, no ground line. '
+    ' '
+    'Framing: the whole character inside the frame with empty margin on every side, centered, on a pure white '
+    'background. A single figure only: no text, no labels, no props, no extra poses, no head studies, no '
+    'turnaround, no borders. '
 )
 
+# Las 9 poses de misiones/2026-11-25-especificacion-9-laminas.md (aprobada 25 nov 2026), sección 4.
+# «pointing» es la de la prueba de humo de la misión 0004.
 POSES = {
     "pointing": (
         "Pose 'pointing': he stands in a confident wide stance, body turned three-quarters, "
         "his LEFT arm (viewer's left) stretched out straight to the side and pointing with the index "
         "finger extended and the other fingers curled, his other hand resting on his hip, "
         "head turned toward the pointing direction, a slight smirk."
+    ),
+    "decidido": (
+        'Pose "determined": wide firm stance, feet apart, leaning slightly forward. His left hand (viewer\'s left) is a closed fist resting on his hip with the elbow out. His right arm is raised to the side with a closed fist held up at shoulder height, clear of the face. Head upright, facing the viewer, brows down, mouth closed and firm.'
+    ),
+    'confundido': (
+        'Pose "confused shrug": standing, shoulders raised in a shrug. Both arms bent with the forearms out to the sides, both hands open with the palms facing up at chest height, symmetrical. Head tilted about ten degrees to one side, facing the viewer, one eyebrow raised, small puzzled mouth.'
+    ),
+    'orgulloso': (
+        'Pose "smug, hands on hips": standing tall, chest out, leaning very slightly back. Both hands are closed fists resting on his hips, both elbows pointing out, with a clear gap of white background between each arm and the body. Tail raised. Head facing the viewer, chin up, half-closed eyes, wide closed smile.'
+    ),
+    'estafado': (
+        'Pose "defeated": slumped, shoulders dropped, knees slightly bent, body sagging. Both arms hang limp straight down in front of the thighs, hands open and loose with the fingers pointing down. Tail drooping down to the floor. Head lowered but still facing the viewer, sad eyebrows, mouth turned down.'
+    ),
+    'grito': (
+        'Pose "shouting": leaning forward, body stretched up. Both hands are open and cupped at the two sides of his head like a megaphone, placed beside the cheeks and NOT in front of the face, elbows pointing out. Tail raised and bristling. Head facing the viewer, mouth wide open shouting, brows down.'
+    ),
+    'explicando': (
+        'Pose "presenting": standing relaxed. His right arm (viewer\'s right) is raised and bent, with the open hand held palm up at head height beside him, as if presenting something to his side. His left arm hangs low with an open relaxed hand next to the hip. Head facing the viewer, friendly smile.'
+    ),
+    'codicia': (
+        'Pose "greedy, rubbing hands": hunched forward, head sunk between the shoulders. Both hands are together in front of his chest, rubbing each other, one hand over the other, elbows close to the body. He holds NOTHING: no money, no coins, no objects. Tail curled. Head facing the viewer and lowered, half-closed eyes, wide sly grin.'
+    ),
+    'asombro': (
+        'Pose "astonished": leaning back, body stretched tall. Both arms flung out to the sides at shoulder height, both hands wide open with the palms toward the viewer and the fingers spread far apart. Tail raised straight. Head facing the viewer, eyes very wide, eyebrows high, small round open mouth.'
+    ),
+    'triunfo': (
+        'Pose "victory jump": jumping in the air, both feet off the ground, knees slightly bent, body stretched. Both arms raised straight up with closed fists above the head, one on each side, not covering the ears. Tail raised with a curl. Head facing the viewer, eyes closed in a big open laughing smile.'
     ),
 }
 
@@ -108,13 +149,14 @@ def redactar(texto: str, llave: str | None = None) -> str:
 
 
 # ------------------------------------------------------------------ API
-def construir_cuerpo(prompt: str, ref_png: bytes, mime: str = "image/png") -> dict:
+def construir_cuerpo(prompt: str, ref_png: bytes, mime: str = "image/png", aspecto: str | None = None) -> dict:
     return {
         "contents": [{"parts": [
             {"text": prompt},
             {"inlineData": {"mimeType": mime, "data": base64.b64encode(ref_png).decode("ascii")}},
         ]}],
-        "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
+        "generationConfig": {"responseModalities": ["TEXT", "IMAGE"],
+                             **({"imageConfig": {"aspectRatio": aspecto}} if aspecto else {})},
     }
 
 
@@ -189,6 +231,7 @@ def main(argv: list[str] | None = None, entorno: dict | None = None, raiz: Path 
     ap.add_argument("--referencia", type=Path, default=raiz / REFERENCIA.relative_to(ROOT))
     ap.add_argument("--salida", type=Path, default=raiz / SALIDA.relative_to(ROOT))
     ap.add_argument("--extra", default="", help="texto que se añade al prompt de la pose")
+    ap.add_argument("--aspecto", default=None, help="relación de aspecto de la imagen, p. ej. 3:4 (cuerpos de pie)")
     a = ap.parse_args(argv)
     entorno = os.environ if entorno is None else entorno
     llave = None
@@ -209,7 +252,7 @@ def main(argv: list[str] | None = None, entorno: dict | None = None, raiz: Path 
             raise ErrorLimpio(f"no encuentro la imagen de referencia: {a.referencia}")
         ref = a.referencia.read_bytes()
         prompt = f"{ESTILO}\n\n{POSES[a.pose]}" + (f"\n\n{a.extra}" if a.extra else "")
-        cuerpo = construir_cuerpo(prompt, ref, "image/png" if a.referencia.suffix.lower() == ".png" else "image/jpeg")
+        cuerpo = construir_cuerpo(prompt, ref, "image/png" if a.referencia.suffix.lower() == ".png" else "image/jpeg", a.aspecto)
         a.salida.mkdir(parents=True, exist_ok=True)
         total = 0.0
         for i in range(a.n):
