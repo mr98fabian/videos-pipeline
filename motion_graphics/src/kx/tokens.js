@@ -52,3 +52,29 @@ export const GRAIN = { opacity: 0.07, baseFrequency: 0.85 };
 // Cambia de dibujo cada `step` frames y cicla entre `variants` dibujos
 // (en vez de un ruido nuevo por frame, que se ve digital).
 export const BOIL = { step: 3, variants: 3, scale: 2.6, baseFrequency: 0.018 };
+
+// Tonos de Tadeo (Misión 0001, Fase 2, A1): fracción de INK sobre PAPER.
+// No son colores nuevos: son puntos de la recta INK→PAPER, que el gate
+// cuenta como neutros. tone() los convierte en el rgb() que pinta el SVG.
+// Iteración 2 (I2-2 punto 5): 6 tonos medidos por zona en la vista frontal de
+// la hoja madre (el T_FUR 0,46 de A1 era el tono de sombra de la madre).
+// kx_trazo.TONOS repite estos valores (lo vigila tests/test_tadeo_parecido.py).
+export const TADEO_TONE = { T_WHITE: 0, T_CREAM: 0.09, T_MEDIO: 0.25, T_FUR: 0.39, T_FUR_SOMBRA: 0.47, T_MASK: 0.64, T_INK: 1 };
+
+const _rgb = (hex) => {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+export const tone = (frac) => {
+  const a = _rgb(PAPER);
+  const b = _rgb(INK);
+  const c = a.map((v, i) => Math.round(v + (b[i] - v) * frac));
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+};
+
+// Presets de spring de la casa (A7). POP lleva una masa por capa del rig.
+export const SPRING = {
+  POP: { damping: 12, stiffness: 200, mass: { ligera: 0.5, media: 0.6, pesada: 0.8 } },
+  SUAVE: { damping: 200, stiffness: 100, mass: 1 },
+  ACENTO: { damping: 8, stiffness: 200, mass: 0.6 },
+};
