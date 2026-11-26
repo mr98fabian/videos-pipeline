@@ -1,6 +1,7 @@
 # Diseño del trazador de láminas de pose de Tadeo
 
-Diseño, 25 nov 2026. **No hay código ni láminas nuevas en este documento.** Fabian lo aprueba antes de construir.
+Diseño, 25 nov 2026. **Aprobado por Fabian el 25 nov 2026** (las cinco decisiones de la sección 0).
+**No hay código ni láminas nuevas en este documento.**
 Insumos: `misiones/2026-11-25-especificacion-9-laminas.md` (en master), las 9 láminas de la PR #10
 (`misiones/evidencia/0005/`), `pointing_api.png` (misión 0004) y `kx_trazo.py` / `kx_parecido.py` de la rama de
 la Fase 2 (PR #7, sin fusionar).
