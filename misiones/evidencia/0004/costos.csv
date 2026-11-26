@@ -1,0 +1,2 @@
+fecha,modelo,pose,archivo,tokens_entrada,tokens_salida,costo_usd,metodo
+2026-11-25T16:03:33,gemini-nano-banana-2.1,pointing,pointing_api.png,1341,1888,0.03561,tokens
