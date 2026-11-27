@@ -11,7 +11,7 @@ por Mijo, así que este archivo hace de misión y de reporte a la vez.
 coincide con su lámina con IoU de 0,994 a 0,998 y tinta del 99,9–100 % en los dos sentidos. Lo que
 **no** funciona es parte del instrumento que el diseño fijó para aprobarlas: el tono cuantizado a
 `TADEO_TONE` no llega al umbral de error tonal en 5 de 11, y de las 6 marcas de proporción solo
-`pie` y `panza` son estables. Con las reglas tal cual pasaba 1 de 9 (`explicando`); **tras la decisión del 27 nov (abajo), pasan 3: `decidido`, `orgulloso` y `explicando`**. Según la
+`pie` y `panza` son estables. Con las reglas tal cual pasaba 1 de 9 (`explicando`); con las dos decisiones del 27 nov (abajo: marcas estables y `T_OSCURO`) **pasan 4: `decidido`, `confundido`, `orgulloso` y `explicando`**. Según la
 sección 4 del diseño no he aflojado ningún umbral: los números van abajo, **decide Fabian**.
 Ninguna traza entra en el rig: quedan como candidatas en `misiones/evidencia/0006/trazas/`.
 
@@ -110,6 +110,26 @@ Aprobó la propuesta del punto 2: la 3.2 decide con `pie` + `panza` + anillos (`
 **Coste de la decisión:** con solo `pie` y `panza`, el malo fabricado «cuerpo aplastado ×0,8» ya **no se
 detecta** (lo cazaba `brazo_grosor`), y «cabeza ×1,3» cae por una sola marca (`pie` −23,9 %). La regla de
 separación sigue sin cumplirse. Sigue pendiente el punto 1 (tono).
+
+### Decisión de Fabian (27 nov 2026): tono oscuro nuevo
+
+`TADEO_TONE` gana `T_OSCURO: 0.69` (`tokens.js` y `kx_trazolib.TONOS`): el gris de pies y anillos de las
+láminas mide 0,664–0,724 (mediana 0,682, 52 regiones) y `T_MASK` (0,64) no llegaba. **El rig no cambia**:
+regenerado `traza.js`, solo se añade la entrada a su tabla `tonos`; la madre no usa el tono nuevo, y
+`parecido.json` solo cambia de huella.
+
+| Lámina | Tono medio / sup. > 0,08 (antes → ahora) | Pasa | Lo que la frena |
+|---|---|---|---|
+| decidido | 0,0215 → 0,0147 / 3,5 % | **sí** | — |
+| confundido | 0,0335 → 0,0270 / 3,7 % | **sí** | — |
+| orgulloso | 0,0280 → 0,0244 / 3,4 % | **sí** | — |
+| explicando | 0,0247 → 0,0201 / 3,9 % | **sí** | — |
+| estafado | 0,0261 → 0,0236 / 3,3 % | no | panza no medible |
+| grito | 0,0199 → 0,0199 / 3,5 % | no | panza no medible; 10 rendijas |
+| codicia | 0,0251 → 0,0229 / 3,1 % | no | panza no medible |
+| asombro | 0,0438 → **0,0355** / 4,3 % | no | tono (peto 219 contra `T_CREAM` 230); 1 rendija |
+| triunfo | 0,0315 → 0,0220 / 3,0 % | no | 8 anillos (pide 5–7) |
+| pointing | 0,0383 → **0,0301** / 3,6 % | no | tono por 0,0001; 3/4 sin marcas que decidan |
 
 ### Decisiones y desviaciones del diseño (declaradas)
 

@@ -175,7 +175,7 @@ def bez(p0, p1, p2, t):
 # ------------------------------------------------------------------ iteración 2 (R1-R3)
 # Tonos medidos en la madre (fracción de INK sobre PAPER, I2-2 punto 5). Deben
 # coincidir con TADEO_TONE de tokens.js (lo vigila tests/test_tadeo_parecido.py).
-TONOS = {"T_WHITE": 0.0, "T_CREAM": 0.09, "T_MEDIO": 0.25, "T_FUR": 0.39, "T_FUR_SOMBRA": 0.47, "T_MASK": 0.64}
+TONOS = {"T_WHITE": 0.0, "T_CREAM": 0.09, "T_MEDIO": 0.25, "T_FUR": 0.39, "T_FUR_SOMBRA": 0.47, "T_MASK": 0.64, "T_OSCURO": 0.69}
 TN = list(TONOS)
 TV = np.array(list(TONOS.values()))
 RECTA = 1 - 17 / 241.1          # luminancia de INK sobre la de PAPER: tone(f) ≈ papel·(1 − RECTA·f)
