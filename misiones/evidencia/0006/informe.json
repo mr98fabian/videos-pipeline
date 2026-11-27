@@ -1,5 +1,5 @@
 {
- "huella_codigo": "55d9ae44bf2efd1c",
+ "huella_codigo": "edc63a0fadf8cea8",
  "umbrales_31": {
   "iou_min": 0.98,
   "iou_duro": 0.95,
@@ -76,10 +76,10 @@
     "brazo_largo": null
    },
    "asombro": {
-    "pie": 0.0389,
-    "panza": -0.0082,
-    "brazo_grosor": -0.0489,
-    "brazo_largo": 0.1667
+    "pie": 0.0012,
+    "panza": 0.0232,
+    "brazo_grosor": -0.0915,
+    "brazo_largo": -0.0139
    },
    "triunfo": {
     "pie": -0.0355,
@@ -117,7 +117,7 @@
     "anillos": 7
    },
    "natural_pointing_forward": {
-    "rechazo": "antifaz: no hay dos lóbulos"
+    "rechazo": "antifaz: no hay dos lóbulos a la misma altura"
    }
   },
   "separacion": {
@@ -151,7 +151,7 @@
      "cumple": false
     },
     "asombro": {
-     "margen_min": 0.0411,
+     "margen_min": 0.0568,
      "cumple": true
     },
     "triunfo": {
@@ -175,7 +175,7 @@
      "cumple": false
     },
     "natural_pointing_forward": {
-     "rechazada_antes": "antifaz: no hay dos lóbulos",
+     "rechazada_antes": "antifaz: no hay dos lóbulos a la misma altura",
      "cumple": true
     }
    },
@@ -191,6 +191,7 @@
    "no_medible": [],
    "anillos_ok": true,
    "solido": true,
+   "spec5": [],
    "pasa": true,
    "marcas_informativas": {
     "brazo_grosor": -0.0587,
@@ -205,6 +206,7 @@
    "no_medible": [],
    "anillos_ok": true,
    "solido": true,
+   "spec5": [],
    "pasa": true,
    "marcas_informativas": {
     "brazo_grosor": 0.1917,
@@ -219,6 +221,7 @@
    "no_medible": [],
    "anillos_ok": true,
    "solido": true,
+   "spec5": [],
    "pasa": true,
    "marcas_informativas": {
     "brazo_grosor": null,
@@ -235,6 +238,7 @@
    ],
    "anillos_ok": true,
    "solido": true,
+   "spec5": [],
    "pasa": false,
    "marcas_informativas": {
     "brazo_grosor": null,
@@ -251,6 +255,7 @@
    ],
    "anillos_ok": true,
    "solido": false,
+   "spec5": [],
    "pasa": false,
    "marcas_informativas": {
     "brazo_grosor": null,
@@ -265,6 +270,7 @@
    "no_medible": [],
    "anillos_ok": true,
    "solido": true,
+   "spec5": [],
    "pasa": true,
    "marcas_informativas": {
     "brazo_grosor": -0.0363,
@@ -281,6 +287,7 @@
    ],
    "anillos_ok": true,
    "solido": true,
+   "spec5": [],
    "pasa": false,
    "marcas_informativas": {
     "brazo_grosor": null,
@@ -288,19 +295,18 @@
    }
   },
   "asombro": {
-   "pasa_31": false,
-   "fallos_31": [
-    "tono_error_medio"
-   ],
+   "pasa_31": true,
+   "fallos_31": [],
    "pasa_32": true,
    "marcas_fuera": {},
    "no_medible": [],
    "anillos_ok": true,
-   "solido": false,
-   "pasa": false,
+   "solido": true,
+   "spec5": [],
+   "pasa": true,
    "marcas_informativas": {
-    "brazo_grosor": -0.0489,
-    "brazo_largo": 0.1667
+    "brazo_grosor": -0.0915,
+    "brazo_largo": -0.0139
    }
   },
   "triunfo": {
@@ -311,6 +317,7 @@
    "no_medible": [],
    "anillos_ok": false,
    "solido": true,
+   "spec5": [],
    "pasa": false,
    "marcas_informativas": {
     "brazo_grosor": null,
@@ -329,6 +336,7 @@
    ],
    "anillos_ok": false,
    "solido": true,
+   "spec5": [],
    "pasa": false,
    "marcas_informativas": {
     "brazo_grosor": 0.2165,
@@ -442,6 +450,12 @@
     },
     "cumple": true
    },
+   "spec5": {
+    "fallos": [],
+    "color_pct": 0.0,
+    "margen": 0.047,
+    "cumple": true
+   },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_decidido.js",
     "sha1": "b98a3798dac0f662"
@@ -500,9 +514,15 @@
     },
     "cumple": true
    },
+   "spec5": {
+    "fallos": [],
+    "color_pct": 0.0,
+    "margen": 0.037,
+    "cumple": true
+   },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_confundido.js",
-    "sha1": "627203595d2c062b"
+    "sha1": "395d8ac27d97df70"
    },
    "fuente_sha1": "44fbdf7a6acb9dbe"
   },
@@ -556,6 +576,12 @@
     "sy_1.012": {
      "huecos_4_399": 0
     },
+    "cumple": true
+   },
+   "spec5": {
+    "fallos": [],
+    "color_pct": 0.0,
+    "margen": 0.044,
     "cumple": true
    },
    "traza": {
@@ -616,6 +642,12 @@
     },
     "cumple": true
    },
+   "spec5": {
+    "fallos": [],
+    "color_pct": 0.15,
+    "margen": 0.05,
+    "cumple": true
+   },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_estafado.js",
     "sha1": "b43cbe2ed14dcc10"
@@ -674,6 +706,12 @@
     },
     "cumple": false
    },
+   "spec5": {
+    "fallos": [],
+    "color_pct": 0.0,
+    "margen": 0.064,
+    "cumple": true
+   },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_grito.js",
     "sha1": "cd7bec1e7b0b42c5"
@@ -730,6 +768,12 @@
     "sy_1.012": {
      "huecos_4_399": 0
     },
+    "cumple": true
+   },
+   "spec5": {
+    "fallos": [],
+    "color_pct": 0.27,
+    "margen": 0.026,
     "cumple": true
    },
    "traza": {
@@ -790,6 +834,12 @@
     },
     "cumple": true
    },
+   "spec5": {
+    "fallos": [],
+    "color_pct": 0.37,
+    "margen": 0.074,
+    "cumple": true
+   },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_codicia.js",
     "sha1": "c0c4caaff457618a"
@@ -798,11 +848,11 @@
   },
   "asombro": {
    "marcas": {
-    "pie": 0.615,
-    "panza": 0.6442,
-    "brazo_grosor": 0.1652,
-    "brazo_largo": 0.84,
-    "cola_ancho": 0.4674,
+    "pie": 0.5927,
+    "panza": 0.6646,
+    "brazo_grosor": 0.1578,
+    "brazo_largo": 0.71,
+    "cola_ancho": 0.4408,
     "cola_anillos": 6
    },
    "anclas": {
@@ -811,48 +861,54 @@
      0.0
     ],
     "barbilla": [
-     10.1,
-     738.8
+     -0.4,
+     768.5
     ],
     "antifaz_centro": [
-     33.9,
-     939.4
+     -0.3,
+     960.0
     ],
-    "eje_cabeza": -6.76,
-    "A_px": 557.26,
-    "escala_u_por_px": 0.68101,
-    "barbilla_propia_A": 0.35
+    "eje_cabeza": -0.03,
+    "A_px": 638.0,
+    "escala_u_por_px": 0.59483,
+    "barbilla_propia_A": 0.31
    },
    "traza_31": {
-    "iou": 0.9951,
+    "iou": 0.993,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 0.9994,
-    "tono_error_medio": 0.0355,
-    "tono_superficie_mayor_008": 0.0429,
+    "area_tinta": 0.9936,
+    "tono_error_medio": 0.0153,
+    "tono_superficie_mayor_008": 0.0336,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
      "tinta_trazo_en_lamina": true,
      "area_tinta": true,
-     "tono_error_medio": false,
+     "tono_error_medio": true,
      "tono_superficie": true
     }
    },
    "solido": {
     "sy_0.988": {
-     "huecos_4_399": 1
+     "huecos_4_399": 0
     },
     "sy_1.012": {
-     "huecos_4_399": 1
+     "huecos_4_399": 0
     },
-    "cumple": false
+    "cumple": true
+   },
+   "spec5": {
+    "fallos": [],
+    "color_pct": 0.0,
+    "margen": 0.035,
+    "cumple": true
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_asombro.js",
-    "sha1": "d573542ce447b8a6"
+    "sha1": "8914c7b44e0fbbd9"
    },
-   "fuente_sha1": "93c32d53787a4a10"
+   "fuente_sha1": "6894c20adfd94ed2"
   },
   "triunfo": {
    "marcas": {
@@ -906,9 +962,15 @@
     },
     "cumple": true
    },
+   "spec5": {
+    "fallos": [],
+    "color_pct": 0.0,
+    "margen": 0.102,
+    "cumple": true
+   },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_triunfo.js",
-    "sha1": "7e1ff2ee05c7de8f"
+    "sha1": "c04e35533b811bbd"
    },
    "fuente_sha1": "b7f97c123cd94355"
   },
@@ -964,9 +1026,15 @@
     },
     "cumple": true
    },
+   "spec5": {
+    "fallos": [],
+    "color_pct": 0.0,
+    "margen": 0.068,
+    "cumple": true
+   },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_pointing.js",
-    "sha1": "3205f0d7cbbd7f60"
+    "sha1": "1e5063d250405c6b"
    },
    "fuente_sha1": "08294392cdd62c24"
   }

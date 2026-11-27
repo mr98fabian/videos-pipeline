@@ -37,7 +37,10 @@ EVID = ROOT / "misiones" / "evidencia"
 OUT_DIR = ROOT / "motion_graphics" / "src" / "kx" / "tadeo" / "laminas"
 EVID_OUT = EVID / "0006"
 POSES = ["decidido", "confundido", "orgulloso", "estafado", "grito", "explicando", "codicia", "asombro", "triunfo"]
-FUENTES = {p: EVID / "0005" / f"{p}_api.png" for p in POSES} | {"pointing": EVID / "0004" / "pointing_api.png"}
+# Las regeneradas de la misión 0006 (por un fallo concreto) sustituyen a las de la 0005.
+REGENERADAS = EVID / "0006" / "regeneradas"
+FUENTES = {p: (REGENERADAS / f"{p}_api.png" if (REGENERADAS / f"{p}_api.png").exists() else EVID / "0005" / f"{p}_api.png")
+           for p in POSES} | {"pointing": EVID / "0004" / "pointing_api.png"}
 VISTA_3_4 = {"pointing"}          # marcas que dependen de la vista: se reportan, no cuentan
 
 ESCALA = 2                        # las láminas (896×1200) se trabajan ×2: antifaz ≈ 600-770 px, como la madre ×4
@@ -107,11 +110,27 @@ def anclar_antifaz(lam: Lamina) -> None:
     cand = [(m, st, c) for m, st, c in regiones(lam)
             if 70 < np.median(g[m]) < 130 and c[1] < top + 0.45 * (bot - top)]
     cand.sort(key=lambda t: -t[1][4])
-    if len(cand) < 2 or cand[1][1][4] < 0.15 * cand[0][1][4]:
-        raise Rechazo("antifaz: no hay dos lóbulos")
-    if len(cand) > 2 and cand[2][1][4] > 0.5 * cand[1][1][4]:
-        raise Rechazo("antifaz: más de dos lóbulos")
-    lob = sorted(cand[:2], key=lambda t: t[2][0])
+    # El antifaz es un PAR: dos manchas casi a la misma altura y una junto a otra.
+    # No basta con «las dos mayores»: un anillo de cola alto (asombro) también es
+    # medio-oscuro y cae en la mitad de arriba. Ratio de áreas ≥ 0,15 (en 3/4 un
+    # lóbulo se ve pequeño), |dy| < media altura, separación < 3 anchos.
+    pares = []
+    for i in range(min(len(cand), 5)):
+        for j in range(i + 1, min(len(cand), 5)):
+            (_, si, ci), (_, sj, cj) = cand[i], cand[j]
+            ratio = min(si[4], sj[4]) / max(si[4], sj[4])
+            h = (si[3] + sj[3]) / 2
+            w = (si[2] + sj[2]) / 2
+            if ratio < 0.15 or abs(ci[1] - cj[1]) > 0.5 * h or abs(ci[0] - cj[0]) > 3 * w:
+                continue
+            pares.append((abs(ci[1] - cj[1]) / h - ratio, i, j))
+    if not pares:
+        raise Rechazo("antifaz: no hay dos lóbulos a la misma altura")
+    pares.sort()
+    if len(pares) > 1 and {pares[0][1], pares[0][2]} & {pares[1][1], pares[1][2]} == set() \
+            and pares[1][0] - pares[0][0] < 0.05:
+        raise Rechazo("antifaz: dos pares posibles")
+    lob = sorted([cand[pares[0][1]], cand[pares[0][2]]], key=lambda t: t[2][0])
     union = L.fill_holes(lob[0][0]) | L.fill_holes(lob[1][0])
     yy, xx = np.where(union)
     # eje: recta que une los dos lóbulos (la inclinación base de la cabeza)
@@ -533,7 +552,23 @@ def tapon(lam: Lamina) -> np.ndarray:
     p, n = np.array(lam.barbilla["punto"]), np.array(lam.antifaz["normal"])
     banda = ~_encima(sh, p - n * 0.15 * A, n) & _encima(sh, p + n * 3, n)
     debajo = lam.mascaras["cuerpo"] & ~_encima(sh, p, n) & _encima(sh, p + n * 0.05 * A, n)
-    return lam.mascaras["cabeza"] & banda & debajo.any(0)[None, :]
+    base = lam.mascaras["cabeza"] & banda & debajo.any(0)[None, :]
+    # Bolsas: donde la cabeza de la lámina era más ancha que la del rig y un brazo
+    # alzado la encierra (asombro, triunfo), quedaría papel entre mejilla, hombro y
+    # brazo. Se cierran con el mismo pelaje sin tinta, detrás del cuerpo. Solo
+    # dentro de lo que era cabeza de la lámina (nunca un hueco brazo-torso) y
+    # pequeñas (≤ 0,02 A²): una bolsa grande sería un fallo de la lámina, no un cierre.
+    cubre = (lam.mascaras["cuerpo"] | lam.mascaras["cola"] | lam.mascaras["delante"] | base
+             | plantilla_cabeza(lam))
+    bolsa = ~cubre & L.fill_holes(cubre)
+    era_cabeza = cv2.dilate(lam.mascaras["cabeza"].astype(np.uint8), L.disk(max(2, int(0.02 * A)))).astype(bool)
+    bolsas = np.zeros_like(bolsa)
+    for m, st, _ in L.componentes(bolsa, 1):
+        # la bolsa tiene que ser casi toda de la cabeza de la lámina (su borde cae en la tinta)
+        if st[4] <= 0.02 * A * A and (m & lam.mascaras["cabeza"]).sum() >= 0.5 * st[4] and (m & ~era_cabeza).sum() == 0:
+            bolsas |= m
+    lam.mascaras["bolsas"] = bolsas
+    return base | cv2.dilate(bolsas.astype(np.uint8), L.disk(3)).astype(bool)
 
 
 def trazar(lam: Lamina) -> dict:
@@ -548,6 +583,20 @@ def trazar(lam: Lamina) -> dict:
         "tapon": pieza(lam, detras(tapon(lam)), cal, con_tinta=False),
         "delante": pieza(lam, delante, cal) if delante.any() else None,
     }
+    # Cierre sobre lo YA TRAZADO: la simplificación del polígono del cuerpo puede
+    # perder una astilla en la unión con la mejilla y dejar una bolsa que en las
+    # máscaras no existe. Las bolsas pequeñas junto a lo que era la cabeza de la
+    # lámina entran en el tapón (pelaje sin tinta, detrás del cuerpo).
+    cub = cobertura(t, cal, lam.g.shape) | plantilla_cabeza(lam)
+    cerca = cv2.dilate(lam.mascaras["cabeza"].astype(np.uint8), L.disk(max(3, int(0.03 * lam.A)))).astype(bool)
+    extra = np.zeros_like(cub)
+    for m, st, _ in L.componentes(~cub & L.fill_holes(cub), 1):
+        if st[4] <= 0.02 * lam.A ** 2 and (m & cerca).sum() >= 0.5 * st[4]:
+            extra |= m
+    if extra.any():
+        lam.mascaras["bolsas"] = lam.mascaras.get("bolsas", np.zeros_like(extra)) | extra
+        zona = detras(tapon(lam)) | cv2.dilate(extra.astype(np.uint8), L.disk(4)).astype(bool)
+        t["tapon"] = pieza(lam, zona, cal, con_tinta=False)
     af = lam.antifaz
     t["anclas"] = {
         "pies": [0.0, 0.0],
@@ -965,6 +1014,15 @@ def hoja_contacto(filas: list, ruta: Path) -> None:
     _guardar(ruta, np.vstack(filas_img))
 
 
+def regla_5(ruta: Path) -> dict:
+    """Sección 5 de la especificación (figura única, fondo blanco, margen, sin color),
+    con el mismo código que scripts/medir_lamina.py: una lámina no pasa sin ella."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import medir_lamina as ML
+    m = ML.medir(ruta)
+    return {"fallos": m["fallos"], "color_pct": m["color_pct"], "margen": m["margen"], "cumple": not m["fallos"]}
+
+
 def procesar(nombres: list, debug=False) -> dict:
     """Traza, mide (3.1, 3.2, sólido) y calibra. Escribe las trazas CANDIDATAS en
     misiones/evidencia/0006/trazas/: ninguna entra en el rig hasta que pase todo."""
@@ -978,6 +1036,7 @@ def procesar(nombres: list, debug=False) -> dict:
             res[nom] = {"marcas": {k: lam.marcas.get(k) for k in MARCAS}, "anclas": t["anclas"],
                         "traza_31": medir_31(lam, t), "solido": solido(lam, t)}
             if nom != "madre":
+                res[nom]["spec5"] = regla_5(FUENTES[nom])
                 ruta = escribir_traza(nom, t, EVID_OUT / "trazas")
                 res[nom]["traza"] = {"archivo": ruta.relative_to(ROOT).as_posix(), "sha1": huella_archivo(ruta)}
                 res[nom]["fuente_sha1"] = huella_archivo(FUENTES[nom])
@@ -1010,7 +1069,8 @@ def informe(todo: dict) -> dict:
         por_lamina[n] = {"pasa_31": all(c31.values()), "fallos_31": [k for k, ok in c31.items() if not ok],
                          "pasa_32": v["pasa"], "marcas_fuera": v["fuera"], "no_medible": v["no_medible"],
                          "anillos_ok": v["anillos_ok"], "solido": r["solido"]["cumple"],
-                         "pasa": all(c31.values()) and v["pasa"] and r["solido"]["cumple"],
+                         "spec5": r["spec5"]["fallos"],
+                         "pasa": all(c31.values()) and v["pasa"] and r["solido"]["cumple"] and r["spec5"]["cumple"],
                          "marcas_informativas": {k: x for k, x in d.items() if k not in DECIDEN}}
     return {"huella_codigo": huella_codigo(), "umbrales_31": UMBRALES_31, "calibracion": cal,
             "por_lamina": por_lamina, "medidas": res}

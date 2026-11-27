@@ -11,7 +11,7 @@ por Mijo, así que este archivo hace de misión y de reporte a la vez.
 coincide con su lámina con IoU de 0,994 a 0,998 y tinta del 99,9–100 % en los dos sentidos. Lo que
 **no** funciona es parte del instrumento que el diseño fijó para aprobarlas: el tono cuantizado a
 `TADEO_TONE` no llega al umbral de error tonal en 5 de 11, y de las 6 marcas de proporción solo
-`pie` y `panza` son estables. Con las reglas tal cual pasaba 1 de 9 (`explicando`); con las dos decisiones del 27 nov (abajo: marcas estables y `T_OSCURO`) **pasan 4: `decidido`, `confundido`, `orgulloso` y `explicando`**. Según la
+`pie` y `panza` son estables. Con las reglas tal cual pasaba 1 de 9 (`explicando`); con las dos decisiones del 27 nov (abajo: marcas estables y `T_OSCURO`) **pasan 4**, y tras regenerar (abajo) **pasan 5: `decidido`, `confundido`, `orgulloso`, `explicando` y `asombro`**. Según la
 sección 4 del diseño no he aflojado ningún umbral: los números van abajo, **decide Fabian**.
 Ninguna traza entra en el rig: quedan como candidatas en `misiones/evidencia/0006/trazas/`.
 
@@ -130,6 +130,36 @@ regenerado `traza.js`, solo se añade la entrada a su tabla `tonos`; la madre no
 | asombro | 0,0438 → **0,0355** / 4,3 % | no | tono (peto 219 contra `T_CREAM` 230); 1 rendija |
 | triunfo | 0,0315 → 0,0220 / 3,0 % | no | 8 anillos (pide 5–7) |
 | pointing | 0,0383 → **0,0301** / 3,6 % | no | tono por 0,0001; 3/4 sin marcas que decidan |
+
+### Regeneración (orden de Fabian, 27 nov 2026)
+
+12 llamadas, **0,432 USD** (`misiones/evidencia/0006/regeneradas/costos.csv`); las originales de la 0005 no se
+tocaron. Cada intento añadía al prompt el fallo concreto. Tope del diseño: 4 por pose.
+
+| Pose | Intentos | Resultado |
+|---|---|---|
+| `asombro` | 2 | **2.º intento pasa todo** → nueva fuente (`regeneradas/asombro_api.png`). El 1.º arregló tono y proporción, pero salió con tinte crema (28,9 %) |
+| `estafado` | 4 | ninguno pasa: crema (5–28 %) y la cola sigue detrás de las piernas (8 anillos). Se queda la original |
+| `triunfo` | 4 | ninguno pasa: pies de punta (`pie` −12,8 %), crema, y el 4.º falla el tono por 0,0023. Se queda la original |
+| `grito` | 2 | los dos ponen las manos SOBRE la cara (el 2.º, además, `pie` +18,8 %). Paré: la API no sigue esa orden |
+| `codicia` | 0 | no se regeneró: frotarse las manos sobre el pecho tapa el peto por definición; `panza` nunca será medible |
+| `pointing` | 0 | no es una de las 9 |
+
+Los rechazados quedan en `regeneradas/rechazadas/`. El trazador usa una regenerada solo si está en
+`regeneradas/` (`FUENTES`).
+
+**Cambios del trazador hechos durante la regeneración:**
+- **La regla 5 de la especificación** (figura única, fondo, margen, sin color; el código de `medir_lamina.py`) entra en
+  el veredicto: antes una lámina con tinte crema «pasaba» porque el trazo la lee en gris.
+- **Antifaz = un par** de manchas a la misma altura y una junto a otra, no «las dos mayores»: en `asombro` un anillo
+  de cola alto era el tercer lóbulo. Las anclas de las 11 imágenes salen idénticas.
+- **Cierre de bolsas en el tapón**: donde un brazo alzado encierra la mejilla y la del rig es algo más estrecha que la
+  de la lámina, quedaba papel. Se rellena con pelaje sin tinta, detrás del cuerpo, solo junto a la cabeza y hasta
+  0,02 A². Medido sobre lo ya trazado.
+
+**Lo que queda sin pasar y por qué:** `estafado`, `grito` y `codicia` (las manos o los brazos tapan el peto, así que
+`panza` no es medible); `triunfo` (8 anillos: la cola pasa detrás de la pierna y un anillo cuenta dos veces); `grito`
+(rendijas junto a las manos, que tocan la cara); `pointing` (3/4).
 
 ### Decisiones y desviaciones del diseño (declaradas)
 
