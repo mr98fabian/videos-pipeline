@@ -1,0 +1,974 @@
+{
+ "huella_codigo": "53cf04075a793404",
+ "umbrales_31": {
+  "iou_min": 0.98,
+  "iou_duro": 0.95,
+  "tinta_min": 0.97,
+  "area_tinta": [
+   0.97,
+   1.03
+  ],
+  "tono_error_medio_max": 0.03,
+  "tono_superficie_max": 0.05
+ },
+ "calibracion": {
+  "referencia_madre": {
+   "pie": 0.592,
+   "panza": 0.6495,
+   "brazo_grosor": 0.1737,
+   "brazo_largo": 0.72,
+   "cola_ancho": null,
+   "cola_anillos": 7
+  },
+  "tolerancias": {
+   "pie": 0.08,
+   "pie_sin_tope": 0.08,
+   "panza": 0.08,
+   "panza_sin_tope": 0.08,
+   "brazo_grosor": 0.15,
+   "brazo_grosor_sin_tope": 0.2706,
+   "brazo_largo": 0.15,
+   "brazo_largo_sin_tope": 0.4861,
+   "cola_ancho": 0.08,
+   "cola_ancho_sin_tope": null
+  },
+  "buenos": {
+   "decidido": {
+    "pie": -0.01,
+    "panza": -0.0095,
+    "brazo_grosor": -0.0587,
+    "brazo_largo": 0.2222
+   },
+   "confundido": {
+    "pie": -0.0606,
+    "panza": -0.0311,
+    "brazo_grosor": 0.1917,
+    "brazo_largo": -0.3889
+   },
+   "orgulloso": {
+    "pie": 0.0497,
+    "panza": -0.0059,
+    "brazo_grosor": null,
+    "brazo_largo": null
+   },
+   "estafado": {
+    "pie": -0.0466,
+    "panza": null,
+    "brazo_grosor": null,
+    "brazo_largo": null
+   },
+   "grito": {
+    "pie": 0.0606,
+    "panza": null,
+    "brazo_grosor": null,
+    "brazo_largo": null
+   },
+   "explicando": {
+    "pie": -0.0182,
+    "panza": -0.0143,
+    "brazo_grosor": -0.0363,
+    "brazo_largo": -0.0694
+   },
+   "codicia": {
+    "pie": -0.0034,
+    "panza": null,
+    "brazo_grosor": null,
+    "brazo_largo": null
+   },
+   "asombro": {
+    "pie": 0.0389,
+    "panza": -0.0082,
+    "brazo_grosor": -0.0489,
+    "brazo_largo": 0.1667
+   },
+   "triunfo": {
+    "pie": -0.0355,
+    "panza": -0.0111,
+    "brazo_grosor": null,
+    "brazo_largo": null
+   }
+  },
+  "vista_3_4": {
+   "pointing": {
+    "brazo_grosor": 0.2165,
+    "brazo_largo": 0.2222
+   }
+  },
+  "malos": {
+   "cabeza_x1.3": {
+    "d": {
+     "pie": -0.2389,
+     "panza": null,
+     "brazo_grosor": null,
+     "brazo_largo": null
+    },
+    "anillos": 7
+   },
+   "cuerpo_ancho_x1.25": {
+    "rechazo": "panza: no hay peto claro bajo la barbilla"
+   },
+   "cuerpo_bajo_x0.8": {
+    "d": {
+     "pie": -0.0103,
+     "panza": -0.0095,
+     "brazo_grosor": -0.2199,
+     "brazo_largo": 0.1111
+    },
+    "anillos": 7
+   },
+   "natural_pointing_forward": {
+    "rechazo": "antifaz: no hay dos lóbulos"
+   }
+  },
+  "separacion": {
+   "buenos": {
+    "decidido": {
+     "margen_min": -0.0722,
+     "cumple": false
+    },
+    "confundido": {
+     "margen_min": -0.2389,
+     "cumple": false
+    },
+    "orgulloso": {
+     "margen_min": 0.0303,
+     "cumple": false
+    },
+    "estafado": {
+     "margen_min": 0.0334,
+     "cumple": false
+    },
+    "grito": {
+     "margen_min": 0.0194,
+     "cumple": false
+    },
+    "explicando": {
+     "margen_min": 0.0618,
+     "cumple": true
+    },
+    "codicia": {
+     "margen_min": 0.0766,
+     "cumple": false
+    },
+    "asombro": {
+     "margen_min": -0.0167,
+     "cumple": false
+    },
+    "triunfo": {
+     "margen_min": 0.0445,
+     "cumple": false
+    },
+    "pointing": {
+     "margen_min": -0.0722,
+     "cumple": false
+    }
+   },
+   "malos": {
+    "cabeza_x1.3": {
+     "marcas_fuera": 1,
+     "peor_exceso": 0.1589,
+     "cumple": false
+    },
+    "cuerpo_ancho_x1.25": {
+     "rechazada_antes": "panza: no hay peto claro bajo la barbilla",
+     "cumple": true
+    },
+    "cuerpo_bajo_x0.8": {
+     "marcas_fuera": 1,
+     "peor_exceso": 0.0699,
+     "cumple": false
+    },
+    "natural_pointing_forward": {
+     "rechazada_antes": "antifaz: no hay dos lóbulos",
+     "cumple": true
+    }
+   },
+   "cumple": false
+  }
+ },
+ "por_lamina": {
+  "decidido": {
+   "pasa_31": true,
+   "fallos_31": [],
+   "pasa_32": false,
+   "marcas_fuera": {
+    "brazo_largo": 0.2222
+   },
+   "no_medible": [],
+   "anillos_ok": true,
+   "solido": true,
+   "pasa": false,
+   "pasa_32_solo_estables": true
+  },
+  "confundido": {
+   "pasa_31": false,
+   "fallos_31": [
+    "tono_error_medio"
+   ],
+   "pasa_32": false,
+   "marcas_fuera": {
+    "brazo_grosor": 0.1917,
+    "brazo_largo": -0.3889
+   },
+   "no_medible": [],
+   "anillos_ok": true,
+   "solido": true,
+   "pasa": false,
+   "pasa_32_solo_estables": true
+  },
+  "orgulloso": {
+   "pasa_31": true,
+   "fallos_31": [],
+   "pasa_32": false,
+   "marcas_fuera": {},
+   "no_medible": [
+    "brazo_grosor",
+    "brazo_largo"
+   ],
+   "anillos_ok": true,
+   "solido": true,
+   "pasa": false,
+   "pasa_32_solo_estables": true
+  },
+  "estafado": {
+   "pasa_31": true,
+   "fallos_31": [],
+   "pasa_32": false,
+   "marcas_fuera": {},
+   "no_medible": [
+    "panza",
+    "brazo_grosor",
+    "brazo_largo"
+   ],
+   "anillos_ok": true,
+   "solido": true,
+   "pasa": false,
+   "pasa_32_solo_estables": false
+  },
+  "grito": {
+   "pasa_31": true,
+   "fallos_31": [],
+   "pasa_32": false,
+   "marcas_fuera": {},
+   "no_medible": [
+    "panza",
+    "brazo_grosor",
+    "brazo_largo"
+   ],
+   "anillos_ok": true,
+   "solido": false,
+   "pasa": false,
+   "pasa_32_solo_estables": false
+  },
+  "explicando": {
+   "pasa_31": true,
+   "fallos_31": [],
+   "pasa_32": true,
+   "marcas_fuera": {},
+   "no_medible": [],
+   "anillos_ok": true,
+   "solido": true,
+   "pasa": true,
+   "pasa_32_solo_estables": true
+  },
+  "codicia": {
+   "pasa_31": true,
+   "fallos_31": [],
+   "pasa_32": false,
+   "marcas_fuera": {},
+   "no_medible": [
+    "panza",
+    "brazo_grosor",
+    "brazo_largo"
+   ],
+   "anillos_ok": true,
+   "solido": true,
+   "pasa": false,
+   "pasa_32_solo_estables": false
+  },
+  "asombro": {
+   "pasa_31": false,
+   "fallos_31": [
+    "tono_error_medio",
+    "tono_superficie"
+   ],
+   "pasa_32": false,
+   "marcas_fuera": {
+    "brazo_largo": 0.1667
+   },
+   "no_medible": [],
+   "anillos_ok": true,
+   "solido": false,
+   "pasa": false,
+   "pasa_32_solo_estables": true
+  },
+  "triunfo": {
+   "pasa_31": false,
+   "fallos_31": [
+    "tono_error_medio",
+    "tono_superficie"
+   ],
+   "pasa_32": false,
+   "marcas_fuera": {},
+   "no_medible": [
+    "brazo_grosor",
+    "brazo_largo"
+   ],
+   "anillos_ok": false,
+   "solido": true,
+   "pasa": false,
+   "pasa_32_solo_estables": false
+  },
+  "pointing": {
+   "pasa_31": false,
+   "fallos_31": [
+    "tono_error_medio"
+   ],
+   "pasa_32": false,
+   "marcas_fuera": {
+    "brazo_grosor": 0.2165,
+    "brazo_largo": 0.2222
+   },
+   "no_medible": [],
+   "anillos_ok": false,
+   "solido": true,
+   "pasa": false,
+   "pasa_32_solo_estables": false
+  }
+ },
+ "medidas": {
+  "madre": {
+   "marcas": {
+    "pie": 0.592,
+    "panza": 0.6495,
+    "brazo_grosor": 0.1737,
+    "brazo_largo": 0.72,
+    "cola_ancho": 0.2236,
+    "cola_anillos": 7
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     -0.7,
+     595.6
+    ],
+    "antifaz_centro": [
+     -0.3,
+     785.8
+    ],
+    "eje_cabeza": -0.12,
+    "A_px": 622.01,
+    "escala_u_por_px": 0.61012,
+    "barbilla_propia_A": 0.3
+   },
+   "traza_31": {
+    "iou": 0.9943,
+    "tinta_lamina_en_trazo": 0.9999,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 1.0188,
+    "tono_error_medio": 0.0285,
+    "tono_superficie_mayor_008": 0.1125,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": false
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 0
+    },
+    "sy_1.012": {
+     "huecos_4_399": 0
+    },
+    "cumple": true
+   }
+  },
+  "decidido": {
+   "marcas": {
+    "pie": 0.5861,
+    "panza": 0.6433,
+    "brazo_grosor": 0.1635,
+    "brazo_largo": 0.88,
+    "cola_ancho": 0.4749,
+    "cola_anillos": 7
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     0.5,
+     615.5
+    ],
+    "antifaz_centro": [
+     0.3,
+     791.5
+    ],
+    "eje_cabeza": 0.07,
+    "A_px": 715.01,
+    "escala_u_por_px": 0.53076,
+    "barbilla_propia_A": 0.31
+   },
+   "traza_31": {
+    "iou": 0.997,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9997,
+    "tono_error_medio": 0.0215,
+    "tono_superficie_mayor_008": 0.0314,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 0
+    },
+    "sy_1.012": {
+     "huecos_4_399": 0
+    },
+    "cumple": true
+   },
+   "traza": {
+    "archivo": "misiones/evidencia/0006/trazas/traza_decidido.js",
+    "sha1": "8e8f206c3a01034a"
+   },
+   "fuente_sha1": "c3e9eb3ddb986eff"
+  },
+  "confundido": {
+   "marcas": {
+    "pie": 0.5561,
+    "panza": 0.6293,
+    "brazo_grosor": 0.207,
+    "brazo_largo": 0.44,
+    "cola_ancho": 0.4557,
+    "cola_anillos": 7
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     -15.2,
+     602.6
+    ],
+    "antifaz_centro": [
+     -0.3,
+     794.9
+    ],
+    "eje_cabeza": -4.42,
+    "A_px": 691.27,
+    "escala_u_por_px": 0.54899,
+    "barbilla_propia_A": 0.32
+   },
+   "traza_31": {
+    "iou": 0.9949,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9974,
+    "tono_error_medio": 0.0335,
+    "tono_superficie_mayor_008": 0.0329,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": false,
+     "tono_superficie": true
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 0
+    },
+    "sy_1.012": {
+     "huecos_4_399": 0
+    },
+    "cumple": true
+   },
+   "traza": {
+    "archivo": "misiones/evidencia/0006/trazas/traza_confundido.js",
+    "sha1": "2d98228b9f263c33"
+   },
+   "fuente_sha1": "44fbdf7a6acb9dbe"
+  },
+  "orgulloso": {
+   "marcas": {
+    "pie": 0.6214,
+    "panza": 0.6457,
+    "brazo_grosor": null,
+    "brazo_largo": null,
+    "cola_ancho": 0.41,
+    "cola_anillos": 7
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     14.1,
+     717.0
+    ],
+    "antifaz_centro": [
+     24.2,
+     914.6
+    ],
+    "eje_cabeza": -2.93,
+    "A_px": 724.79,
+    "escala_u_por_px": 0.5236,
+    "barbilla_propia_A": 0.38
+   },
+   "traza_31": {
+    "iou": 0.9976,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 1.0009,
+    "tono_error_medio": 0.028,
+    "tono_superficie_mayor_008": 0.0289,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 0
+    },
+    "sy_1.012": {
+     "huecos_4_399": 0
+    },
+    "cumple": true
+   },
+   "traza": {
+    "archivo": "misiones/evidencia/0006/trazas/traza_orgulloso.js",
+    "sha1": "806cbefe2108cc87"
+   },
+   "fuente_sha1": "47a081e9822783f5"
+  },
+  "estafado": {
+   "marcas": {
+    "pie": 0.5644,
+    "panza": null,
+    "brazo_grosor": null,
+    "brazo_largo": null,
+    "cola_ancho": 0.3648,
+    "cola_anillos": 7
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     -88.5,
+     682.2
+    ],
+    "antifaz_centro": [
+     -102.8,
+     865.6
+    ],
+    "eje_cabeza": 4.46,
+    "A_px": 689.9,
+    "escala_u_por_px": 0.55008,
+    "barbilla_propia_A": 0.34
+   },
+   "traza_31": {
+    "iou": 0.9972,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9944,
+    "tono_error_medio": 0.0261,
+    "tono_superficie_mayor_008": 0.0371,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 0
+    },
+    "sy_1.012": {
+     "huecos_4_399": 0
+    },
+    "cumple": true
+   },
+   "traza": {
+    "archivo": "misiones/evidencia/0006/trazas/traza_estafado.js",
+    "sha1": "431db1668668d72a"
+   },
+   "fuente_sha1": "19cb0bd22c2eb18b"
+  },
+  "grito": {
+   "marcas": {
+    "pie": 0.6279,
+    "panza": null,
+    "brazo_grosor": null,
+    "brazo_largo": null,
+    "cola_ancho": 0.4527,
+    "cola_anillos": 6
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     -0.4,
+     691.5
+    ],
+    "antifaz_centro": [
+     -0.6,
+     880.4
+    ],
+    "eje_cabeza": 0.08,
+    "A_px": 708.0,
+    "escala_u_por_px": 0.53601,
+    "barbilla_propia_A": 0.39
+   },
+   "traza_31": {
+    "iou": 0.9968,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.998,
+    "tono_error_medio": 0.0199,
+    "tono_superficie_mayor_008": 0.0346,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 10
+    },
+    "sy_1.012": {
+     "huecos_4_399": 9
+    },
+    "cumple": false
+   },
+   "traza": {
+    "archivo": "misiones/evidencia/0006/trazas/traza_grito.js",
+    "sha1": "cd7bec1e7b0b42c5"
+   },
+   "fuente_sha1": "33ef6992004e284c"
+  },
+  "explicando": {
+   "marcas": {
+    "pie": 0.5812,
+    "panza": 0.6402,
+    "brazo_grosor": 0.1674,
+    "brazo_largo": 0.67,
+    "cola_ancho": 0.4653,
+    "cola_anillos": 7
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     -0.6,
+     607.2
+    ],
+    "antifaz_centro": [
+     -0.5,
+     801.2
+    ],
+    "eje_cabeza": -0.01,
+    "A_px": 767.0,
+    "escala_u_por_px": 0.49478,
+    "barbilla_propia_A": 0.31
+   },
+   "traza_31": {
+    "iou": 0.995,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9974,
+    "tono_error_medio": 0.0247,
+    "tono_superficie_mayor_008": 0.0359,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 0
+    },
+    "sy_1.012": {
+     "huecos_4_399": 0
+    },
+    "cumple": true
+   },
+   "traza": {
+    "archivo": "misiones/evidencia/0006/trazas/traza_explicando.js",
+    "sha1": "0e53ffc931d7b09f"
+   },
+   "fuente_sha1": "1c731d3bbe86e47a"
+  },
+  "codicia": {
+   "marcas": {
+    "pie": 0.59,
+    "panza": null,
+    "brazo_grosor": null,
+    "brazo_largo": null,
+    "cola_ancho": 0.4696,
+    "cola_anillos": 7
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     -2.4,
+     584.2
+    ],
+    "antifaz_centro": [
+     -5.2,
+     775.7
+    ],
+    "eje_cabeza": 0.83,
+    "A_px": 766.01,
+    "escala_u_por_px": 0.49543,
+    "barbilla_propia_A": 0.3
+   },
+   "traza_31": {
+    "iou": 0.9977,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9986,
+    "tono_error_medio": 0.0251,
+    "tono_superficie_mayor_008": 0.0281,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 0
+    },
+    "sy_1.012": {
+     "huecos_4_399": 0
+    },
+    "cumple": true
+   },
+   "traza": {
+    "archivo": "misiones/evidencia/0006/trazas/traza_codicia.js",
+    "sha1": "1ef9b41d901bb60b"
+   },
+   "fuente_sha1": "d025a98ac8c27cc6"
+  },
+  "asombro": {
+   "marcas": {
+    "pie": 0.615,
+    "panza": 0.6442,
+    "brazo_grosor": 0.1652,
+    "brazo_largo": 0.84,
+    "cola_ancho": 0.4674,
+    "cola_anillos": 6
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     10.1,
+     738.8
+    ],
+    "antifaz_centro": [
+     33.9,
+     939.4
+    ],
+    "eje_cabeza": -6.76,
+    "A_px": 557.26,
+    "escala_u_por_px": 0.68101,
+    "barbilla_propia_A": 0.35
+   },
+   "traza_31": {
+    "iou": 0.9951,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9963,
+    "tono_error_medio": 0.0438,
+    "tono_superficie_mayor_008": 0.0523,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": false,
+     "tono_superficie": false
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 1
+    },
+    "sy_1.012": {
+     "huecos_4_399": 1
+    },
+    "cumple": false
+   },
+   "traza": {
+    "archivo": "misiones/evidencia/0006/trazas/traza_asombro.js",
+    "sha1": "fa9fbb985fa60fb0"
+   },
+   "fuente_sha1": "93c32d53787a4a10"
+  },
+  "triunfo": {
+   "marcas": {
+    "pie": 0.571,
+    "panza": 0.6423,
+    "brazo_grosor": null,
+    "brazo_largo": null,
+    "cola_ancho": 0.4373,
+    "cola_anillos": 8
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     -0.3,
+     729.7
+    ],
+    "antifaz_centro": [
+     -0.2,
+     911.2
+    ],
+    "eje_cabeza": -0.02,
+    "A_px": 601.0,
+    "escala_u_por_px": 0.63145,
+    "barbilla_propia_A": 0.39
+   },
+   "traza_31": {
+    "iou": 0.9943,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9983,
+    "tono_error_medio": 0.0315,
+    "tono_superficie_mayor_008": 0.0606,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": false,
+     "tono_superficie": false
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 0
+    },
+    "sy_1.012": {
+     "huecos_4_399": 0
+    },
+    "cumple": true
+   },
+   "traza": {
+    "archivo": "misiones/evidencia/0006/trazas/traza_triunfo.js",
+    "sha1": "55f46e1a9b99e6b9"
+   },
+   "fuente_sha1": "b7f97c123cd94355"
+  },
+  "pointing": {
+   "marcas": {
+    "pie": 0.6646,
+    "panza": 0.6807,
+    "brazo_grosor": 0.2113,
+    "brazo_largo": 0.88,
+    "cola_ancho": 0.5724,
+    "cola_anillos": 8
+   },
+   "anclas": {
+    "pies": [
+     0.0,
+     0.0
+    ],
+    "barbilla": [
+     15.3,
+     743.6
+    ],
+    "antifaz_centro": [
+     37.2,
+     942.1
+    ],
+    "eje_cabeza": -6.29,
+    "A_px": 492.12,
+    "escala_u_por_px": 0.77116,
+    "barbilla_propia_A": 0.35
+   },
+   "traza_31": {
+    "iou": 0.9965,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9953,
+    "tono_error_medio": 0.0382,
+    "tono_superficie_mayor_008": 0.046,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": false,
+     "tono_superficie": true
+    }
+   },
+   "solido": {
+    "sy_0.988": {
+     "huecos_4_399": 0
+    },
+    "sy_1.012": {
+     "huecos_4_399": 0
+    },
+    "cumple": true
+   },
+   "traza": {
+    "archivo": "misiones/evidencia/0006/trazas/traza_pointing.js",
+    "sha1": "6fa41b0fb777a9c6"
+   },
+   "fuente_sha1": "08294392cdd62c24"
+  }
+ }
+}
