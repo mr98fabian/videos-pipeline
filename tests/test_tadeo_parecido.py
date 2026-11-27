@@ -87,7 +87,7 @@ def test_evidencia_visual_existe():
 def test_tonos_de_trazo_son_los_de_tokens():
     tok = (ROOT / "motion_graphics" / "src" / "kx" / "tokens.js").read_text(encoding="utf-8")
     js = dict((k, float(v)) for k, v in re.findall(r"(T_[A-Z_]+): ([0-9.]+)", tok.split("TADEO_TONE", 1)[1].split("}")[0]))
-    py = (ROOT / "kx_trazo.py").read_text(encoding="utf-8")
+    py = (ROOT / "kx_trazolib.py").read_text(encoding="utf-8")
     tr = dict((k, float(v)) for k, v in re.findall(r'"(T_[A-Z_]+)": ([0-9.]+)', py.split("TONOS = {", 1)[1].split("}")[0]))
     assert tr == {k: v for k, v in js.items() if k != "T_INK"}, (tr, js)
     assert TRAZA["tonos"] == tr

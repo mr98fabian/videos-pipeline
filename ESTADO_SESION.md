@@ -13,6 +13,26 @@ lo que quedó a medias, y qué sigue. Se lee al empezar y se actualiza al termin
 
 ---
 
+## Actualizado: 27 nov 2026 — trazador de láminas de Tadeo construido (misión 0006)
+
+**Rama `feat/trazador-laminas`**, PR abierto. Reporte completo en `misiones/0006-trazador-laminas.md`.
+
+- `kx_lamina.py` traza las 9 láminas + `pointing`: el cuerpo copia su lámina con IoU 0,994–0,998 y
+  tinta ~100 %. La cabeza la pone el rig, anclada por el antifaz.
+- **Pasan 5 de 9** (`decidido`, `confundido`, `orgulloso`, `explicando`, `asombro`) tras dos decisiones de Fabian del
+  27 nov (proporción solo con `pie` + `panza` + anillos; `T_OSCURO: 0.69` en `TADEO_TONE`) y la regeneración (12
+  llamadas, 0,432 USD; solo `asombro` mejoró). No pasan: `estafado`, `grito` y `codicia` (el peto queda tapado, `panza`
+  no medible), `triunfo` (8 anillos por la pierna). Siguiente: decidir si `panza` tapada bloquea o se integra.
+- **Integradas en el rig** las 5 que pasan: `<Tadeo cuerpo="lamina" />` (opcional; por defecto sigue el cuerpo
+  por piezas, así que ningún vídeo cambia). Medido sobre el render real de Remotion (`py kx_lamina.py --rig`):
+  cuerpo IoU ≥ 0,992, cabeza a ≤ 0,1 % de A de su sitio.
+- **Por defecto en KOREX:** `RubberTadeo` (KorexMotion) dibuja la lámina vectorial cuando la pose la tiene; el
+  resto sigue en PNG. Cambia la salida de todo vídeo KOREX nuevo (entrada en `HISTORIAL_MEJORAS.md`).
+- Siguiente: revisar la franja en el cuello de `orgulloso` (`misiones/evidencia/0006/rig_contacto.png`) y qué hacer
+  con `estafado`, `grito`, `codicia` y `triunfo`.
+
+---
+
 ## Actualizado: 17 ago 2026 — canal reordenado, calendario fijo y dos Shorts programados
 
 **Otra sesión.** El grueso del día no fue producir: fue descubrir que medíamos mal.

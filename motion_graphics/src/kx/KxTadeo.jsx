@@ -6,16 +6,18 @@ import { INK, PAPER, SAFE } from "./tokens";
 import { DISPLAY_FAMILY } from "./fonts";
 import { FilmGrain } from "./texture";
 import { Tadeo } from "./tadeo/Tadeo.jsx";
-import { CabezaPartes, TadeoPartes } from "./tadeo/partes.jsx";
+import { CabezaPartes, CuerpoLamina, TadeoPartes } from "./tadeo/partes.jsx";
 import { estado } from "./tadeo/acting.js";
+import { POSES } from "./tadeo/poses.js";
+import { LAMINAS } from "./tadeo/laminas/index.js";
 
-export const KxTadeo = ({ linea, silueta = false }) => {
+export const KxTadeo = ({ linea, silueta = false, cuerpo = "piezas" }) => {
   const frame = useCurrentFrame();
   const cur = [...linea].reverse().find((c) => frame >= c.t0) || linea[0];
   if (silueta) {
     return (
       <AbsoluteFill style={{ background: PAPER }}>
-        <Tadeo linea={linea} semilla={3} uid="kxt" silueta />
+        <Tadeo linea={linea} semilla={3} uid="kxt" silueta cuerpo={cuerpo} />
       </AbsoluteFill>
     );
   }
@@ -25,7 +27,7 @@ export const KxTadeo = ({ linea, silueta = false }) => {
         fontFamily: DISPLAY_FAMILY, fontWeight: 800, fontSize: 56, color: INK }}>
         {`${cur.beat ? "*" : ""}tadeo/${cur.pose}`}
       </div>
-      <Tadeo linea={linea} semilla={3} uid="kxt" />
+      <Tadeo linea={linea} semilla={3} uid="kxt" cuerpo={cuerpo} />
       <FilmGrain />
     </AbsoluteFill>
   );
@@ -148,6 +150,25 @@ export const KxTadeoMolde = ({ xc, suelo, s, pose = "neutro" }) => {
       <svg width="100%" height="100%">
         <g transform={`translate(${xc} ${suelo}) scale(${s} ${-s})`}>
           <TadeoPartes est={est} uid="molde" />
+        </g>
+      </svg>
+    </AbsoluteFill>
+  );
+};
+
+
+// Molde de lámina (misión 0006): la pose con su lámina, sin boil ni idle, en la
+// MISMA rejilla de la lámina ×2 (pies en xc/suelo, s px por u), para que
+// kx_lamina.py --rig mida el render real del rig contra la lámina. Sin el giro de
+// cabeza de la pose (falso 3/4 de la mirada), que desplaza el antifaz a propósito.
+export const KxTadeoLaminaMolde = ({ pose, xc, suelo, s }) => {
+  const e0 = estado({ desde: pose, frame: 0, conIdle: false, agenda: [] });
+  const est = { ...e0, cabeza: { ...e0.cabeza, gira: 0 } };
+  return (
+    <AbsoluteFill style={{ background: PAPER }}>
+      <svg width="100%" height="100%">
+        <g transform={`translate(${xc} ${suelo}) scale(${s} ${-s})`}>
+          <CuerpoLamina t={LAMINAS[pose]} est={est} baseInclina={(POSES[pose]?.cabeza?.inclina) || 0} baseSy={(POSES[pose]?.torso?.sy) || 1} uid="lmolde" />
         </g>
       </svg>
     </AbsoluteFill>

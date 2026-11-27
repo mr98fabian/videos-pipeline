@@ -1,0 +1,115 @@
+{
+ "huella_codigo": "fbeed370d9df8224",
+ "poses": {
+  "decidido": {
+   "traza_31_rig": {
+    "iou": 0.9964,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9906,
+    "tono_error_medio": 0.0155,
+    "tono_superficie_mayor_008": 0.0351,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "cabeza_iou": 0.9468,
+   "antifaz_desvio_A": 0.0008,
+   "antifaz_A_rig_sobre_lamina": 1.0028,
+   "antifaz_giro_rig_menos_lamina": 0.0
+  },
+  "confundido": {
+   "traza_31_rig": {
+    "iou": 0.9943,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9884,
+    "tono_error_medio": 0.0283,
+    "tono_superficie_mayor_008": 0.0382,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "cabeza_iou": 0.957,
+   "antifaz_desvio_A": 0.0009,
+   "antifaz_A_rig_sobre_lamina": 1.0028,
+   "antifaz_giro_rig_menos_lamina": -0.01
+  },
+  "orgulloso": {
+   "traza_31_rig": {
+    "iou": 0.9966,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 0.9988,
+    "area_tinta": 0.9934,
+    "tono_error_medio": 0.0257,
+    "tono_superficie_mayor_008": 0.0338,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "cabeza_iou": 0.973,
+   "antifaz_desvio_A": 0.0007,
+   "antifaz_A_rig_sobre_lamina": 1.0031,
+   "antifaz_giro_rig_menos_lamina": 0.01
+  },
+  "explicando": {
+   "traza_31_rig": {
+    "iou": 0.9945,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 1.0,
+    "area_tinta": 0.9891,
+    "tono_error_medio": 0.0214,
+    "tono_superficie_mayor_008": 0.0398,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "cabeza_iou": 0.984,
+   "antifaz_desvio_A": 0.0008,
+   "antifaz_A_rig_sobre_lamina": 1.0013,
+   "antifaz_giro_rig_menos_lamina": -0.01
+  },
+  "asombro": {
+   "traza_31_rig": {
+    "iou": 0.9925,
+    "tinta_lamina_en_trazo": 1.0,
+    "tinta_trazo_en_lamina": 0.9989,
+    "area_tinta": 0.9788,
+    "tono_error_medio": 0.0155,
+    "tono_superficie_mayor_008": 0.0354,
+    "cumple": {
+     "iou": true,
+     "tinta_lamina_en_trazo": true,
+     "tinta_trazo_en_lamina": true,
+     "area_tinta": true,
+     "tono_error_medio": true,
+     "tono_superficie": true
+    }
+   },
+   "cabeza_iou": 0.9506,
+   "antifaz_desvio_A": 0.001,
+   "antifaz_A_rig_sobre_lamina": 1.0016,
+   "antifaz_giro_rig_menos_lamina": 0.02
+  }
+ }
+}

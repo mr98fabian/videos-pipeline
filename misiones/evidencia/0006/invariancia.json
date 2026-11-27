@@ -1,0 +1,66 @@
+{
+ "lamina": "decidido",
+ "casos": {
+  "desplazada": {
+   "area": 0.0,
+   "centroide": 0.0,
+   "marcas": {
+    "pie": 0.0,
+    "panza": 0.0,
+    "brazo_grosor": 0.0,
+    "brazo_largo": 0.0,
+    "cola_ancho": 0.0
+   },
+   "cumple": true
+  },
+  "x0.7": {
+   "area": -0.0202,
+   "centroide": 0.0127,
+   "marcas": {
+    "pie": 0.0012,
+    "panza": -0.002,
+    "brazo_grosor": 0.0024,
+    "brazo_largo": 0.0,
+    "cola_ancho": 0.0665
+   },
+   "cumple": false
+  },
+  "x1.4": {
+   "area": -0.0024,
+   "centroide": 0.0007,
+   "marcas": {
+    "pie": 0.0002,
+    "panza": -0.0025,
+    "brazo_grosor": -0.0018,
+    "brazo_largo": 0.0,
+    "cola_ancho": -0.0002
+   },
+   "cumple": true
+  },
+  "giro+3": {
+   "area": -0.0003,
+   "centroide": 0.041,
+   "marcas": {
+    "pie": 0.0003,
+    "panza": -0.0003,
+    "brazo_grosor": 0.0043,
+    "brazo_largo": 0.0,
+    "cola_ancho": -0.0011
+   },
+   "cumple": false
+  },
+  "giro-3": {
+   "area": -0.0023,
+   "centroide": 0.038,
+   "marcas": {
+    "pie": -0.0007,
+    "panza": -0.0014,
+    "brazo_grosor": -0.0061,
+    "brazo_largo": 0.0,
+    "cola_ancho": -0.0063
+   },
+   "cumple": false
+  }
+ },
+ "cumple": false
+}

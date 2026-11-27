@@ -1,0 +1,13 @@
+fecha,modelo,pose,archivo,tokens_entrada,tokens_salida,costo_usd,metodo
+2026-11-27T03:35:34,gemini-nano-banana-2.1,estafado,estafado_api.png,1595,1572,0.03599,tokens
+2026-11-27T03:35:49,gemini-nano-banana-2.1,grito,grito_api.png,1595,1742,0.03599,tokens
+2026-11-27T03:36:09,gemini-nano-banana-2.1,asombro,asombro_api.png,1578,1624,0.03597,tokens
+2026-11-27T03:36:22,gemini-nano-banana-2.1,triunfo,triunfo_api.png,1572,1513,0.03596,tokens
+2026-11-27T03:38:29,gemini-nano-banana-2.1,grito,grito_api.png,1617,1638,0.03603,tokens
+2026-11-27T03:38:57,gemini-nano-banana-2.1,triunfo,triunfo_api.png,1597,2055,0.036,tokens
+2026-11-27T03:39:13,gemini-nano-banana-2.1,estafado,estafado_api.png,1610,1524,0.03601,tokens
+2026-11-27T03:48:04,gemini-nano-banana-2.1,asombro,asombro_api.png,1583,1621,0.03597,tokens
+2026-11-27T03:49:35,gemini-nano-banana-2.1,estafado,estafado_api.png,1624,2073,0.03604,tokens
+2026-11-27T03:49:50,gemini-nano-banana-2.1,triunfo,triunfo_api.png,1602,1557,0.036,tokens
+2026-11-27T03:50:33,gemini-nano-banana-2.1,triunfo,triunfo_api.png,1608,1532,0.03601,tokens
+2026-11-27T03:51:06,gemini-nano-banana-2.1,estafado,estafado_api.png,1620,2999,0.03603,tokens

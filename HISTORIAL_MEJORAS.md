@@ -869,3 +869,11 @@ vs. "es un problema real y persistente", no para confirmar el video largo.
 - **Dónde:** solo la composición de prueba `KxNucleo`; ningún video publicado cambia todavía.
 - **Medido:** 15/15 páginas confirmadas por Whisper sobre el MP4; 0,034 % fuera de paleta (ringing del códec), rojo ≤1,6 %, 0 color sobre el personaje, 0 píxeles fuera de la zona segura.
 - **Hipótesis:** páginas de 2-4 palabras cortadas por cláusula y con la palabra activa invertida se leen antes que el karaoke por oración del prototipo.
+
+## 2026-11-27 — KOREX dibuja a Tadeo con sus láminas trazadas (misión 0006)
+- **Investigación/origen:** misión 0006 (trazador de láminas, diseño aprobado el 25 nov). Orden de Fabian del 27 nov: «por defecto».
+- **Cambio:** en `KorexMotion.jsx`, `RubberTadeo` dibuja el Tadeo VECTORIAL cuando la pose de `kx_cast` tiene lámina aprobada (`kx/tadeo/laminas/`): el cuerpo trazado de su lámina y la cabeza del rig, que parpadea y mantiene la expresión de la pose. Conserva la entrada, el rebote, el balanceo y el volteo de siempre. Escala fija para todas las poses (1180 u por hueco), así que Tadeo no cambia de tamaño entre escenas. Las poses sin lámina y los otros personajes (la bruja) siguen en PNG.
+- **Dónde:** todo vídeo KOREX nuevo (`pipeline.py --script-file X --voice qw_korex` → `korex_motion.py`). Poses con lámina: `decidido`, `confundido`, `orgulloso`, `explicando`, `asombro`. Ningún vídeo ya subido se rehace.
+- **Medido:** con el rig real de Remotion, el cuerpo coincide con su lámina (IoU ≥ 0,992, tinta ~100 %) y la cabeza cae a ≤ 0,1 % del ancho del antifaz de su sitio (`py kx_lamina.py --rig`). Comprobado en 6 fotogramas del piloto del sobregiro (las tres poses que usa tienen lámina): el gancho, las escenas de personaje y el Tadeo acompañante, sin solaparse con el título.
+- **Hipótesis:** un Tadeo idéntico entre escenas, con parpadeo y cara viva, se lee como personaje de serie y no como recortes de IA distintos; se mide con «Regular viewers» de los Shorts KOREX siguientes.
+

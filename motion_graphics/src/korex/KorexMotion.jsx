@@ -8,7 +8,12 @@ import {
   useCurrentFrame,
   Easing,
   random,
+  useVideoConfig,
 } from "remotion";
+import { CuerpoLamina } from "../kx/tadeo/partes.jsx";
+import { estado } from "../kx/tadeo/acting.js";
+import { POSES } from "../kx/tadeo/poses.js";
+import { LAMINAS } from "../kx/tadeo/laminas/index.js";
 
 // ============================================================================
 // KOREX MOTION (nov 2026) — camino unico de produccion de KOREX.
@@ -170,6 +175,39 @@ const WhipLines = ({ scenes }) => {
 };
 
 // ----------------------------------------------------------------------------
+// Metodo de laminas (mision 0006, por defecto desde el 27 nov 2026): si la pose
+// de kx_cast es de Tadeo y tiene lamina aprobada (kx/tadeo/laminas), se dibuja
+// el Tadeo VECTORIAL -- cuerpo trazado de su lamina + cabeza del rig, que
+// parpadea y mantiene la expresion de la pose -- en el mismo hueco que el PNG.
+// Una pose sin lamina sigue con su PNG. kxm/<slug>/tadeo/decidido_2.png -> "decidido".
+export const laminaDe = (src) => {
+  const m = /\/tadeo\/([a-z]+)(?:_\d+)?\.png$/.exec(src || "");
+  return m && LAMINAS[m[1]] ? m[1] : null;
+};
+
+let _uidLamina = 0;
+const ALTO_HUECO = 1180; // u: el rig mide 1000 u de suelo a orejas; ~85 % del hueco, como la figura en los PNG de kx_cast
+const TadeoLamina = ({ pose, local, seed }) => {
+  const { durationInFrames } = useVideoConfig();
+  const uid = React.useMemo(() => `kxl${(_uidLamina += 1)}`, []);
+  const t = LAMINAS[pose];
+  // sin idle del rig: RubberTadeo ya respira y se balancea; el parpadeo sí sale de acting
+  const est = estado({ desde: pose, frame: Math.max(0, local), conIdle: false, semilla: seed, duracion: durationInFrames });
+  // Escala FIJA para todas las poses (la del rig, no la caja de cada lámina): Tadeo no
+  // cambia de tamaño entre escenas, y los brazos abiertos salen del hueco (overflow).
+  // El hueco de RubberTadeo mide alto × 0,558; los pies en el centro de su borde inferior.
+  return (
+    <svg viewBox={`${-ALTO_HUECO * 0.279} ${-ALTO_HUECO} ${ALTO_HUECO * 0.558} ${ALTO_HUECO}`} preserveAspectRatio="xMidYMax meet"
+      style={{ width: "100%", height: "100%", overflow: "visible" }}>
+      <g transform="scale(1 -1)">
+        <CuerpoLamina t={t} est={est} baseInclina={(POSES[pose]?.cabeza?.inclina) || 0}
+          baseSy={(POSES[pose]?.torso?.sy) || 1} uid={uid} />
+      </g>
+    </svg>
+  );
+};
+
+// ----------------------------------------------------------------------------
 // Tadeo vivo: una pose recortada (PNG con alfa de kx_cast) animada por codigo.
 // Entrada con squash & stretch, balanceo continuo, respiracion de goma,
 // "parpadeo" de squash cada ~2.5 s y desplazamientos con easing.
@@ -217,7 +255,9 @@ const RubberTadeo = ({ src, x = 540, base = 1300, h = 860, local, enter = true, 
           transform: `scaleX(${1 - bob / 90})`,
         }}
       />
-      <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+      {laminaDe(src)
+        ? <TadeoLamina pose={laminaDe(src)} local={local} seed={seed} />
+        : <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: "contain" }} />}
     </div>
   );
 };
