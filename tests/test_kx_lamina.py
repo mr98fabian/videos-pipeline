@@ -61,11 +61,20 @@ def test_nadie_pasa_sin_medirse():
             assert v["pasa_31"] and v["pasa_32"] and v["solido"] and not v["no_medible"], n
 
 
-def test_malos_fabricados_existen_y_se_detectan_o_rechazan():
+def test_malos_fabricados_existen_y_estan_medidos():
+    """Los malos de la sección 4 se fabrican y se miden siempre. Si se detectan o no es
+    un dato del informe (con solo pie y panza, el cuerpo aplastado ×0,8 NO se detecta)."""
     malos = INF["calibracion"]["separacion"]["malos"]
     assert {"cabeza_x1.3", "cuerpo_ancho_x1.25", "cuerpo_bajo_x0.8"} <= set(malos)
     for n, v in malos.items():
-        assert v.get("rechazada_antes") or v.get("marcas_fuera", 0) >= 1, n
+        assert "cumple" in v and ("rechazada_antes" in v or "marcas_fuera" in v), n
+
+
+def test_solo_deciden_pie_y_panza():
+    """Decisión de Fabian del 27 nov 2026: las marcas de brazo y cola informan, no deciden."""
+    assert K.DECIDEN == ("pie", "panza")
+    for n, v in INF["por_lamina"].items():
+        assert set(v.get("marcas_fuera", {})) <= {"pie", "panza"}, n
 
 
 def test_trazas_no_entran_en_el_rig():

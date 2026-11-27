@@ -660,7 +660,10 @@ TOL_BASE, TOL_TOPE, TOL_FACTOR = 0.08, 0.15, 1.25
 MARGEN_BUENO, EXCESO_MALO = 0.02, 0.05
 ANILLOS = (5, 7)
 MARCAS_CONTINUAS = ["pie", "panza", "brazo_grosor", "brazo_largo", "cola_ancho"]
-ESTABLES = {"pie", "panza"}     # alternativa para Fabian: las que la calibración dejó estables
+# Decisión de Fabian (27 nov 2026): la 3.2 se aprueba SOLO con las marcas que la
+# calibración dejó estables + los anillos. brazo_grosor, brazo_largo y cola_ancho se
+# siguen midiendo y reportando, pero no deciden (dependen de la pose o no tienen referencia).
+DECIDEN = ("pie", "panza")
 MALO_NATURAL = ROOT / "assets" / "kx_cast" / "tadeo" / "_hojas" / "Cartoon_character_pointing_forward_202608040458.jpeg"
 
 
@@ -690,9 +693,12 @@ def tolerancias(buenos: dict) -> dict:
 def veredicto(d: dict, anillos, tol: dict) -> dict:
     """Paso de una lámina: todas sus marcas dentro de tolerancia. Una marca no medible
     (None) no pasa: se lista aparte, nunca cuenta como «dentro»."""
+    d = {k: v for k, v in d.items() if k in DECIDEN}
     fuera = {k: v for k, v in d.items() if v is not None and abs(v) > tol[k]}
     no_medible = [k for k, v in d.items() if v is None]
     an_ok = anillos is not None and ANILLOS[0] <= anillos <= ANILLOS[1]
+    if not d:                       # 3/4: ninguna marca que decide se puede medir → no pasa
+        no_medible = ["sin marcas que decidan en esta vista"]
     return {"fuera": fuera, "no_medible": no_medible, "anillos_ok": an_ok,
             "pasa": not fuera and not no_medible and an_ok}
 
@@ -761,6 +767,9 @@ def calibrar(resultados: dict, ref: dict, lam_base: Lamina) -> dict:
             malos["natural_pointing_forward"] = {"rechazo": str(e)}
     sep_buenos = {}
     for n, d in (buenos | vista).items():
+        d = {k: v for k, v in d.items() if k in DECIDEN}
+        if not d:
+            continue
         margenes = {k: round(tol[k] - abs(v), 4) for k, v in d.items() if v is not None}
         sep_buenos[n] = {"margen_min": min(margenes.values()) if margenes else None,
                          "cumple": bool(margenes) and min(margenes.values()) >= MARGEN_BUENO
@@ -770,7 +779,8 @@ def calibrar(resultados: dict, ref: dict, lam_base: Lamina) -> dict:
         if "rechazo" in m:
             sep_malos[n] = {"rechazada_antes": m["rechazo"], "cumple": True}
             continue
-        exc = {k: round(abs(v) - tol[k], 4) for k, v in m["d"].items() if v is not None and abs(v) > tol[k]}
+        exc = {k: round(abs(v) - tol[k], 4) for k, v in m["d"].items()
+               if k in DECIDEN and v is not None and abs(v) > tol[k]}
         sep_malos[n] = {"marcas_fuera": len(exc), "peor_exceso": max(exc.values()) if exc else 0.0,
                         "cumple": len(exc) >= 2 and max(exc.values()) >= EXCESO_MALO}
     regla = all(v["cumple"] for v in sep_buenos.values()) and all(v["cumple"] for v in sep_malos.values())
@@ -1001,9 +1011,7 @@ def informe(todo: dict) -> dict:
                          "pasa_32": v["pasa"], "marcas_fuera": v["fuera"], "no_medible": v["no_medible"],
                          "anillos_ok": v["anillos_ok"], "solido": r["solido"]["cumple"],
                          "pasa": all(c31.values()) and v["pasa"] and r["solido"]["cumple"],
-                         "pasa_32_solo_estables": not {k for k in v["fuera"] if k in ESTABLES}
-                         and not {k for k in v["no_medible"] if k in ESTABLES and not (n in VISTA_3_4 and k in SOLO_FRONTAL)}
-                         and v["anillos_ok"]}
+                         "marcas_informativas": {k: x for k, x in d.items() if k not in DECIDEN}}
     return {"huella_codigo": huella_codigo(), "umbrales_31": UMBRALES_31, "calibracion": cal,
             "por_lamina": por_lamina, "medidas": res}
 

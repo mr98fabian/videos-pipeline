@@ -1,5 +1,5 @@
 {
- "huella_codigo": "53cf04075a793404",
+ "huella_codigo": "371916bcbdd5586a",
  "umbrales_31": {
   "iou_min": 0.98,
   "iou_duro": 0.95,
@@ -123,16 +123,16 @@
   "separacion": {
    "buenos": {
     "decidido": {
-     "margen_min": -0.0722,
-     "cumple": false
+     "margen_min": 0.07,
+     "cumple": true
     },
     "confundido": {
-     "margen_min": -0.2389,
+     "margen_min": 0.0194,
      "cumple": false
     },
     "orgulloso": {
      "margen_min": 0.0303,
-     "cumple": false
+     "cumple": true
     },
     "estafado": {
      "margen_min": 0.0334,
@@ -151,16 +151,12 @@
      "cumple": false
     },
     "asombro": {
-     "margen_min": -0.0167,
-     "cumple": false
+     "margen_min": 0.0411,
+     "cumple": true
     },
     "triunfo": {
      "margen_min": 0.0445,
-     "cumple": false
-    },
-    "pointing": {
-     "margen_min": -0.0722,
-     "cumple": false
+     "cumple": true
     }
    },
    "malos": {
@@ -174,8 +170,8 @@
      "cumple": true
     },
     "cuerpo_bajo_x0.8": {
-     "marcas_fuera": 1,
-     "peor_exceso": 0.0699,
+     "marcas_fuera": 0,
+     "peor_exceso": 0.0,
      "cumple": false
     },
     "natural_pointing_forward": {
@@ -190,45 +186,46 @@
   "decidido": {
    "pasa_31": true,
    "fallos_31": [],
-   "pasa_32": false,
-   "marcas_fuera": {
-    "brazo_largo": 0.2222
-   },
+   "pasa_32": true,
+   "marcas_fuera": {},
    "no_medible": [],
    "anillos_ok": true,
    "solido": true,
-   "pasa": false,
-   "pasa_32_solo_estables": true
+   "pasa": true,
+   "marcas_informativas": {
+    "brazo_grosor": -0.0587,
+    "brazo_largo": 0.2222
+   }
   },
   "confundido": {
    "pasa_31": false,
    "fallos_31": [
     "tono_error_medio"
    ],
-   "pasa_32": false,
-   "marcas_fuera": {
-    "brazo_grosor": 0.1917,
-    "brazo_largo": -0.3889
-   },
+   "pasa_32": true,
+   "marcas_fuera": {},
    "no_medible": [],
    "anillos_ok": true,
    "solido": true,
    "pasa": false,
-   "pasa_32_solo_estables": true
+   "marcas_informativas": {
+    "brazo_grosor": 0.1917,
+    "brazo_largo": -0.3889
+   }
   },
   "orgulloso": {
    "pasa_31": true,
    "fallos_31": [],
-   "pasa_32": false,
+   "pasa_32": true,
    "marcas_fuera": {},
-   "no_medible": [
-    "brazo_grosor",
-    "brazo_largo"
-   ],
+   "no_medible": [],
    "anillos_ok": true,
    "solido": true,
-   "pasa": false,
-   "pasa_32_solo_estables": true
+   "pasa": true,
+   "marcas_informativas": {
+    "brazo_grosor": null,
+    "brazo_largo": null
+   }
   },
   "estafado": {
    "pasa_31": true,
@@ -236,14 +233,15 @@
    "pasa_32": false,
    "marcas_fuera": {},
    "no_medible": [
-    "panza",
-    "brazo_grosor",
-    "brazo_largo"
+    "panza"
    ],
    "anillos_ok": true,
    "solido": true,
    "pasa": false,
-   "pasa_32_solo_estables": false
+   "marcas_informativas": {
+    "brazo_grosor": null,
+    "brazo_largo": null
+   }
   },
   "grito": {
    "pasa_31": true,
@@ -251,14 +249,15 @@
    "pasa_32": false,
    "marcas_fuera": {},
    "no_medible": [
-    "panza",
-    "brazo_grosor",
-    "brazo_largo"
+    "panza"
    ],
    "anillos_ok": true,
    "solido": false,
    "pasa": false,
-   "pasa_32_solo_estables": false
+   "marcas_informativas": {
+    "brazo_grosor": null,
+    "brazo_largo": null
+   }
   },
   "explicando": {
    "pasa_31": true,
@@ -269,7 +268,10 @@
    "anillos_ok": true,
    "solido": true,
    "pasa": true,
-   "pasa_32_solo_estables": true
+   "marcas_informativas": {
+    "brazo_grosor": -0.0363,
+    "brazo_largo": -0.0694
+   }
   },
   "codicia": {
    "pasa_31": true,
@@ -277,14 +279,15 @@
    "pasa_32": false,
    "marcas_fuera": {},
    "no_medible": [
-    "panza",
-    "brazo_grosor",
-    "brazo_largo"
+    "panza"
    ],
    "anillos_ok": true,
    "solido": true,
    "pasa": false,
-   "pasa_32_solo_estables": false
+   "marcas_informativas": {
+    "brazo_grosor": null,
+    "brazo_largo": null
+   }
   },
   "asombro": {
    "pasa_31": false,
@@ -292,15 +295,16 @@
     "tono_error_medio",
     "tono_superficie"
    ],
-   "pasa_32": false,
-   "marcas_fuera": {
-    "brazo_largo": 0.1667
-   },
+   "pasa_32": true,
+   "marcas_fuera": {},
    "no_medible": [],
    "anillos_ok": true,
    "solido": false,
    "pasa": false,
-   "pasa_32_solo_estables": true
+   "marcas_informativas": {
+    "brazo_grosor": -0.0489,
+    "brazo_largo": 0.1667
+   }
   },
   "triunfo": {
    "pasa_31": false,
@@ -310,14 +314,14 @@
    ],
    "pasa_32": false,
    "marcas_fuera": {},
-   "no_medible": [
-    "brazo_grosor",
-    "brazo_largo"
-   ],
+   "no_medible": [],
    "anillos_ok": false,
    "solido": true,
    "pasa": false,
-   "pasa_32_solo_estables": false
+   "marcas_informativas": {
+    "brazo_grosor": null,
+    "brazo_largo": null
+   }
   },
   "pointing": {
    "pasa_31": false,
@@ -325,15 +329,17 @@
     "tono_error_medio"
    ],
    "pasa_32": false,
-   "marcas_fuera": {
-    "brazo_grosor": 0.2165,
-    "brazo_largo": 0.2222
-   },
-   "no_medible": [],
+   "marcas_fuera": {},
+   "no_medible": [
+    "sin marcas que decidan en esta vista"
+   ],
    "anillos_ok": false,
    "solido": true,
    "pasa": false,
-   "pasa_32_solo_estables": false
+   "marcas_informativas": {
+    "brazo_grosor": 0.2165,
+    "brazo_largo": 0.2222
+   }
   }
  },
  "medidas": {

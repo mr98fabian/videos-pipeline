@@ -11,7 +11,7 @@ por Mijo, así que este archivo hace de misión y de reporte a la vez.
 coincide con su lámina con IoU de 0,994 a 0,998 y tinta del 99,9–100 % en los dos sentidos. Lo que
 **no** funciona es parte del instrumento que el diseño fijó para aprobarlas: el tono cuantizado a
 `TADEO_TONE` no llega al umbral de error tonal en 5 de 11, y de las 6 marcas de proporción solo
-`pie` y `panza` son estables. Con las reglas tal cual, **pasa 1 de 9 (`explicando`)**. Según la
+`pie` y `panza` son estables. Con las reglas tal cual pasaba 1 de 9 (`explicando`); **tras la decisión del 27 nov (abajo), pasan 3: `decidido`, `orgulloso` y `explicando`**. Según la
 sección 4 del diseño no he aflojado ningún umbral: los números van abajo, **decide Fabian**.
 Ninguna traza entra en el rig: quedan como candidatas en `misiones/evidencia/0006/trazas/`.
 
@@ -88,6 +88,28 @@ Umbrales (sin tocar): IoU ≥ 0,98 · tinta ≥ 97 % · área 0,97–1,03 · ton
 6. **Rendijas de sólido** en `grito` (manos junto a las mejillas) y `asombro`: la cabeza de la lámina
    es algo mayor que la de la madre junto a una mano, y al quitarla queda papel de hasta 23 px.
    Encaja en la reserva que ya tenía `grito` («guantes rozando el antifaz»). Candidatas a regenerar.
+
+### Decisión de Fabian (27 nov 2026): solo marcas estables
+
+Aprobó la propuesta del punto 2: la 3.2 decide con `pie` + `panza` + anillos (`DECIDEN` en `kx_lamina.py`).
+`brazo_grosor`, `brazo_largo` y `cola_ancho` se siguen midiendo en `marcas_informativas`, sin decidir.
+
+| Lámina | 3.1 | 3.2 | Sólido | Pasa | Lo que la frena |
+|---|---|---|---|---|---|
+| decidido | sí | sí | sí | **sí** | — |
+| orgulloso | sí | sí | sí | **sí** | — |
+| explicando | sí | sí | sí | **sí** | — |
+| confundido | no | sí | sí | no | tono medio 0,0335 |
+| asombro | no | sí | no | no | tono 0,0438 / 5,2 %; 1 rendija |
+| estafado | sí | no | sí | no | panza no medible (brazos sobre el peto) |
+| grito | sí | no | no | no | panza no medible (manos); 10 rendijas |
+| codicia | sí | no | sí | no | panza no medible (manos sobre el peto) |
+| triunfo | no | no | sí | no | tono 0,0315 / 6,1 %; 8 anillos |
+| pointing | no | no | sí | no | tono; 3/4: ninguna marca que decida es medible |
+
+**Coste de la decisión:** con solo `pie` y `panza`, el malo fabricado «cuerpo aplastado ×0,8» ya **no se
+detecta** (lo cazaba `brazo_grosor`), y «cabeza ×1,3» cae por una sola marca (`pie` −23,9 %). La regla de
+separación sigue sin cumplirse. Sigue pendiente el punto 1 (tono).
 
 ### Decisiones y desviaciones del diseño (declaradas)
 

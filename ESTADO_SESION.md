@@ -19,10 +19,10 @@ lo que quedó a medias, y qué sigue. Se lee al empezar y se actualiza al termin
 
 - `kx_lamina.py` traza las 9 láminas + `pointing`: el cuerpo copia su lámina con IoU 0,994–0,998 y
   tinta ~100 %. La cabeza la pone el rig, anclada por el antifaz.
-- **Pasa 1 de 9 (`explicando`)** con las reglas del diseño. No se aflojó nada; faltan tres decisiones de
-  Fabian: (1) el tono, porque los 6 de `TADEO_TONE` no llegan a los grises de pies y cola de la API;
-  (2) las marcas, porque solo `pie` y `panza` son estables; con ellas pasarían 5 en la 3.2;
-  (3) qué hacer con la regla de separación.
+- **Pasan 3 de 9** (`decidido`, `orgulloso`, `explicando`) tras la decisión de Fabian del 27 nov: la
+  proporción decide solo con `pie` + `panza` + anillos. Pendiente su decisión sobre el **tono**: los 6 de
+  `TADEO_TONE` no llegan a los grises de pies y cola de la API (frena a 4 láminas). `panza` no es medible
+  donde las manos tapan el peto (`estafado`, `grito`, `codicia`).
 - Las trazas son candidatas (`misiones/evidencia/0006/trazas/`): ninguna entra en el rig hasta pasar.
 - Siguiente: las decisiones → re-correr `py kx_lamina.py` (gratis) → regenerar las que fallen →
   integrar `traza_<pose>.js` en `Tadeo.jsx`.
