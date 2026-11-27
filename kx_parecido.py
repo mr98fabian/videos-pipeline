@@ -54,7 +54,7 @@ TONO_UMBRAL = 0.08
 # Lo que el resultado depende de: si cambia, parecido.json está viejo.
 ENTRADAS = ["motion_graphics/src/kx/tadeo/partes.jsx", "motion_graphics/src/kx/tadeo/poses.js",
             "motion_graphics/src/kx/tadeo/traza.js", "motion_graphics/src/kx/tadeo/acting.js",
-            "motion_graphics/src/kx/tokens.js", "kx_trazo.py", "kx_parecido.py"]
+            "motion_graphics/src/kx/tokens.js", "kx_trazo.py", "kx_trazolib.py", "kx_parecido.py"]
 
 
 def huella() -> str:
