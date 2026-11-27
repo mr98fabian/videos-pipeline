@@ -571,6 +571,22 @@ def tapon(lam: Lamina) -> np.ndarray:
     return base | cv2.dilate(bolsas.astype(np.uint8), L.disk(3)).astype(bool)
 
 
+_MADRE_RIG = {}
+
+
+def antifaz_madre_rig() -> dict:
+    """Centro del antifaz de la madre en unidades del RIG (x = 0 en la nariz, como
+    traza.js) y su eje, medidos con el mismo código que en las láminas."""
+    if not _MADRE_RIG:
+        import kx_trazo as KT
+        md = madre()
+        anclar_antifaz(md)
+        cal_rig = KT.calibrar(md.g, KT.silueta(md.g))
+        _MADRE_RIG.update({"centro_u": L.r1(L.to_u(cal_rig, [md.antifaz["centro"]]))[0],
+                           "eje": round(-md.antifaz["angulo"], 2)})
+    return _MADRE_RIG
+
+
 def trazar(lam: Lamina) -> dict:
     cal = cal_de(lam)
     delante = lam.mascaras["delante"]
@@ -606,6 +622,16 @@ def trazar(lam: Lamina) -> dict:
         "A_px": round(lam.A, 2),
         "escala_u_por_px": round(1 / cal["s"], 5),
         "barbilla_propia_A": lam.barbilla["propia_A"],
+    }
+    # Dónde va la cabeza del rig: la cabeza trazada de la madre (traza.js) está en
+    # su posición neutra; se lleva su antifaz al de la lámina y se gira lo que la
+    # cabeza de la lámina está ladeada respecto a la de la madre. Escala 1: la
+    # normalización ya dejó el antifaz de la lámina al tamaño del de la madre.
+    m = antifaz_madre_rig()
+    t["cabeza_rig"] = {
+        "desde": m["centro_u"],
+        "hacia": t["anclas"]["antifaz_centro"],
+        "giro": round(t["anclas"]["eje_cabeza"] - m["eje"], 2),
     }
     t["marcas"] = {k: lam.marcas.get(k) for k in MARCAS}
     return t
@@ -654,11 +680,12 @@ def cobertura(t: dict, cal: dict, shape) -> np.ndarray:
     return cv2.resize(img, (W, H), interpolation=cv2.INTER_AREA) > 127
 
 
-def medir_31(lam: Lamina, t: dict) -> dict:
+def medir_31(lam: Lamina, t: dict, render: np.ndarray | None = None) -> dict:
     """Sección 3.1 del diseño, fuera de la cabeza de la lámina y de una banda de 12 u
-    a su alrededor (la cabeza la pone el rig: no se compara aquí)."""
+    a su alrededor (la cabeza la pone el rig: no se compara aquí). `render`: la
+    figura ya dibujada por el rig en la rejilla de la lámina; si no, se rasteriza aquí."""
     cal = cal_de(lam)
-    r = rasterizar(t, cal, lam.g.shape)
+    r = rasterizar(t, cal, lam.g.shape) if render is None else render
     s = cal["s"]
     zona = ~cv2.dilate(lam.mascaras["cabeza"].astype(np.uint8), L.disk(int(round(BANDA_CABEZA_U * s)))).astype(bool)
     # la cabeza se tapa en las dos imágenes antes de buscar el papel exterior: si no,
@@ -681,13 +708,16 @@ def medir_31(lam: Lamina, t: dict) -> dict:
     t_en_l = float(1 - (ir & (dl > dpx)).sum() / max(1, ir.sum()))
     area = float(ir.sum() / max(1, il.sum()))
 
-    def mapa(g, sil, i):
+    def mapa(g, sil, i, papel=PAPEL):
         m = (sil & ~i).astype(float)
-        num = cv2.GaussianBlur(g.astype(float) / PAPEL * m, (0, 0), TONO_SIGMA)
+        num = cv2.GaussianBlur(g.astype(float) / papel * m, (0, 0), TONO_SIGMA)
         return num / np.maximum(cv2.GaussianBlur(m, (0, 0), TONO_SIGMA), 1e-6)
 
     reg = sil_l & sil_r & ~(il | ir)
-    e = np.abs(mapa(lam.g, sil_l, il) - mapa(r, sil_r, ir))
+    # la lámina, contra el papel del modelo de tonos (251); el trazo, contra el suyo:
+    # 251 si lo rasteriza Python, el crema de PAPER si lo dibuja el rig (medido en el borde)
+    papel_r = PAPEL if render is None else float(np.median(np.concatenate([r[0], r[-1], r[:, 0], r[:, -1]])))
+    e = np.abs(mapa(lam.g, sil_l, il) - mapa(r, sil_r, ir, papel_r))
     u = UMBRALES_31
     res = {"iou": round(iou, 4), "tinta_lamina_en_trazo": round(l_en_t, 4), "tinta_trazo_en_lamina": round(t_en_l, 4),
            "area_tinta": round(area, 4), "tono_error_medio": round(float(e[reg].mean()), 4),
@@ -909,6 +939,23 @@ def solido(lam: Lamina, t: dict) -> dict:
 
 
 # ------------------------------------------------------------------ salida
+def escribir_rig(pasan: list) -> None:
+    """Sección 7: en la biblioteca del rig solo entran las láminas que pasan todo.
+    Copia la traza de evidencia tal cual (misma huella) y regenera el índice."""
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    for viejo in OUT_DIR.glob("traza_*.js"):
+        if viejo.stem.removeprefix("traza_") not in pasan:
+            viejo.unlink()
+    for n in pasan:
+        (OUT_DIR / f"traza_{n}.js").write_bytes((EVID_OUT / "trazas" / f"traza_{n}.js").read_bytes())
+    imports = "".join(f'import {{ TRAZA_{n.upper()} }} from "./traza_{n}.js";\n' for n in pasan)
+    tabla = ", ".join(f"{n}: TRAZA_{n.upper()}" for n in pasan)
+    (OUT_DIR / "index.js").write_text(
+        "// GENERADO por kx_lamina.py: las láminas de pose que pasan el trazador (misión 0006).\n"
+        "// Una pose que no está aquí se dibuja con el cuerpo por piezas de siempre.\n"
+        f"{imports}\nexport const LAMINAS = {{ {tabla} }};\n", encoding="utf-8", newline="\n")
+
+
 def huella_archivo(p: Path) -> str:
     return hashlib.sha1(p.read_bytes().replace(b"\r\n", b"\n")).hexdigest()[:16]
 
@@ -1088,6 +1135,72 @@ def huella_codigo() -> str:
     return h.hexdigest()[:16]
 
 
+def render_rig(pose: str, lam: Lamina) -> np.ndarray:
+    """La pose dibujada por el rig real (Remotion, KxTadeoLaminaMolde) en la rejilla de su lámina."""
+    import subprocess
+    cal = cal_de(lam)
+    H, W = lam.g.shape
+    out = EVID_OUT / "rig" / f"rig_{pose}.png"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    props = EVID_OUT / "rig" / f"_props_{pose}.json"
+    props.write_text(json.dumps({"pose": pose, "xc": cal["xc"], "suelo": cal["suelo"], "s": cal["s"], "w": W, "h": H}),
+                     encoding="utf-8")
+    try:
+        subprocess.run(["npx", "remotion", "still", "src/index.jsx", "KxTadeoLaminaMolde", str(out), f"--props={props}",
+                        "--log=error"], cwd=ROOT / "motion_graphics", check=True, shell=True, timeout=600)
+    finally:
+        props.unlink(missing_ok=True)
+    return cv2.cvtColor(cv2.imread(str(out)), cv2.COLOR_BGR2GRAY)
+
+
+def anclaje_ok(r: dict) -> bool:
+    """La cabeza del rig cae donde se calculó: antifaz a ≤ 1 % de A, misma escala ± 1 %, giro ± 0,5°."""
+    return (r["antifaz_desvio_A"] <= 0.01 and abs(r["antifaz_A_rig_sobre_lamina"] - 1) <= 0.01
+            and abs(r["antifaz_giro_rig_menos_lamina"]) <= 0.5)
+
+
+def medir_rig() -> dict:
+    """Las poses de laminas/index.js renderizadas por el rig: la 3.1 sobre el render
+    real (cuerpo) y la cabeza del rig contra la de la madre colocada por el antifaz
+    (IoU de silueta: comprueba que el anclaje del JSX es el que calculó Python)."""
+    import re
+    idx = (OUT_DIR / "index.js").read_text(encoding="utf-8")
+    poses = re.findall(r"import \{ TRAZA_\w+ \} from \"\./traza_(\w+)\.js\"", idx)
+    res, celdas = {}, []
+    for pose in poses:
+        lam = segmentar(cargar(pose))
+        medir_marcas(lam)
+        t = trazar(lam)
+        r = render_rig(pose, lam)
+        m31 = medir_31(lam, t, render=r)
+        # cabeza: silueta del render dentro de la zona de la cabeza vs la cabeza de la madre puesta por el antifaz
+        _, mh = cabeza_rig_pixeles(lam)
+        zona = cv2.dilate(mh.astype(np.uint8), L.disk(int(0.08 * lam.A))).astype(bool)
+        sil_r = silueta(r) & zona & ~lam.mascaras["cuerpo"] & ~lam.mascaras["delante"]
+        cab_iou = float((sil_r & mh).sum() / max(1, (sil_r | mh).sum()))
+        # el anclaje: el antifaz que dibuja el rig contra el que se calculó (en A)
+        ar = cargar(pose, gris=r, escala=1)
+        anclar_antifaz(ar)
+        desvio = float(np.linalg.norm(np.array(ar.antifaz["centro"]) - np.array(lam.antifaz["centro"])) / lam.A)
+        res[pose] = {"traza_31_rig": m31, "cabeza_iou": round(cab_iou, 4), "antifaz_desvio_A": round(desvio, 4),
+                     "antifaz_A_rig_sobre_lamina": round(ar.A / lam.A, 4),
+                     "antifaz_giro_rig_menos_lamina": round(ar.antifaz["angulo"] - lam.antifaz["angulo"], 2)}
+        celdas.append(np.hstack([lam.g, np.full((lam.g.shape[0], 20), 255, np.uint8), r]))
+        print(f"{pose:11s} rig: IoU {m31['iou']:.4f} tinta {m31['tinta_lamina_en_trazo']:.3f}/{m31['tinta_trazo_en_lamina']:.3f} "
+              f"tono {m31['tono_error_medio']:.4f}/{100 * m31['tono_superficie_mayor_008']:.1f}% · cabeza IoU {cab_iou:.4f} · "
+              f"antifaz desvío {desvio:.4f} A, escala {ar.A / lam.A:.4f}, giro {ar.antifaz['angulo'] - lam.antifaz['angulo']:+.2f}° · "
+              f"{'OK' if anclaje_ok(res[pose]) and all(m31['cumple'].values()) else 'NO'}")
+    if celdas:
+        alto = 600
+        celdas = [cv2.resize(c, (int(c.shape[1] * alto / c.shape[0]), alto), interpolation=cv2.INTER_AREA) for c in celdas]
+        filas = [np.hstack(celdas[i:i + 3] + [np.full_like(celdas[0], 255)] * (3 - len(celdas[i:i + 3])))
+                 for i in range(0, len(celdas), 3)]
+        _guardar(EVID_OUT / "rig_contacto.png", np.vstack(filas))
+    (EVID_OUT / "rig.json").write_text(json.dumps({"huella_codigo": huella_codigo(), "poses": res}, ensure_ascii=False,
+                                                  indent=1) + "\n", encoding="utf-8")
+    return res
+
+
 def main(argv=None) -> int:
     argv = list(argv if argv is not None else sys.argv[1:])
     if "--invariancia" in argv:
@@ -1095,6 +1208,9 @@ def main(argv=None) -> int:
         print(json.dumps(r, ensure_ascii=False, indent=1))
         (EVID_OUT / "invariancia.json").write_text(json.dumps(r, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         return 0 if r["cumple"] else 1
+    if "--rig" in argv:
+        r = medir_rig()
+        return 0 if all(all(v["traza_31_rig"]["cumple"].values()) and anclaje_ok(v) for v in r.values()) else 1
     if "--determinismo" in argv:
         a = procesar(["madre", "grito"])["res"]["grito"]["traza"]["sha1"]
         b = procesar(["madre", "grito"])["res"]["grito"]["traza"]["sha1"]
@@ -1118,6 +1234,9 @@ def main(argv=None) -> int:
     inf = informe(todo)
     EVID_OUT.mkdir(parents=True, exist_ok=True)
     (EVID_OUT / "informe.json").write_text(json.dumps(inf, ensure_ascii=False, indent=1, default=float) + "\n", encoding="utf-8")
+    pasan = [n for n in POSES if inf["por_lamina"][n].get("pasa")]
+    escribir_rig(pasan)
+    print("en el rig:", ", ".join(pasan))
     filas = [(n, todo["lams"][n], "PASA" if inf["por_lamina"][n].get("pasa") else "NO PASA")
              for n in [*POSES, "pointing"] if "rechazo" not in todo["res"][n]]
     hoja_contacto(filas, EVID_OUT / "contacto_trazos.png")

@@ -8,4 +8,4 @@
 | 3 | Limpieza antes de hacer público el repo (etapa 1: árbol + correo noreply) | completada — repo PÚBLICO y `master` protegido (PR + `verify` estricto, `enforce_admins`) | `chore/limpieza-pre-publico` |
 | 4 | API de Gemini (Nano Banana) para láminas de pose | fusionada en `master` (PR #8) | `feat/api-gemini-laminas` |
 | 5 | Generar las 9 láminas de pose | fusionada en `master` (PR #10), trazado pendiente → misión 6 | `feat/laminas-9-poses` |
-| 6 | Construir el trazador de láminas (`kx_lamina.py`) | en-auditoria — copia las 11; 3 decisiones de Fabian sobre tono y marcas | `feat/trazador-laminas` |
+| 6 | Construir el trazador de láminas (`kx_lamina.py`) | en-auditoria — 5 de 9 pasan y están en el rig (`cuerpo="lamina"`, opcional) | `feat/trazador-laminas` |

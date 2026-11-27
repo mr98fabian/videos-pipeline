@@ -77,9 +77,32 @@ def test_solo_deciden_pie_y_panza():
         assert set(v.get("marcas_fuera", {})) <= {"pie", "panza"}, n
 
 
-def test_trazas_no_entran_en_el_rig():
-    """Regla de la sección 7: ninguna traza entra en la biblioteca del rig hasta que pase todo."""
-    assert not (ROOT / "motion_graphics" / "src" / "kx" / "tadeo" / "laminas").exists()
+def test_en_el_rig_estan_exactamente_las_que_pasan():
+    """Sección 7: en laminas/ solo entran las que pasan todo, copia exacta de su traza de evidencia."""
+    carpeta = ROOT / "motion_graphics" / "src" / "kx" / "tadeo" / "laminas"
+    pasan = {n for n in K.POSES if INF["por_lamina"][n].get("pasa")}
+    en_rig = {p.stem.removeprefix("traza_") for p in carpeta.glob("traza_*.js")}
+    assert en_rig == pasan
+    indice = (carpeta / "index.js").read_text(encoding="utf-8")
+    for n in pasan:
+        assert _sha1(carpeta / f"traza_{n}.js") == INF["medidas"][n]["traza"]["sha1"], n
+        assert f"{n}: TRAZA_{n.upper()}" in indice, n
+
+
+RIG = json.loads((K.EVID_OUT / "rig.json").read_text(encoding="utf-8"))
+
+
+def test_rig_medido_con_el_trazador_actual():
+    assert RIG["huella_codigo"] == K.huella_codigo(), "rig.json es de otro trazador: corre `py kx_lamina.py --rig`"
+    assert set(RIG["poses"]) == {n for n in K.POSES if INF["por_lamina"][n].get("pasa")}
+
+
+@pytest.mark.parametrize("pose", sorted(RIG["poses"]))
+def test_el_rig_dibuja_la_lamina(pose):
+    """El render REAL del rig (Remotion) copia el cuerpo de su lámina y pone la cabeza donde se calculó."""
+    r = RIG["poses"][pose]
+    assert all(r["traza_31_rig"]["cumple"].values()), r["traza_31_rig"]
+    assert K.anclaje_ok(r), r
 
 
 def test_anclas_de_decidido():

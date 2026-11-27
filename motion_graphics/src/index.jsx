@@ -13,7 +13,7 @@ import { StoryVideo } from "./archivo/StoryVideo";
 import { KorexVideo } from "./korex/KorexVideo";
 import { KorexMotion } from "./korex/KorexMotion";
 import { KxNucleo } from "./kx/KxNucleo";
-import { KxTadeo, KxTadeoHoja, KxTadeoMolde } from "./kx/KxTadeo";
+import { KxTadeo, KxTadeoHoja, KxTadeoLaminaMolde, KxTadeoMolde } from "./kx/KxTadeo";
 
 const WIDTH = 1080;
 const HEIGHT = 1920;
@@ -147,6 +147,16 @@ const RemotionRoot = () => {
         height={1700}
         defaultProps={{ xc: 660, suelo: 1676, s: 1.6 }}
         calculateMetadata={({ props }) => ({ width: props.w || 1320, height: props.h || 1700 })}
+      />
+      <Composition
+        id="KxTadeoLaminaMolde"
+        component={KxTadeoLaminaMolde}
+        durationInFrames={1}
+        fps={FPS}
+        width={1792}
+        height={2400}
+        defaultProps={{ pose: "decidido", xc: 896, suelo: 2300, s: 1.88 }}
+        calculateMetadata={({ props }) => ({ width: props.w || 1792, height: props.h || 2400 })}
       />
       <Composition
         id="KxTadeoHoja"

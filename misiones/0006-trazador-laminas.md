@@ -161,6 +161,37 @@ Los rechazados quedan en `regeneradas/rechazadas/`. El trazador usa una regenera
 `panza` no es medible); `triunfo` (8 anillos: la cola pasa detrás de la pierna y un anillo cuenta dos veces); `grito`
 (rendijas junto a las manos, que tocan la cara); `pointing` (3/4).
 
+### Integración en el rig (orden de Fabian, 27 nov 2026)
+
+Las 5 que pasan están en la biblioteca del rig: `motion_graphics/src/kx/tadeo/laminas/` (`traza_<pose>.js` +
+`index.js`, generados por `py kx_lamina.py`; solo entran las que pasan, copia exacta de su traza de evidencia).
+
+- **`<Tadeo cuerpo="lamina" …/>`** dibuja la pose con su lámina (`CuerpoLamina` en `partes.jsx`): cola · tapón ·
+  cuerpo · cabeza del rig · manos que pisan la cara. La cabeza es la de siempre, con su expresión, mirada y
+  parpadeo; se coloca con `cabeza_rig` (del antifaz de la madre al de la lámina, y su giro). El cuerpo solo
+  recibe la respiración del idle (no el aplastamiento propio de la pose, que la lámina ya trae dibujado) y la
+  cabeza sigue a la barbilla. El cambio de pose es un cambio de dibujo a los 3 frames (sección 8).
+  Una pose sin lámina cae al cuerpo por piezas.
+- **Es opcional: por defecto sigue `cuerpo="piezas"`.** Ningún vídeo ni composición existente cambia. El
+  neutro de la madre sale idéntico (`parecido.json` solo cambia de huella).
+- **Medido sobre el render REAL del rig** (`py kx_lamina.py --rig`, composición `KxTadeoLaminaMolde` en la
+  rejilla de cada lámina; `rig.json`, `rig_contacto.png`):
+
+| Pose | IoU | Tinta | Tono medio / sup. | Antifaz del rig contra el calculado |
+|---|---|---|---|---|
+| decidido | 0,9964 | 1,000 / 1,000 | 0,0155 / 3,5 % | 0,08 % de A · escala 1,003 · 0,00° |
+| confundido | 0,9943 | 1,000 / 1,000 | 0,0283 / 3,8 % | 0,09 % · 1,003 · −0,01° |
+| orgulloso | 0,9966 | 1,000 / 0,999 | 0,0257 / 3,4 % | 0,07 % · 1,003 · +0,01° |
+| explicando | 0,9945 | 1,000 / 1,000 | 0,0214 / 4,0 % | 0,08 % · 1,001 · −0,01° |
+| asombro | 0,9925 | 1,000 / 0,999 | 0,0155 / 3,5 % | 0,10 % · 1,002 · +0,02° |
+
+  Umbral del anclaje: ≤ 1 % de A, escala ± 1 %, giro ± 0,5°. El molde anula el giro de cabeza de la pose (falso
+  3/4 de la mirada), que desplaza el antifaz a propósito.
+- **Para revisar a ojo:** en `orgulloso` asoma una franja clara en el cuello (el tapón, entre la barbilla del
+  rig y el cuerpo). La medida no la ve: cae dentro de la banda de 12 u que se excluye alrededor de la cabeza.
+- **Medida del tono contra el rig:** el render se normaliza por su propio papel (crema, `PAPER`), medido en el
+  borde; la lámina, por el papel del modelo de tonos (251).
+
 ### Decisiones y desviaciones del diseño (declaradas)
 
 1. **Barbilla = la del rig, colocada por el antifaz**, no el «punto más bajo de la región cara».
@@ -186,8 +217,7 @@ Los rechazados quedan en `regeneradas/rechazadas/`. El trazador usa una regenera
 
 ### Lo que NO se hizo
 
-- Integración en el rig (`Tadeo.jsx` leyendo `traza_<pose>.js`, transición entre poses de la §8): es la
-  misión siguiente, y además la sección 7 prohíbe meter trazas que no pasan.
+- Usar `cuerpo="lamina"` en una composición de producción (KorexMotion): decisión aparte.
 - Regenerar láminas (0 USD gastados en esta misión).
 - La sección 2.2 de la especificación de las 9 láminas sigue sin corregir: la corrige la decisión del
   punto 2 de arriba.

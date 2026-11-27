@@ -23,9 +23,11 @@ lo que quedó a medias, y qué sigue. Se lee al empezar y se actualiza al termin
   27 nov (proporción solo con `pie` + `panza` + anillos; `T_OSCURO: 0.69` en `TADEO_TONE`) y la regeneración (12
   llamadas, 0,432 USD; solo `asombro` mejoró). No pasan: `estafado`, `grito` y `codicia` (el peto queda tapado, `panza`
   no medible), `triunfo` (8 anillos por la pierna). Siguiente: decidir si `panza` tapada bloquea o se integra.
-- Las trazas son candidatas (`misiones/evidencia/0006/trazas/`): ninguna entra en el rig hasta pasar.
-- Siguiente: las decisiones → re-correr `py kx_lamina.py` (gratis) → regenerar las que fallen →
-  integrar `traza_<pose>.js` en `Tadeo.jsx`.
+- **Integradas en el rig** las 5 que pasan: `<Tadeo cuerpo="lamina" />` (opcional; por defecto sigue el cuerpo
+  por piezas, así que ningún vídeo cambia). Medido sobre el render real de Remotion (`py kx_lamina.py --rig`):
+  cuerpo IoU ≥ 0,992, cabeza a ≤ 0,1 % de A de su sitio.
+- Siguiente: revisar `misiones/evidencia/0006/rig_contacto.png` (franja en el cuello de `orgulloso`), decidir si
+  KorexMotion usa `cuerpo="lamina"`, y qué hacer con `estafado`, `grito`, `codicia` y `triunfo`.
 
 ---
 

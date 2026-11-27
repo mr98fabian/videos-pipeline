@@ -591,6 +591,51 @@ export const TadeoPartes = ({ est, uid = "t" }) => {
   );
 };
 
+// ------------------------------------------------------------ método de láminas (misión 0006)
+// Una pose = un dibujo: el cuerpo, la cola y el tapón salen TRAZADOS de su
+// lámina (laminas/traza_<pose>.js, generado por kx_lamina.py) y la cabeza es la
+// del rig, con sus expresiones, llevada del antifaz de la madre al de la lámina.
+// Unidades del rig con el origen en el punto medio de los pies.
+// Orden (sección 8 del diseño): cola · tapón · cuerpo · cabeza · manos que la pisan.
+const PiezaLamina = ({ p }) => (p ? (
+  <g>
+    {p.rellenos.map((r, i) => <path key={i} d={cerrado(r.caminos)} fill={TONO[r.tono]} fillRule="evenodd" />)}
+    <Tinta polys={p.tinta} />
+  </g>
+) : null);
+
+// est: el de acting.estado() de esa misma pose (la cara, la mirada, el idle).
+// baseInclina: la inclinación de cabeza propia de la pose en POSES; en la lámina
+// ya está dibujada, así que solo se suma lo que el acting añade encima (idle).
+// baseSy: el aplastamiento propio de la pose (POSES[pose].torso.sy), que la lámina
+// también trae dibujado: el cuerpo solo se escala por lo que el acting pone ENCIMA
+// (la respiración del idle, los beats), con el mismo recorte que squash().
+export const CuerpoLamina = ({ t, est, baseInclina = 0, baseSy = 1, uid = "t" }) => {
+  const sy = (est.torso.sy || 1) / Math.min(1.15, Math.max(0.85, baseSy));
+  const sx = 1 / sy;
+  const [bx, by] = t.anclas.barbilla;
+  const c = t.cabeza_rig;
+  const extra = -((est.cabeza.inclina || 0) - baseInclina);
+  // la cabeza sigue a la barbilla cuando el cuerpo respira (escala desde el suelo)
+  const cab = `translate(${bx * (sx - 1)} ${by * (sy - 1)}) rotate(${extra} ${bx} ${by}) `
+    + `translate(${c.hacia[0]} ${c.hacia[1]}) rotate(${c.giro}) translate(${-c.desde[0]} ${-c.desde[1]})`;
+  return (
+    <g>
+      <g transform={`scale(${sx} ${sy})`}>
+        <PiezaLamina p={t.cola} />
+        <PiezaLamina p={t.tapon} />
+        <PiezaLamina p={t.cuerpo} />
+      </g>
+      <g transform={cab}>
+        <CabezaPartes cabeza={est.cabeza} cara={est.cara} mirada={est.mirada} orejas={est.orejas} mechon={est.mechon} uid={uid} />
+      </g>
+      <g transform={`scale(${sx} ${sy})`}>
+        <PiezaLamina p={t.delante} />
+      </g>
+    </g>
+  );
+};
+
 // Punto 3a: tapón de pelaje en la cadera. Pertenece al cuerpo (va con el torso,
 // nunca con la cola) y se pinta detrás de todo: solo se ve donde, al moverse la
 // cola o la mano, quedaría fondo en la base de la cola.
