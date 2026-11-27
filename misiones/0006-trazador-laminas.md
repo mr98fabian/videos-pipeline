@@ -192,6 +192,16 @@ Las 5 que pasan están en la biblioteca del rig: `motion_graphics/src/kx/tadeo/l
 - **Medida del tono contra el rig:** el render se normaliza por su propio papel (crema, `PAPER`), medido en el
   borde; la lámina, por el papel del modelo de tonos (251).
 
+### Por defecto en los vídeos de KOREX (orden de Fabian, 27 nov 2026)
+
+Los vídeos de KOREX no usan `<Tadeo>`: dibujan con `RubberTadeo` (KorexMotion), que movía un PNG de `kx_cast`.
+Ahí entra la lámina: si la ruta del PNG es de Tadeo (`kxm/<slug>/tadeo/<pose>[_N].png`) y la pose está en
+`laminas/index.js`, se dibuja el vector (`TadeoLamina`) en el mismo hueco, con la misma animación de goma.
+Escala fija de 1180 u por hueco: la figura ocupa ~85 % como en los PNG, sin pisar el título del gancho (un
+primer intento con la caja de cada pose cambiaba el tamaño de Tadeo entre escenas; con 1080 u las orejas
+rozaban el título). Verificado en fotogramas del piloto del sobregiro. Test: la regla del componente casa con
+todos los nombres de `kx_cast/tadeo` y con ninguno de otro personaje. Entrada en `HISTORIAL_MEJORAS.md`.
+
 ### Decisiones y desviaciones del diseño (declaradas)
 
 1. **Barbilla = la del rig, colocada por el antifaz**, no el «punto más bajo de la región cara».
@@ -217,7 +227,6 @@ Las 5 que pasan están en la biblioteca del rig: `motion_graphics/src/kx/tadeo/l
 
 ### Lo que NO se hizo
 
-- Usar `cuerpo="lamina"` en una composición de producción (KorexMotion): decisión aparte.
 - Regenerar láminas (0 USD gastados en esta misión).
 - La sección 2.2 de la especificación de las 9 láminas sigue sin corregir: la corrige la decisión del
   punto 2 de arriba.

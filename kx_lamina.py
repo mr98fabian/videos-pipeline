@@ -627,6 +627,11 @@ def trazar(lam: Lamina) -> dict:
     # su posición neutra; se lleva su antifaz al de la lámina y se gira lo que la
     # cabeza de la lámina está ladeada respecto a la de la madre. Escala 1: la
     # normalización ya dejó el antifaz de la lámina al tamaño del de la madre.
+    # caja de la figura entera (con la cabeza de la lámina, del tamaño de la del rig) en u:
+    # para encajar el vector en el mismo hueco que ocupaba un PNG (KorexMotion)
+    ys, xs = np.where(lam.sil)
+    esq = L.to_u(cal, np.array([[xs.min(), ys.max()], [xs.max(), ys.min()]], float))
+    t["caja"] = [round(float(v), 1) for v in (*esq[0], *esq[1])]
     m = antifaz_madre_rig()
     t["cabeza_rig"] = {
         "desde": m["centro_u"],

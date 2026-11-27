@@ -121,3 +121,25 @@ def test_rechaza_una_lamina_sin_antifaz():
     cv2.circle(g, (225, 300), 120, 20, 6)
     with pytest.raises(K.Rechazo, match="antifaz"):
         K.segmentar(K.cargar("vacia", gris=g, escala=1))
+
+
+def test_korex_dibuja_con_lamina_las_poses_de_kx_cast():
+    """KorexMotion reconoce la pose por la ruta del PNG (kxm/<slug>/tadeo/decidido_2.png): la
+    regla tiene que casar con los nombres REALES de kx_cast de cada lámina del rig, y con
+    ninguno de otro personaje."""
+    import re
+    jsx = (ROOT / "motion_graphics" / "src" / "korex" / "KorexMotion.jsx").read_text(encoding="utf-8")
+    patron = re.search(r"const m = /(.+)/\.exec", jsx).group(1).replace(r"\/", "/")
+    regla = re.compile(patron)
+    carpeta = ROOT / "motion_graphics" / "src" / "kx" / "tadeo" / "laminas"
+    en_rig = {q.stem.removeprefix("traza_") for q in carpeta.glob("traza_*.js")}
+    cast = ROOT / "assets" / "kx_cast" / "tadeo"
+    for png in cast.glob("*.png"):
+        m = regla.search(f"kxm/slug/tadeo/{png.name}")
+        assert m, png.name
+        base = re.sub(r"_\d+$", "", png.stem)
+        assert m.group(1) == base, png.name
+    for pose in en_rig:
+        assert any(re.sub(r"_\d+$", "", q.stem) == pose for q in cast.glob("*.png")), f"{pose}: sin PNG en kx_cast, nunca se usaría"
+    assert not regla.search("kxm/slug/bruja/malvada.png")
+

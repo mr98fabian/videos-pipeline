@@ -26,8 +26,10 @@ lo que quedó a medias, y qué sigue. Se lee al empezar y se actualiza al termin
 - **Integradas en el rig** las 5 que pasan: `<Tadeo cuerpo="lamina" />` (opcional; por defecto sigue el cuerpo
   por piezas, así que ningún vídeo cambia). Medido sobre el render real de Remotion (`py kx_lamina.py --rig`):
   cuerpo IoU ≥ 0,992, cabeza a ≤ 0,1 % de A de su sitio.
-- Siguiente: revisar `misiones/evidencia/0006/rig_contacto.png` (franja en el cuello de `orgulloso`), decidir si
-  KorexMotion usa `cuerpo="lamina"`, y qué hacer con `estafado`, `grito`, `codicia` y `triunfo`.
+- **Por defecto en KOREX:** `RubberTadeo` (KorexMotion) dibuja la lámina vectorial cuando la pose la tiene; el
+  resto sigue en PNG. Cambia la salida de todo vídeo KOREX nuevo (entrada en `HISTORIAL_MEJORAS.md`).
+- Siguiente: revisar la franja en el cuello de `orgulloso` (`misiones/evidencia/0006/rig_contacto.png`) y qué hacer
+  con `estafado`, `grito`, `codicia` y `triunfo`.
 
 ---
 

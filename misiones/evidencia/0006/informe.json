@@ -1,5 +1,5 @@
 {
- "huella_codigo": "2754ee3896fee734",
+ "huella_codigo": "fbeed370d9df8224",
  "umbrales_31": {
   "iou_min": 0.98,
   "iou_duro": 0.95,
@@ -458,7 +458,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_decidido.js",
-    "sha1": "3e8ebd1d955e7263"
+    "sha1": "4563dd1dfef6ce1e"
    },
    "fuente_sha1": "c3e9eb3ddb986eff"
   },
@@ -522,7 +522,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_confundido.js",
-    "sha1": "8d9bf5741dde1cd5"
+    "sha1": "2aee6004f44d6409"
    },
    "fuente_sha1": "44fbdf7a6acb9dbe"
   },
@@ -586,7 +586,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_orgulloso.js",
-    "sha1": "23fa4a454657454c"
+    "sha1": "71fcb0b330571244"
    },
    "fuente_sha1": "47a081e9822783f5"
   },
@@ -650,7 +650,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_estafado.js",
-    "sha1": "f10c1593f83e7d08"
+    "sha1": "796a83df48c984bf"
    },
    "fuente_sha1": "19cb0bd22c2eb18b"
   },
@@ -714,7 +714,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_grito.js",
-    "sha1": "d4de0f7c584d3733"
+    "sha1": "121a92a3b39b3949"
    },
    "fuente_sha1": "33ef6992004e284c"
   },
@@ -778,7 +778,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_explicando.js",
-    "sha1": "dd6f4891c5e45b15"
+    "sha1": "785d4f5aef322600"
    },
    "fuente_sha1": "1c731d3bbe86e47a"
   },
@@ -842,7 +842,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_codicia.js",
-    "sha1": "15fbfc98df2ce97a"
+    "sha1": "6f83b1d45fe7305d"
    },
    "fuente_sha1": "d025a98ac8c27cc6"
   },
@@ -906,7 +906,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_asombro.js",
-    "sha1": "d8f210747933457a"
+    "sha1": "945a14779330479a"
    },
    "fuente_sha1": "6894c20adfd94ed2"
   },
@@ -970,7 +970,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_triunfo.js",
-    "sha1": "277d264625ff5602"
+    "sha1": "eef4e582fe97254d"
    },
    "fuente_sha1": "b7f97c123cd94355"
   },
@@ -1034,7 +1034,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_pointing.js",
-    "sha1": "7b5245a4301acb10"
+    "sha1": "9f44841756d44388"
    },
    "fuente_sha1": "08294392cdd62c24"
   }
