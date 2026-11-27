@@ -1,6 +1,6 @@
 # MISIÓN 0006 — Construir el trazador de láminas de pose de Tadeo
 
-Rama `feat/trazador-laminas` · PR contra master · estado: **en-auditoria**.
+Rama `feat/trazador-laminas` · PR #12 · estado: **aprobada — fusionada en `master` el 27 nov 2026 por orden de Fabian**.
 Fuente de verdad: `misiones/2026-11-25-diseno-trazador-laminas.md` (aprobado por Fabian el 25 nov 2026).
 Orden de Fabian del 27 nov 2026: «constrúyelo». La ejecutó Claude (Fable/Opus) sin misión escrita
 por Mijo, así que este archivo hace de misión y de reporte a la vez.

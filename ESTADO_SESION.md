@@ -15,7 +15,7 @@ lo que quedó a medias, y qué sigue. Se lee al empezar y se actualiza al termin
 
 ## Actualizado: 27 nov 2026 — trazador de láminas de Tadeo construido (misión 0006)
 
-**Rama `feat/trazador-laminas`**, PR abierto. Reporte completo en `misiones/0006-trazador-laminas.md`.
+**Fusionado en `master`** (PR #12, 27 nov 2026, orden de Fabian). Reporte completo en `misiones/0006-trazador-laminas.md`.
 
 - `kx_lamina.py` traza las 9 láminas + `pointing`: el cuerpo copia su lámina con IoU 0,994–0,998 y
   tinta ~100 %. La cabeza la pone el rig, anclada por el antifaz.
