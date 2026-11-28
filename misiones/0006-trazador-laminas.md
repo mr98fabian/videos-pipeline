@@ -187,8 +187,14 @@ Las 5 que pasan están en la biblioteca del rig: `motion_graphics/src/kx/tadeo/l
 
   Umbral del anclaje: ≤ 1 % de A, escala ± 1 %, giro ± 0,5°. El molde anula el giro de cabeza de la pose (falso
   3/4 de la mirada), que desplaza el antifaz a propósito.
-- **Para revisar a ojo:** en `orgulloso` asoma una franja clara en el cuello (el tapón, entre la barbilla del
-  rig y el cuerpo). La medida no la ve: cae dentro de la banda de 12 u que se excluye alrededor de la cabeza.
+- **Franja del cuello de `orgulloso` (arreglada el 27 nov):** su cara es más larga que la del rig, y el corte en la
+  barbilla del rig dejaba en el cuerpo una banda de su mandíbula (contorno, mechones de mejilla y relleno). Ahora:
+  (1) se corta en la barbilla PROPIA de la lámina cuando cae más baja (estrechamiento + 0,04 A, el desfase medido
+  en la madre) y la cabeza del rig baja hasta apoyarse en ella (`bajada_cabeza_A`: 0,08 en `orgulloso`, 0,09 en
+  `grito` y `triunfo`, ≤ 0,04 en el resto); (2) el tapón toma el tono del cuerpo que tiene al lado, no el de la cara
+  que había; (3) la tinta del cuerpo no entra en la máscara de la cabeza (recogía astillas de la mandíbula en la
+  línea de corte); (4) el cierre de bolsas mira también los extremos de la respiración (`asombro` abría una de 9 px
+  al inspirar). Medido en el render del rig: mismo gris encima y debajo del corte (221 en el peto, 153 en el pelaje).
 - **Medida del tono contra el rig:** el render se normaliza por su propio papel (crema, `PAPER`), medido en el
   borde; la lámina, por el papel del modelo de tonos (251).
 

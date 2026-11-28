@@ -1,12 +1,12 @@
 {
- "huella_codigo": "fbeed370d9df8224",
+ "huella_codigo": "788688aee17b48c4",
  "poses": {
   "decidido": {
    "traza_31_rig": {
-    "iou": 0.9964,
+    "iou": 0.9953,
     "tinta_lamina_en_trazo": 1.0,
-    "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 0.9906,
+    "tinta_trazo_en_lamina": 0.9978,
+    "area_tinta": 0.9926,
     "tono_error_medio": 0.0155,
     "tono_superficie_mayor_008": 0.0351,
     "cumple": {
@@ -18,19 +18,19 @@
      "tono_superficie": true
     }
    },
-   "cabeza_iou": 0.9468,
-   "antifaz_desvio_A": 0.0008,
+   "cabeza_iou": 0.9448,
+   "antifaz_desvio_A": 0.0009,
    "antifaz_A_rig_sobre_lamina": 1.0028,
    "antifaz_giro_rig_menos_lamina": 0.0
   },
   "confundido": {
    "traza_31_rig": {
-    "iou": 0.9943,
+    "iou": 0.9945,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 0.9884,
-    "tono_error_medio": 0.0283,
-    "tono_superficie_mayor_008": 0.0382,
+    "area_tinta": 0.9883,
+    "tono_error_medio": 0.0282,
+    "tono_superficie_mayor_008": 0.0381,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -40,19 +40,19 @@
      "tono_superficie": true
     }
    },
-   "cabeza_iou": 0.957,
-   "antifaz_desvio_A": 0.0009,
+   "cabeza_iou": 0.9559,
+   "antifaz_desvio_A": 0.001,
    "antifaz_A_rig_sobre_lamina": 1.0028,
-   "antifaz_giro_rig_menos_lamina": -0.01
+   "antifaz_giro_rig_menos_lamina": 0.0
   },
   "orgulloso": {
    "traza_31_rig": {
-    "iou": 0.9966,
+    "iou": 0.9957,
     "tinta_lamina_en_trazo": 1.0,
-    "tinta_trazo_en_lamina": 0.9988,
-    "area_tinta": 0.9934,
-    "tono_error_medio": 0.0257,
-    "tono_superficie_mayor_008": 0.0338,
+    "tinta_trazo_en_lamina": 0.9952,
+    "area_tinta": 0.998,
+    "tono_error_medio": 0.0254,
+    "tono_superficie_mayor_008": 0.0333,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -62,19 +62,19 @@
      "tono_superficie": true
     }
    },
-   "cabeza_iou": 0.973,
-   "antifaz_desvio_A": 0.0007,
+   "cabeza_iou": 0.9696,
+   "antifaz_desvio_A": 0.0009,
    "antifaz_A_rig_sobre_lamina": 1.0031,
-   "antifaz_giro_rig_menos_lamina": 0.01
+   "antifaz_giro_rig_menos_lamina": 0.02
   },
   "explicando": {
    "traza_31_rig": {
     "iou": 0.9945,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 0.9891,
-    "tono_error_medio": 0.0214,
-    "tono_superficie_mayor_008": 0.0398,
+    "area_tinta": 0.9889,
+    "tono_error_medio": 0.0215,
+    "tono_superficie_mayor_008": 0.0397,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -84,17 +84,17 @@
      "tono_superficie": true
     }
    },
-   "cabeza_iou": 0.984,
+   "cabeza_iou": 0.985,
    "antifaz_desvio_A": 0.0008,
    "antifaz_A_rig_sobre_lamina": 1.0013,
    "antifaz_giro_rig_menos_lamina": -0.01
   },
   "asombro": {
    "traza_31_rig": {
-    "iou": 0.9925,
+    "iou": 0.9926,
     "tinta_lamina_en_trazo": 1.0,
-    "tinta_trazo_en_lamina": 0.9989,
-    "area_tinta": 0.9788,
+    "tinta_trazo_en_lamina": 0.998,
+    "area_tinta": 0.9797,
     "tono_error_medio": 0.0155,
     "tono_superficie_mayor_008": 0.0354,
     "cumple": {
@@ -106,10 +106,10 @@
      "tono_superficie": true
     }
    },
-   "cabeza_iou": 0.9506,
+   "cabeza_iou": 0.9498,
    "antifaz_desvio_A": 0.001,
    "antifaz_A_rig_sobre_lamina": 1.0016,
-   "antifaz_giro_rig_menos_lamina": 0.02
+   "antifaz_giro_rig_menos_lamina": 0.01
   }
  }
 }
