@@ -187,8 +187,34 @@ def anclar_barbilla(lam: Lamina) -> None:
     región de la cara de la lámina (`propia_A`)."""
     af = lam.antifaz
     c, n, A = np.array(af["centro"]), np.array(af["normal"]), lam.A
-    p = c + n * (af["borde_inf"] + BARBILLA_A * A)
-    lam.barbilla = {"punto": p.tolist(), "propia_A": estrechamiento(lam)}
+    propia = estrechamiento(lam)
+    # Si la cara de la lámina es más larga que la del rig (orgulloso, grito, triunfo),
+    # cortar en la barbilla del rig deja en el cuerpo una banda de su mandíbula (la
+    # «franja del cuello»). Entonces se corta en la barbilla PROPIA y la cabeza del rig
+    # baja hasta apoyarse en ella (`bajada_A`). El estrechamiento cae por encima de la
+    # barbilla real; la diferencia se mide en la madre, donde ambas se conocen.
+    bajada = 0.0
+    if propia is not None and lam.nombre != "madre":
+        bajada = max(0.0, propia + desfase_barbilla() - BARBILLA_A)
+    p = c + n * (af["borde_inf"] + (BARBILLA_A + bajada) * A)
+    lam.barbilla = {"punto": p.tolist(), "propia_A": propia, "bajada_A": round(bajada, 4)}
+
+
+_DESFASE = {}
+
+
+def desfase_barbilla() -> float:
+    """Barbilla real menos estrechamiento, en A, medido en la madre (0,34 − 0,30)."""
+    if "d" not in _DESFASE:
+        md = madre()
+        anclar_antifaz(md)
+        _DESFASE["d"] = BARBILLA_A - estrechamiento(md)
+    return _DESFASE["d"]
+
+
+def bajada_px(lam: Lamina) -> np.ndarray:
+    """Cuánto baja la cabeza del rig respecto a su sitio por el antifaz, en px."""
+    return np.array(lam.antifaz["normal"]) * lam.barbilla.get("bajada_A", 0.0) * lam.A
 
 
 def estrechamiento(lam: Lamina):
@@ -256,7 +282,7 @@ def plantilla_cabeza(lam: Lamina) -> np.ndarray:
     cab_m, c_m, ang_m, A_m = _PLANTILLA["m"]
     af = lam.antifaz
     M = cv2.getRotationMatrix2D((float(c_m[0]), float(c_m[1])), -(af["angulo"] - ang_m), lam.A / A_m)
-    M[:, 2] += np.array(af["centro"]) - np.array(c_m)
+    M[:, 2] += np.array(af["centro"]) + bajada_px(lam) - np.array(c_m)
     H, W = lam.g.shape
     return cv2.warpAffine(cab_m.astype(np.uint8), M, (W, H), flags=cv2.INTER_NEAREST).astype(bool)
 
@@ -520,7 +546,35 @@ def tono_region(g, m) -> int:
     return int(L.cuantiza(np.array([f]))[0])
 
 
-def pieza(lam: Lamina, zona: np.ndarray, cal: dict, con_tinta=True, zona_tinta=None) -> dict:
+def pieza_tapon(lam: Lamina, zona: np.ndarray, cal: dict) -> dict:
+    """El tapón CONTINÚA el cuerpo que tiene al lado: cada píxel toma el tono de la
+    región del cuerpo más cercana (peto claro al centro, pelaje a los lados), no el de
+    la cara de la lámina que había ahí. Si no, bajo la barbilla queda un escalón de tono."""
+    cuerpo = lam.mascaras["cuerpo"] & ~lam.ink
+    etiqueta = np.full(lam.g.shape, -1, np.int16)
+    for m, _, _ in L.componentes(cuerpo, 30):
+        etiqueta[m] = tono_region(lam.g, m)
+    fuente = etiqueta >= 0
+    if not fuente.any() or not zona.any():
+        return pieza(lam, zona, cal, con_tinta=False)
+    _, idx = cv2.distanceTransformWithLabels((~fuente).astype(np.uint8), cv2.DIST_L2, 5,
+                                             labelType=cv2.DIST_LABEL_PIXEL)
+    ys, xs = np.where(fuente)
+    tono_px = np.zeros(idx.max() + 1, np.int16)
+    tono_px[idx[ys, xs]] = etiqueta[ys, xs]
+    tonos = tono_px[idx]
+    capas = {int(t_): zona & (tonos == t_) for t_ in np.unique(tonos[zona])}
+    base_t = max(capas, key=lambda t_: capas[t_].sum())
+    rellenos = [{"tono": L.TN[base_t], "caminos": L.poly_ccomp(cal, zona, eps=0.6, suav=1.0)}]
+    r = max(2, int(round(0.01 * lam.A)))
+    for t_ in sorted(capas, key=lambda t_: -capas[t_].sum()):
+        if t_ != base_t:
+            m = cv2.dilate(capas[t_].astype(np.uint8), L.disk(r)).astype(bool) & zona
+            rellenos.append({"tono": L.TN[t_], "caminos": L.poly_ccomp(cal, m, eps=0.6, suav=1.0)})
+    return {"rellenos": rellenos}
+
+
+def pieza(lam: Lamina, zona: np.ndarray, cal: dict, con_tinta=True, zona_tinta=None, excluir=None) -> dict:
     """Relleno por tonos planos (una capa por tono: las regiones de la lámina que
     separa su propia tinta, ensanchadas por debajo de la línea) + tinta copiada
     como isolínea subpíxel, todo en u."""
@@ -540,7 +594,7 @@ def pieza(lam: Lamina, zona: np.ndarray, cal: dict, con_tinta=True, zona_tinta=N
         rellenos.append({"tono": L.TN[t], "caminos": L.poly_ccomp(cal, m, eps=0.6, suav=1.0)})
     out = {"rellenos": rellenos}
     if con_tinta:
-        out["tinta"] = L.poly_iso(cal, g, zona if zona_tinta is None else zona_tinta)
+        out["tinta"] = L.poly_iso(cal, g, zona if zona_tinta is None else zona_tinta, excluir=excluir)
     return out
 
 
@@ -587,6 +641,22 @@ def antifaz_madre_rig() -> dict:
     return _MADRE_RIG
 
 
+RESPIRA = 0.012          # amplitud de la respiración del rig (IDLE.amplitudSy), la de la prueba de sólido
+
+
+def respirar(t: dict, sy: float) -> dict:
+    """La traza con el cuerpo escalado en vertical desde el suelo (como respira el rig)."""
+    t2 = json.loads(json.dumps(t))
+    for clave in ("cola", "tapon", "cuerpo", "delante"):
+        pz = t2.get(clave)
+        if not pz:
+            continue
+        for capa in pz["rellenos"]:
+            capa["caminos"] = [[[x, y * sy] for x, y in c] for c in capa["caminos"]]
+        pz["tinta"] = [[[x, y * sy] for x, y in c] for c in pz.get("tinta", [])]
+    return t2
+
+
 def trazar(lam: Lamina) -> dict:
     cal = cal_de(lam)
     delante = lam.mascaras["delante"]
@@ -595,24 +665,43 @@ def trazar(lam: Lamina) -> dict:
     detras = lambda m: cv2.dilate(m.astype(np.uint8), L.disk(2)).astype(bool) & (lam.sil | lam.mascaras["cabeza"])  # noqa: E731
     t = {
         "cola": pieza(lam, detras(lam.mascaras["cola"]), cal, zona_tinta=lam.mascaras["cola"]),
-        "cuerpo": pieza(lam, lam.mascaras["cuerpo"] & ~delante, cal),
-        "tapon": pieza(lam, detras(tapon(lam)), cal, con_tinta=False),
+        # la isolínea amplía su zona 3 px: sin excluir la cabeza, recoge astillas de la
+        # mandíbula de la lámina justo en la línea de corte (una línea discontinua tenue)
+        "cuerpo": pieza(lam, lam.mascaras["cuerpo"] & ~delante, cal, excluir=lam.mascaras["cabeza"]),
+        "tapon": pieza_tapon(lam, detras(tapon(lam)), cal),
         "delante": pieza(lam, delante, cal) if delante.any() else None,
     }
     # Cierre sobre lo YA TRAZADO: la simplificación del polígono del cuerpo puede
     # perder una astilla en la unión con la mejilla y dejar una bolsa que en las
     # máscaras no existe. Las bolsas pequeñas junto a lo que era la cabeza de la
     # lámina entran en el tapón (pelaje sin tinta, detrás del cuerpo).
-    cub = cobertura(t, cal, lam.g.shape) | plantilla_cabeza(lam)
+    # En reposo y en los dos extremos de la respiración: al inspirar el brazo sube con
+    # el cuerpo y la cabeza no del todo, y puede abrirse una bolsa que en reposo no hay.
+    # La de un extremo se lleva a reposo (des-escalando desde el suelo) y solo entra lo
+    # que en reposo ya queda tapado: el relleno nunca asoma cuando no hace falta.
     cerca = cv2.dilate(lam.mascaras["cabeza"].astype(np.uint8), L.disk(max(3, int(0.03 * lam.A)))).astype(bool)
-    extra = np.zeros_like(cub)
-    for m, st, _ in L.componentes(~cub & L.fill_holes(cub), 1):
-        if st[4] <= 0.02 * lam.A ** 2 and (m & cerca).sum() >= 0.5 * st[4]:
-            extra |= m
+    reposo = cobertura(t, cal, lam.g.shape) | plantilla_cabeza(lam)
+    tapado = reposo | L.fill_holes(reposo)
+    extra = np.zeros_like(reposo)
+    for sy in (1.0, 1 - RESPIRA, 1 + RESPIRA):
+        dy = (lam.pies["suelo"] - lam.barbilla["punto"][1]) * (sy - 1)
+        cab = cv2.warpAffine(plantilla_cabeza(lam).astype(np.uint8), np.float32([[1, 0, 0], [0, 1, -dy]]),
+                             reposo.shape[::-1], flags=cv2.INTER_NEAREST).astype(bool)
+        cub = cobertura(respirar(t, sy), cal, lam.g.shape) | cab
+        bolsa = np.zeros_like(cub)
+        for m, st, _ in L.componentes(~cub & L.fill_holes(cub), 1):
+            if st[4] <= 0.02 * lam.A ** 2 and (m & cerca).sum() >= 0.5 * st[4]:
+                bolsa |= m
+        if bolsa.any() and sy != 1.0:
+            s0 = lam.pies["suelo"]
+            M = np.float32([[1, 0, 0], [0, 1 / sy, s0 * (1 - 1 / sy)]])
+            bolsa = cv2.warpAffine(bolsa.astype(np.uint8), M, reposo.shape[::-1], flags=cv2.INTER_NEAREST).astype(bool)
+            bolsa = cv2.dilate(bolsa.astype(np.uint8), L.disk(2)).astype(bool) & tapado
+        extra |= bolsa
     if extra.any():
         lam.mascaras["bolsas"] = lam.mascaras.get("bolsas", np.zeros_like(extra)) | extra
         zona = detras(tapon(lam)) | cv2.dilate(extra.astype(np.uint8), L.disk(4)).astype(bool)
-        t["tapon"] = pieza(lam, zona, cal, con_tinta=False)
+        t["tapon"] = pieza_tapon(lam, zona, cal)
     af = lam.antifaz
     t["anclas"] = {
         "pies": [0.0, 0.0],
@@ -622,6 +711,7 @@ def trazar(lam: Lamina) -> dict:
         "A_px": round(lam.A, 2),
         "escala_u_por_px": round(1 / cal["s"], 5),
         "barbilla_propia_A": lam.barbilla["propia_A"],
+        "bajada_cabeza_A": lam.barbilla.get("bajada_A", 0.0),
     }
     # Dónde va la cabeza del rig: la cabeza trazada de la madre (traza.js) está en
     # su posición neutra; se lleva su antifaz al de la lámina y se gira lo que la
@@ -635,7 +725,7 @@ def trazar(lam: Lamina) -> dict:
     m = antifaz_madre_rig()
     t["cabeza_rig"] = {
         "desde": m["centro_u"],
-        "hacia": t["anclas"]["antifaz_centro"],
+        "hacia": L.r1(L.to_u(cal, [np.array(af["centro"]) + bajada_px(lam)]))[0],
         "giro": round(t["anclas"]["eje_cabeza"] - m["eje"], 2),
     }
     t["marcas"] = {k: lam.marcas.get(k) for k in MARCAS}
@@ -920,17 +1010,9 @@ def solido(lam: Lamina, t: dict) -> dict:
     respiración (sy 1 ± 0,012 desde el suelo): cero huecos de fondo de 4 a 399 px."""
     cal = cal_de(lam)
     res = {}
-    for sy in (0.988, 1.012):
+    for sy in (1 - RESPIRA, 1 + RESPIRA):
         c2 = dict(cal)
-        t2 = json.loads(json.dumps(t))
-        for clave in ("cola", "tapon", "cuerpo", "delante"):
-            pz = t2.get(clave)
-            if not pz:
-                continue
-            for capa in pz["rellenos"]:
-                capa["caminos"] = [[[x, y * sy] for x, y in c] for c in capa["caminos"]]
-            pz["tinta"] = [[[x, y * sy] for x, y in c] for c in pz.get("tinta", [])]
-        cub = cobertura(t2, c2, lam.g.shape)
+        cub = cobertura(respirar(t, sy), c2, lam.g.shape)
         cab = plantilla_cabeza(lam)
         dy = (lam.pies["suelo"] - lam.barbilla["punto"][1]) * (sy - 1)   # la cabeza sigue a la barbilla
         cab = cv2.warpAffine(cab.astype(np.uint8), np.float32([[1, 0, 0], [0, 1, -dy]]), cab.shape[::-1],
@@ -1034,7 +1116,7 @@ def cabeza_rig_pixeles(lam: Lamina):
     cab_m, c_m, ang_m, A_m = _PLANTILLA["m"]
     af = lam.antifaz
     M = cv2.getRotationMatrix2D((float(c_m[0]), float(c_m[1])), -(af["angulo"] - ang_m), lam.A / A_m)
-    M[:, 2] += np.array(af["centro"]) - np.array(c_m)
+    M[:, 2] += np.array(af["centro"]) + bajada_px(lam) - np.array(c_m)
     H, W = lam.g.shape
     g = cv2.warpAffine(md.g, M, (W, H), flags=cv2.INTER_AREA, borderValue=251)
     m = cv2.warpAffine(cab_m.astype(np.uint8), M, (W, H), flags=cv2.INTER_NEAREST).astype(bool)
@@ -1186,7 +1268,9 @@ def medir_rig() -> dict:
         # el anclaje: el antifaz que dibuja el rig contra el que se calculó (en A)
         ar = cargar(pose, gris=r, escala=1)
         anclar_antifaz(ar)
-        desvio = float(np.linalg.norm(np.array(ar.antifaz["centro"]) - np.array(lam.antifaz["centro"])) / lam.A)
+        # donde DEBE caer: su antifaz más la bajada hasta la barbilla propia
+        esperado = np.array(lam.antifaz["centro"]) + bajada_px(lam)
+        desvio = float(np.linalg.norm(np.array(ar.antifaz["centro"]) - esperado) / lam.A)
         res[pose] = {"traza_31_rig": m31, "cabeza_iou": round(cab_iou, 4), "antifaz_desvio_A": round(desvio, 4),
                      "antifaz_A_rig_sobre_lamina": round(ar.A / lam.A, 4),
                      "antifaz_giro_rig_menos_lamina": round(ar.antifaz["angulo"] - lam.antifaz["angulo"], 2)}

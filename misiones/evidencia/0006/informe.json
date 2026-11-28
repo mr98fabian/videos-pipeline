@@ -1,5 +1,5 @@
 {
- "huella_codigo": "fbeed370d9df8224",
+ "huella_codigo": "788688aee17b48c4",
  "umbrales_31": {
   "iou_min": 0.98,
   "iou_duro": 0.95,
@@ -79,7 +79,7 @@
     "pie": 0.0012,
     "panza": 0.0232,
     "brazo_grosor": -0.0915,
-    "brazo_largo": -0.0139
+    "brazo_largo": 0.0
    },
    "triunfo": {
     "pie": -0.0355,
@@ -91,7 +91,7 @@
   "vista_3_4": {
    "pointing": {
     "brazo_grosor": 0.2165,
-    "brazo_largo": 0.2222
+    "brazo_largo": 0.2778
    }
   },
   "malos": {
@@ -306,7 +306,7 @@
    "pasa": true,
    "marcas_informativas": {
     "brazo_grosor": -0.0915,
-    "brazo_largo": -0.0139
+    "brazo_largo": 0.0
    }
   },
   "triunfo": {
@@ -325,10 +325,8 @@
    }
   },
   "pointing": {
-   "pasa_31": false,
-   "fallos_31": [
-    "tono_error_medio"
-   ],
+   "pasa_31": true,
+   "fallos_31": [],
    "pasa_32": false,
    "marcas_fuera": {},
    "no_medible": [
@@ -340,7 +338,7 @@
    "pasa": false,
    "marcas_informativas": {
     "brazo_grosor": 0.2165,
-    "brazo_largo": 0.2222
+    "brazo_largo": 0.2778
    }
   }
  },
@@ -370,13 +368,14 @@
     "eje_cabeza": -0.12,
     "A_px": 622.01,
     "escala_u_por_px": 0.61012,
-    "barbilla_propia_A": 0.3
+    "barbilla_propia_A": 0.3,
+    "bajada_cabeza_A": 0.0
    },
    "traza_31": {
     "iou": 0.9943,
     "tinta_lamina_en_trazo": 0.9999,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 1.0188,
+    "area_tinta": 1.0185,
     "tono_error_medio": 0.0285,
     "tono_superficie_mayor_008": 0.1125,
     "cumple": {
@@ -414,7 +413,7 @@
     ],
     "barbilla": [
      0.5,
-     615.5
+     611.7
     ],
     "antifaz_centro": [
      0.3,
@@ -423,15 +422,16 @@
     "eje_cabeza": 0.07,
     "A_px": 715.01,
     "escala_u_por_px": 0.53076,
-    "barbilla_propia_A": 0.31
+    "barbilla_propia_A": 0.31,
+    "bajada_cabeza_A": 0.01
    },
    "traza_31": {
     "iou": 0.997,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 1.0045,
+    "area_tinta": 1.0044,
     "tono_error_medio": 0.0147,
-    "tono_superficie_mayor_008": 0.0345,
+    "tono_superficie_mayor_008": 0.0346,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -458,7 +458,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_decidido.js",
-    "sha1": "4563dd1dfef6ce1e"
+    "sha1": "654ccc91d435b295"
    },
    "fuente_sha1": "c3e9eb3ddb986eff"
   },
@@ -477,8 +477,8 @@
      0.0
     ],
     "barbilla": [
-     -15.2,
-     602.6
+     -15.8,
+     595.0
     ],
     "antifaz_centro": [
      -0.3,
@@ -487,15 +487,16 @@
     "eje_cabeza": -4.42,
     "A_px": 691.27,
     "escala_u_por_px": 0.54899,
-    "barbilla_propia_A": 0.32
+    "barbilla_propia_A": 0.32,
+    "bajada_cabeza_A": 0.02
    },
    "traza_31": {
     "iou": 0.9949,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 1.003,
-    "tono_error_medio": 0.027,
-    "tono_superficie_mayor_008": 0.0366,
+    "area_tinta": 1.0029,
+    "tono_error_medio": 0.0269,
+    "tono_superficie_mayor_008": 0.0365,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -522,7 +523,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_confundido.js",
-    "sha1": "2aee6004f44d6409"
+    "sha1": "35ffcbdd06d74d7c"
    },
    "fuente_sha1": "44fbdf7a6acb9dbe"
   },
@@ -541,8 +542,8 @@
      0.0
     ],
     "barbilla": [
-     14.1,
-     717.0
+     12.5,
+     686.6
     ],
     "antifaz_centro": [
      24.2,
@@ -551,15 +552,16 @@
     "eje_cabeza": -2.93,
     "A_px": 724.79,
     "escala_u_por_px": 0.5236,
-    "barbilla_propia_A": 0.38
+    "barbilla_propia_A": 0.38,
+    "bajada_cabeza_A": 0.08
    },
    "traza_31": {
-    "iou": 0.9976,
+    "iou": 0.9975,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 1.0062,
-    "tono_error_medio": 0.0244,
-    "tono_superficie_mayor_008": 0.0335,
+    "area_tinta": 1.0069,
+    "tono_error_medio": 0.0242,
+    "tono_superficie_mayor_008": 0.0329,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -586,7 +588,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_orgulloso.js",
-    "sha1": "71fcb0b330571244"
+    "sha1": "06ad44987cb5bbae"
    },
    "fuente_sha1": "47a081e9822783f5"
   },
@@ -605,8 +607,8 @@
      0.0
     ],
     "barbilla": [
-     -88.5,
-     682.2
+     -87.3,
+     667.1
     ],
     "antifaz_centro": [
      -102.8,
@@ -615,15 +617,16 @@
     "eje_cabeza": 4.46,
     "A_px": 689.9,
     "escala_u_por_px": 0.55008,
-    "barbilla_propia_A": 0.34
+    "barbilla_propia_A": 0.34,
+    "bajada_cabeza_A": 0.04
    },
    "traza_31": {
-    "iou": 0.9972,
+    "iou": 0.9971,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 0.9975,
-    "tono_error_medio": 0.0236,
-    "tono_superficie_mayor_008": 0.0328,
+    "area_tinta": 0.9978,
+    "tono_error_medio": 0.0235,
+    "tono_superficie_mayor_008": 0.0324,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -650,7 +653,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_estafado.js",
-    "sha1": "796a83df48c984bf"
+    "sha1": "0256869ae0da3b5f"
    },
    "fuente_sha1": "19cb0bd22c2eb18b"
   },
@@ -669,8 +672,8 @@
      0.0
     ],
     "barbilla": [
-     -0.4,
-     691.5
+     -0.3,
+     657.3
     ],
     "antifaz_centro": [
      -0.6,
@@ -679,15 +682,16 @@
     "eje_cabeza": 0.08,
     "A_px": 708.0,
     "escala_u_por_px": 0.53601,
-    "barbilla_propia_A": 0.39
+    "barbilla_propia_A": 0.39,
+    "bajada_cabeza_A": 0.09
    },
    "traza_31": {
     "iou": 0.9968,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 0.998,
-    "tono_error_medio": 0.0199,
-    "tono_superficie_mayor_008": 0.0346,
+    "area_tinta": 0.9984,
+    "tono_error_medio": 0.02,
+    "tono_superficie_mayor_008": 0.035,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -702,7 +706,7 @@
      "huecos_4_399": 10
     },
     "sy_1.012": {
-     "huecos_4_399": 9
+     "huecos_4_399": 21
     },
     "cumple": false
    },
@@ -714,7 +718,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_grito.js",
-    "sha1": "121a92a3b39b3949"
+    "sha1": "bc0049564b2c7a35"
    },
    "fuente_sha1": "33ef6992004e284c"
   },
@@ -734,7 +738,7 @@
     ],
     "barbilla": [
      -0.6,
-     607.2
+     603.4
     ],
     "antifaz_centro": [
      -0.5,
@@ -743,15 +747,16 @@
     "eje_cabeza": -0.01,
     "A_px": 767.0,
     "escala_u_por_px": 0.49478,
-    "barbilla_propia_A": 0.31
+    "barbilla_propia_A": 0.31,
+    "bajada_cabeza_A": 0.01
    },
    "traza_31": {
     "iou": 0.995,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 1.0028,
+    "area_tinta": 1.0027,
     "tono_error_medio": 0.0201,
-    "tono_superficie_mayor_008": 0.0385,
+    "tono_superficie_mayor_008": 0.0384,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -778,7 +783,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_explicando.js",
-    "sha1": "785d4f5aef322600"
+    "sha1": "caa3f2944e781b22"
    },
    "fuente_sha1": "1c731d3bbe86e47a"
   },
@@ -807,13 +812,14 @@
     "eje_cabeza": 0.83,
     "A_px": 766.01,
     "escala_u_por_px": 0.49543,
-    "barbilla_propia_A": 0.3
+    "barbilla_propia_A": 0.3,
+    "bajada_cabeza_A": 0.0
    },
    "traza_31": {
     "iou": 0.9977,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 1.0036,
+    "area_tinta": 1.0037,
     "tono_error_medio": 0.0229,
     "tono_superficie_mayor_008": 0.0313,
     "cumple": {
@@ -842,7 +848,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_codicia.js",
-    "sha1": "6f83b1d45fe7305d"
+    "sha1": "5d6bfe751bbc8a35"
    },
    "fuente_sha1": "d025a98ac8c27cc6"
   },
@@ -851,7 +857,7 @@
     "pie": 0.5927,
     "panza": 0.6646,
     "brazo_grosor": 0.1578,
-    "brazo_largo": 0.71,
+    "brazo_largo": 0.72,
     "cola_ancho": 0.4408,
     "cola_anillos": 6
    },
@@ -862,7 +868,7 @@
     ],
     "barbilla": [
      -0.4,
-     768.5
+     764.7
     ],
     "antifaz_centro": [
      -0.3,
@@ -871,7 +877,8 @@
     "eje_cabeza": -0.03,
     "A_px": 638.0,
     "escala_u_por_px": 0.59483,
-    "barbilla_propia_A": 0.31
+    "barbilla_propia_A": 0.31,
+    "bajada_cabeza_A": 0.01
    },
    "traza_31": {
     "iou": 0.993,
@@ -879,7 +886,7 @@
     "tinta_trazo_en_lamina": 1.0,
     "area_tinta": 0.9936,
     "tono_error_medio": 0.0153,
-    "tono_superficie_mayor_008": 0.0336,
+    "tono_superficie_mayor_008": 0.0334,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -906,7 +913,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_asombro.js",
-    "sha1": "945a14779330479a"
+    "sha1": "29ef7d81e264528c"
    },
    "fuente_sha1": "6894c20adfd94ed2"
   },
@@ -926,7 +933,7 @@
     ],
     "barbilla": [
      -0.3,
-     729.7
+     695.5
     ],
     "antifaz_centro": [
      -0.2,
@@ -935,15 +942,16 @@
     "eje_cabeza": -0.02,
     "A_px": 601.0,
     "escala_u_por_px": 0.63145,
-    "barbilla_propia_A": 0.39
+    "barbilla_propia_A": 0.39,
+    "bajada_cabeza_A": 0.09
    },
    "traza_31": {
-    "iou": 0.9943,
+    "iou": 0.9964,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 1.0041,
-    "tono_error_medio": 0.022,
-    "tono_superficie_mayor_008": 0.0298,
+    "area_tinta": 1.0255,
+    "tono_error_medio": 0.0203,
+    "tono_superficie_mayor_008": 0.0237,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
@@ -970,7 +978,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_triunfo.js",
-    "sha1": "eef4e582fe97254d"
+    "sha1": "df1c32cc4412e6f9"
    },
    "fuente_sha1": "b7f97c123cd94355"
   },
@@ -979,7 +987,7 @@
     "pie": 0.6646,
     "panza": 0.6807,
     "brazo_grosor": 0.2113,
-    "brazo_largo": 0.88,
+    "brazo_largo": 0.92,
     "cola_ancho": 0.5724,
     "cola_anillos": 8
    },
@@ -989,8 +997,8 @@
      0.0
     ],
     "barbilla": [
-     15.3,
-     743.6
+     13.3,
+     724.7
     ],
     "antifaz_centro": [
      37.2,
@@ -999,21 +1007,22 @@
     "eje_cabeza": -6.29,
     "A_px": 492.12,
     "escala_u_por_px": 0.77116,
-    "barbilla_propia_A": 0.35
+    "barbilla_propia_A": 0.35,
+    "bajada_cabeza_A": 0.05
    },
    "traza_31": {
-    "iou": 0.9965,
+    "iou": 0.9964,
     "tinta_lamina_en_trazo": 1.0,
     "tinta_trazo_en_lamina": 1.0,
-    "area_tinta": 0.9998,
-    "tono_error_medio": 0.0301,
-    "tono_superficie_mayor_008": 0.0357,
+    "area_tinta": 0.9995,
+    "tono_error_medio": 0.0299,
+    "tono_superficie_mayor_008": 0.0353,
     "cumple": {
      "iou": true,
      "tinta_lamina_en_trazo": true,
      "tinta_trazo_en_lamina": true,
      "area_tinta": true,
-     "tono_error_medio": false,
+     "tono_error_medio": true,
      "tono_superficie": true
     }
    },
@@ -1034,7 +1043,7 @@
    },
    "traza": {
     "archivo": "misiones/evidencia/0006/trazas/traza_pointing.js",
-    "sha1": "9f44841756d44388"
+    "sha1": "95c1f50eb0805ae3"
    },
    "fuente_sha1": "08294392cdd62c24"
   }
